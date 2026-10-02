@@ -9,8 +9,8 @@ Purpose: prove every chapter page is correct and still matches its audited text,
 yap render .yap/<slug>/chapters --root <repo> --dry-run
 ```
 
-`--root` is the user's repository. The dry run performs every check the real render does and renders nothing:
-for each chapter it prints `<id>: ready` or `<id>: failed (<reason>)`. Fix every `failed` chapter before going on.
+`--root` is the user's repository. The dry run performs every check the real render does except the layout check
+(it prints that command instead) and renders nothing: for each chapter it prints `<id>: ready` or `<id>: failed (<reason>)`. Fix every `failed` chapter before going on.
 The reasons and what they mean:
 
 | Reason starts with | Fix |
@@ -19,6 +19,7 @@ The reasons and what they mean:
 | `audit:` | a source or sentence fails: fix the spec, redo the chapter |
 | `not narrated yet` | run `yap narrate` on it |
 | `chapter changed after narrate` | something changed since narrate: redo the chapter |
+| `layout check failed` | the page fails `hyperframes check` (often a code line too wide): fix the spec, redo the chapter |
 
 Redo means: fix the spec, delete the chapter folder (`rm -r .yap/<slug>/chapters/<id>`), then `yap scaffold`,
 `yap audit`, `yap narrate` (see [narrate.md](narrate.md)).
@@ -55,7 +56,8 @@ yap render .yap/<slug>/chapters --root <repo> --cap 1
 ```
 
 This is the only way a chapter is rendered; never call the render tool yourself. It re-runs the narration-text
-check, the claim audit and the build-record check, skips any chapter that fails, and renders the rest at draft
+check, the claim audit and the build-record check, then runs `hyperframes check` on the page (the layout check),
+skips any chapter that fails any of them, and renders the rest at draft
 quality, several at a time (the cap comes from free memory; `--cap <n>` sets it, and `--cap 1` is the safe choice
 on a small machine). It removes an old `chapter.mp4` before each attempt, retries a failed chapter once on its
 own, and prints one line per chapter. Exit 0 means every chapter is `ready`. Every chapter that passes is rendered

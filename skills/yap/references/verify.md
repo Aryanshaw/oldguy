@@ -22,6 +22,8 @@ A source is one quoted place in the code:
 - `quote` must appear on those lines. The check collapses runs of spaces, tabs and line breaks to one space, so
   layout does not matter, but every word and symbol must match. Copy it from the file; never type it from memory.
 - Keep quotes short (a line or two): long quotes break on small differences.
+- A line you plan to show on a code card must fit in 68 columns (a tab counts as 4). If it is longer, show a
+  shorter part of it or pick other lines; never wrap it.
 - Give each source a short id (`s1`, `s2`, ...) that is unique within its chapter.
 
 Write all of them to `.yap/<slug>/sources.json` as a list, and list each chapter's sources in `script.md`.

@@ -1,11 +1,25 @@
 "use strict";
 const k = require("./shared.cjs");
 
-// Check one code line; its text keeps every space and tab but can never add a second line.
+// The widest code line the card shows on one row at 1080p; a longer line would wrap or be cut off on screen.
+const MAX_CODE_COLUMNS = 68;
+const TAB_COLUMNS = 4;
+
+// How many columns a line takes on the card: one per character, four per tab.
+function columns(text) {
+  return [...text].reduce((n, ch) => n + (ch === "\t" ? TAB_COLUMNS : 1), 0);
+}
+
+// Check one code line; its text keeps every space and tab but can never add a second line or run past the card.
 function readLine(line, i) {
   if (line === null || typeof line !== "object") throw new Error(`code-card: lines[${i}] must be an object`);
-  const text = k.requireText(line.text === "" ? " " : line.text, `lines[${i}].text`, "code-card");
-  return { no: k.optionalText(line.no), text: text.replace(/\r\n|\r|\n/g, " "), highlight: line.highlight === true };
+  const text = k.requireText(line.text === "" ? " " : line.text, `lines[${i}].text`, "code-card").replace(/\r\n|\r|\n/g, " ");
+  const width = columns(text);
+  if (width > MAX_CODE_COLUMNS) {
+    throw new Error(`code-card: lines[${i}] is ${width} columns wide, over the ${MAX_CODE_COLUMNS} that fit (a tab counts as ${TAB_COLUMNS}); `
+      + "quote a shorter part of the line or pick other lines, never wrap");
+  }
+  return { no: k.optionalText(line.no), text, highlight: line.highlight === true };
 }
 
 // Write one line row; highlighted rows carry both a class and a data attribute.
@@ -40,4 +54,4 @@ function render(params, opts) {
   return { html, ...k.finish(tl, t.endMs) };
 }
 
-module.exports = { render };
+module.exports = { render, MAX_CODE_COLUMNS };

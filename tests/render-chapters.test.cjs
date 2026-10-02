@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { renderChapters, renderArgs } = require('../lib/render-chapters.cjs');
+const { renderChapters, renderArgs, checkArgs } = require('../lib/render-chapters.cjs');
 const { HYPERFRAMES_VERSION } = require('../lib/hyperframes.cjs');
 const { buildRecord } = require('../lib/build-record.cjs');
 const { scaffoldChapter } = require('../lib/chapter.cjs');
@@ -53,6 +53,15 @@ function fakeRender(failOnce = []) {
   return { render, calls };
 }
 
+// A layout check that always passes, for tests about the other gates.
+const passCheck = async () => ({ code: 0, stdout: '', stderr: '' });
+
+// A pretend layout check that records the folders it was asked about and answers with the given result.
+function fakeCheck(answer = { code: 0, stdout: '', stderr: '' }) {
+  const dirs = [];
+  return { dirs, check: async (dir) => { dirs.push(dir); return answer; } };
+}
+
 test('renderArgs: pinned hyperframes via npx --yes, draft quality, 2 workers, chapter.mp4 inside the chapter', () => {
   assert.equal(HYPERFRAMES_VERSION, '0.8.112');
   assert.deepEqual(renderArgs('/w/chapters/intro'), ['--yes', 'hyperframes@0.8.112', 'render', '/w/chapters/intro', '-q', 'draft', '-w', '2', '-o', '/w/chapters/intro/chapter.mp4']);
@@ -63,7 +72,7 @@ test('chapters that pass the audit and are narrated are rendered and ready', asy
   const dir = addChapter(chapters, 'intro');
   addChapter(chapters, 'retry');
   const seen = [];
-  const results = await renderChapters(chapters, { root: repo, cap: 2, render: async (c) => seen.push(c) });
+  const results = await renderChapters(chapters, { root: repo, check: passCheck, cap: 2, render: async (c) => seen.push(c) });
   assert.deepEqual(results, [{ id: 'intro', status: 'ready', attempts: 1 }, { id: 'retry', status: 'ready', attempts: 1 }]);
   assert.deepEqual(seen.find((c) => c.id === 'intro'), { id: 'intro', dir });
 });
@@ -73,7 +82,7 @@ test('a chapter that fails the audit is never rendered and is failed with the au
   addChapter(chapters, 'bad', { sources: [{ ...GOOD_SOURCE, quote: 'stop()' }] });
   addChapter(chapters, 'good');
   const { render, calls } = fakeRender();
-  const results = await renderChapters(chapters, { root: repo, cap: 2, render });
+  const results = await renderChapters(chapters, { root: repo, check: passCheck, cap: 2, render });
   assert.deepEqual(calls, ['good']);
   assert.deepEqual(results[0], { id: 'bad', status: 'failed', reason: 'audit: s1: quote not on lines 1-1' });
   assert.equal(results[1].status, 'ready');
@@ -83,7 +92,7 @@ test('a chapter with no index.html is failed as not narrated and not rendered', 
   const { repo, chapters } = workspace(t);
   addChapter(chapters, 'draft', { narrated: false });
   const { render, calls } = fakeRender();
-  const results = await renderChapters(chapters, { root: repo, cap: 1, render });
+  const results = await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render });
   assert.deepEqual(calls, []);
   assert.deepEqual(results, [{ id: 'draft', status: 'failed', reason: 'not narrated yet (no index.html); run yap narrate first' }]);
 });
@@ -93,7 +102,7 @@ test('an unreadable chapter.json is failed with the reason, the others still ren
   fs.mkdirSync(path.join(chapters, 'broken'));
   fs.writeFileSync(path.join(chapters, 'broken', 'chapter.json'), '{ nope');
   addChapter(chapters, 'fine');
-  const results = await renderChapters(chapters, { root: repo, cap: 1, render: async () => {} });
+  const results = await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render: async () => {} });
   assert.equal(results[0].id, 'broken');
   assert.equal(results[0].status, 'failed');
   assert.match(results[0].reason, /cannot read chapter.json/);
@@ -105,7 +114,7 @@ test('the render scheduler is used: one failed render is retried once and ends r
   addChapter(chapters, 'a');
   addChapter(chapters, 'b');
   const { render, calls } = fakeRender(['a']);
-  const results = await renderChapters(chapters, { root: repo, cap: 2, render });
+  const results = await renderChapters(chapters, { root: repo, check: passCheck, cap: 2, render });
   assert.deepEqual(results, [{ id: 'a', status: 'ready', attempts: 2 }, { id: 'b', status: 'ready', attempts: 1 }]);
   assert.deepEqual(calls.filter((c) => c === 'a').length, 2);
 });
@@ -113,7 +122,7 @@ test('the render scheduler is used: one failed render is retried once and ends r
 test('a render that keeps failing is failed with its error as the reason', async (t) => {
   const { repo, chapters } = workspace(t);
   addChapter(chapters, 'a');
-  const results = await renderChapters(chapters, { root: repo, cap: 1, render: async () => { throw new Error('out of memory'); } });
+  const results = await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render: async () => { throw new Error('out of memory'); } });
   assert.deepEqual(results, [{ id: 'a', status: 'failed', attempts: 2, reason: 'out of memory' }]);
 });
 
@@ -128,7 +137,7 @@ test('the cap limits how many renders run at once', async (t) => {
     await new Promise((r) => setImmediate(r));
     inFlight--;
   };
-  await renderChapters(chapters, { root: repo, cap: 1, render });
+  await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render });
   assert.equal(most, 1);
 });
 
@@ -138,7 +147,7 @@ test('folders without chapter.json and loose files are ignored; results follow f
   addChapter(chapters, 'alpha');
   fs.mkdirSync(path.join(chapters, 'notes'));
   fs.writeFileSync(path.join(chapters, 'README.txt'), 'x');
-  const results = await renderChapters(chapters, { root: repo, cap: 1, render: async () => {} });
+  const results = await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render: async () => {} });
   assert.deepEqual(results.map((r) => r.id), ['alpha', 'zeta']);
 });
 
@@ -148,7 +157,7 @@ test('narration.txt edited after the audit: never rendered, failed with the redo
   addChapter(chapters, 'extra', { narration: `${CLAIM.text} And then more.\n` });
   addChapter(chapters, 'spacing', { narration: '  It   calls\r\nstart.\r\n' });
   const { render, calls } = fakeRender();
-  const results = await renderChapters(chapters, { root: repo, cap: 1, render });
+  const results = await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render });
   assert.deepEqual(calls, ['spacing']);
   for (const r of results.slice(0, 2)) {
     assert.equal(r.status, 'failed');
@@ -160,7 +169,7 @@ test('narration.txt edited after the audit: never rendered, failed with the redo
 test('the narration check runs before the claim audit', async (t) => {
   const { repo, chapters } = workspace(t);
   addChapter(chapters, 'both', { sources: [{ ...GOOD_SOURCE, quote: 'stop()' }], narration: 'Something else.\n' });
-  const results = await renderChapters(chapters, { root: repo, cap: 1, render: async () => {} });
+  const results = await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render: async () => {} });
   assert.match(results[0].reason, /^narration\.txt no longer matches/);
 });
 
@@ -169,7 +178,7 @@ test('a chapter folder named like an option reaches the renderer as an absolute 
   addChapter(chapters, '--evil');
   const seen = [];
   // a relative chapters folder is the case where path.join would have produced a bare "--evil"
-  const results = await renderChapters(path.relative(process.cwd(), chapters), { root: repo, cap: 1, render: async (c) => seen.push(c) });
+  const results = await renderChapters(path.relative(process.cwd(), chapters), { root: repo, check: passCheck, cap: 1, render: async (c) => seen.push(c) });
   assert.equal(results[0].status, 'ready');
   assert.equal(seen[0].dir, path.join(chapters, '--evil'));
   assert.ok(path.isAbsolute(seen[0].dir));
@@ -202,7 +211,7 @@ async function narratedChapter(t) {
 // Renders the chapters folder with a recording fake and returns the one result plus whether render was called.
 async function renderOnce(repo, chapters) {
   const { render, calls } = fakeRender();
-  const [result] = await renderChapters(chapters, { root: repo, cap: 1, render });
+  const [result] = await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render });
   return { result, called: calls.length > 0 };
 }
 
@@ -309,7 +318,7 @@ test('the build check runs after the claim audit', async (t) => {
   const { repo, chapters } = workspace(t);
   const dir = addChapter(chapters, 'both', { sources: [{ ...GOOD_SOURCE, quote: 'stop()' }] });
   fs.rmSync(path.join(dir, 'build.json'));
-  const results = await renderChapters(chapters, { root: repo, cap: 1, render: async () => {} });
+  const results = await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render: async () => {} });
   assert.match(results[0].reason, /^audit: /);
 });
 
@@ -323,7 +332,7 @@ test('stale video: an existing chapter.mp4 is removed before rendering, so a fai
     seenOld.push(fs.existsSync(mp4));
     throw new Error('chrome crashed');
   };
-  const [result] = await renderChapters(chapters, { root: repo, cap: 1, render });
+  const [result] = await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render });
   assert.equal(result.status, 'failed');
   assert.deepEqual(seenOld, [false, false]);
   assert.equal(fs.existsSync(mp4), false);
@@ -334,7 +343,7 @@ test('stale video: a chapter that fails its checks keeps its chapter.mp4 untouch
   const dir = addChapter(chapters, 'bad', { sources: [{ ...GOOD_SOURCE, quote: 'stop()' }] });
   fs.writeFileSync(path.join(dir, 'chapter.mp4'), 'old video');
   const { render, calls } = fakeRender();
-  const [result] = await renderChapters(chapters, { root: repo, cap: 1, render });
+  const [result] = await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render });
   assert.equal(result.status, 'failed');
   assert.deepEqual(calls, []);
   assert.equal(fs.readFileSync(path.join(dir, 'chapter.mp4'), 'utf8'), 'old video');
@@ -344,7 +353,57 @@ test('stale video: a dry run deletes nothing', async (t) => {
   const { repo, chapters } = workspace(t);
   const dir = addChapter(chapters, 'a');
   fs.writeFileSync(path.join(dir, 'chapter.mp4'), 'old video');
-  const [result] = await renderChapters(chapters, { root: repo, cap: 1, render: async () => {}, dryRun: true });
+  const [result] = await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render: async () => {}, dryRun: true });
   assert.equal(result.status, 'ready');
   assert.equal(fs.readFileSync(path.join(dir, 'chapter.mp4'), 'utf8'), 'old video');
+});
+
+test('checkArgs: the pinned hyperframes check on the chapter folder, as an argv array', () => {
+  assert.deepEqual(checkArgs('/w/chapters/intro'), ['--yes', 'hyperframes@0.8.112', 'check', '/w/chapters/intro']);
+});
+
+test('layout check: a failing check blocks the render, keeps the old video, and gives its first output line', async (t) => {
+  const { repo, chapters } = workspace(t);
+  const dir = addChapter(chapters, 'a');
+  fs.writeFileSync(path.join(dir, 'chapter.mp4'), 'old video');
+  const { check, dirs } = fakeCheck({ code: 1, stdout: '\n  clipped_text: .yk-code overflows\nmore detail\n', stderr: 'later' });
+  const { render, calls } = fakeRender();
+  const [result] = await renderChapters(chapters, { root: repo, cap: 1, render, check });
+  assert.deepEqual(result, { id: 'a', status: 'failed', reason: 'layout check failed: clipped_text: .yk-code overflows' });
+  assert.deepEqual(calls, []);
+  assert.deepEqual(dirs, [dir]);
+  assert.equal(fs.readFileSync(path.join(dir, 'chapter.mp4'), 'utf8'), 'old video');
+});
+
+test('layout check: with no output the reason names the exit code', async (t) => {
+  const { repo, chapters } = workspace(t);
+  addChapter(chapters, 'a');
+  const { check } = fakeCheck({ code: 2, stdout: '', stderr: '' });
+  const [result] = await renderChapters(chapters, { root: repo, cap: 1, render: async () => {}, check });
+  assert.equal(result.reason, 'layout check failed: exit code 2');
+});
+
+test('layout check: a passing check lets the render run, on the chapter\'s absolute folder', async (t) => {
+  const { repo, chapters } = workspace(t);
+  const dir = addChapter(chapters, 'a');
+  const { check, dirs } = fakeCheck();
+  const { render, calls } = fakeRender();
+  const [result] = await renderChapters(chapters, { root: repo, cap: 1, render, check });
+  assert.deepEqual(result, { id: 'a', status: 'ready', attempts: 1 });
+  assert.deepEqual(calls, ['a']);
+  assert.deepEqual(dirs, [dir]);
+});
+
+test('layout check runs last: narration text, claim audit and build record all stop a chapter before it', async (t) => {
+  const { repo, chapters } = workspace(t);
+  addChapter(chapters, 'edited', { narration: 'It calls stop.\n' });
+  addChapter(chapters, 'unaudited', { sources: [{ ...GOOD_SOURCE, quote: 'stop()' }] });
+  const changed = addChapter(chapters, 'changed');
+  fs.writeFileSync(path.join(changed, 'index.html'), '<!doctype html><p>edited by hand</p>');
+  const { check, dirs } = fakeCheck({ code: 1, stdout: 'should never be read', stderr: '' });
+  const results = await renderChapters(chapters, { root: repo, cap: 1, render: async () => {}, check });
+  assert.deepEqual(dirs, []);
+  assert.equal(results.find((r) => r.id === 'changed').reason, CHANGED);
+  assert.match(results.find((r) => r.id === 'edited').reason, /^narration\.txt no longer matches/);
+  assert.match(results.find((r) => r.id === 'unaudited').reason, /^audit: /);
 });

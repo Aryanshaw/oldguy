@@ -226,3 +226,10 @@ test('checkNarrationText: a changed word or an extra sentence fails with the red
   assert.throws(() => checkNarrationText('One thing. Another stuff.', sentences), message);
   assert.throws(() => checkNarrationText('One thing. Another thing. A third.', sentences), message);
 });
+
+test('scaffold refuses a code-card line over 68 columns with the kit\'s message and writes nothing', (t) => {
+  const root = tempRoot(t);
+  const scene = [{ piece: 'code-card', params: { file: 'app.js', lines: [{ no: 1, text: 'y'.repeat(70) }] }, beat: 0 }];
+  assert.throws(() => scaffoldChapter(spec(root, { scene })), /scene\[0\]: code-card: lines\[0\] is 70 columns wide/);
+  assert.deepEqual(fs.readdirSync(root), []);
+});

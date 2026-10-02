@@ -129,6 +129,8 @@ test('render --dry-run prints the render command for passing chapters and fails 
   assert.equal(r.status, 1, r.stderr);
   const good = path.join(chapters, 'good');
   assert.ok(r.stdout.includes(`would run: npx --yes hyperframes@0.8.112 render ${good} -q draft -w 2 -o ${path.join(good, 'chapter.mp4')}\n`), r.stdout);
+  assert.ok(r.stdout.includes(`would run: npx --yes hyperframes@0.8.112 check ${good}\n`), r.stdout);
+  assert.ok(r.stdout.indexOf('0.8.112 check ') < r.stdout.indexOf('0.8.112 render '), 'the layout check comes before the render');
   assert.doesNotMatch(r.stdout, /would run: .*bad/);
   assert.match(r.stdout, /^bad: failed \(audit: s1: quote not on lines 1-1\)$/m);
   assert.match(r.stdout, /^good: ready$/m);

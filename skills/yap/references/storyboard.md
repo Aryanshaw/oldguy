@@ -41,7 +41,8 @@ with one.
 
 For each chapter, list the scene-kit pieces in order and the sentence index (`beat`, starting at 0) each appears
 with. Beats must go up; the first piece should start at beat 0 so the screen is never empty. Two to four pieces
-per chapter is plenty. See [scene-kit.md](scene-kit.md) for what each piece can show.
+per chapter is plenty. See [scene-kit.md](scene-kit.md) for what each piece can show. Code card lines are at
+most 68 columns: pick lines that fit, or quote a shorter part of a long one, never wrap.
 
 ## 6. Write it into script.md
 

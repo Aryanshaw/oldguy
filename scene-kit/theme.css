@@ -129,6 +129,8 @@
 /* keep every leading space and tab exactly as written */
 .yk-code {
   white-space: pre;
+  /* a tab is 4 columns, the same count the code card's width limit uses */
+  tab-size: 4;
   overflow: hidden;
 }
 .yk-hl {

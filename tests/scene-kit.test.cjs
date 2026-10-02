@@ -232,3 +232,28 @@ test("pieces use no raw pixel sizes in markup", () => {
     assert.doesNotMatch(pieces[name]({}, WIN).html, /\d\s*px/);
   }
 });
+
+// A code line of n plain characters.
+const codeLine = (n) => ({ no: 1, text: "x".repeat(n) });
+
+test("code-card fits 68 columns and refuses 69, naming the line index and its length", () => {
+  assert.equal(codeCard.MAX_CODE_COLUMNS, 68);
+  assert.doesNotThrow(() => codeCard.render({ file: "a.js", lines: [codeLine(68)] }, WIN));
+  assert.throws(() => codeCard.render({ file: "a.js", lines: [codeLine(3), codeLine(69)] }, WIN),
+    /code-card: lines\[1\] is 69 columns wide, over the 68 that fit/);
+});
+
+test("code-card counts a tab as 4 columns", () => {
+  assert.doesNotThrow(() => codeCard.render({ file: "a.js", lines: [{ text: `\t${"x".repeat(64)}` }] }, WIN));
+  assert.throws(() => codeCard.render({ file: "a.js", lines: [{ text: `\t${"x".repeat(65)}` }] }, WIN), /lines\[0\] is 69 columns/);
+});
+
+test("code-card refuses a 200-character line and says to quote a shorter part, never wrap", () => {
+  assert.throws(() => codeCard.render({ file: "a.js", lines: [codeLine(200)] }, WIN),
+    /lines\[0\] is 200 columns wide.*quote a shorter part of the line or pick other lines/);
+});
+
+test("code-card keeps tabs 4 columns wide on screen, matching the count", () => {
+  const css = fs.readFileSync(path.join(kitDir, "theme.css"), "utf8");
+  assert.match(css, /\.yk-code \{[^}]*tab-size: 4;/);
+});

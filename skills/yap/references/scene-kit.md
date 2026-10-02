@@ -30,6 +30,8 @@ callout    {"text": text, "pointTo": "up" | "down" | "left" | "right" (optional,
 - Every text is plain text. The kit escapes it, so code with `<` or quotes is safe to show.
 - `code-card` lines: copy the real lines from the file, keep `no` as the real line number, and highlight only the
   lines the sentence talks about. Six to twelve lines fit; a card is a window, not the whole file.
+- `code-card` lines are at most 68 columns wide (a tab counts as 4); scaffold refuses a longer line. Quote a
+  shorter part of the line or pick other lines. Never wrap a line onto two.
 - `steps`: three to five items, each label a few words.
 - `callout`: one short sentence. `pointTo` must be one of the four words or the piece is rejected.
 
