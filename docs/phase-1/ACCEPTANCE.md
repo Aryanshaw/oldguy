@@ -237,7 +237,8 @@ here since it stopped at scope.
 
 ## Re-run after the fix wave
 
-Date: 2026-10-03, branch `phase-1-generator` at `c8d2e5f` (fixes `c154361` F1, `9263977` F2, `9dfd292` F3,
+Date: 2026-10-03, branch `phase-1-generator`. The same-command positive run and Step 6 by hand ran at `c8d2e5f`;
+the stdin-open experiment and the negative run ran at `6a95b9d` (R3 fix in place) (fixes `c154361` F1, `9263977` F2, `9dfd292` F3,
 `f1bfcfa` F4, `c8d2e5f` F5). Same machine, same harness (`.superpowers/acceptance/rerun/run.sh`, a copy of `run.sh`
 that also records `date`; logs in `.superpowers/acceptance/rerun/`). `npm test`: 270 of 270 before, 272 of 272
 after the two fixes below.
@@ -344,7 +345,8 @@ new turn (255 s), and the last one a third (408 s). Six chapters, all timing `wo
 Chapters 3 to 6 were rendered by the Step 6 confirm run itself (255 to 404 s, one at a time, story order). The
 hand-off at 412 s listed the six `chapter.mp4` paths in story order and said the player arrives later. Note: it
 wrote its spec builder to `/tmp/yapgen/gen.cjs`, outside the project (removed afterwards). The process does not
-exit on stdin EOF; it was stopped after the hand-off. So the notify-and-continue pattern works when the session
+exit on stdin EOF; it was stopped after the hand-off. This run had the R3 fix (`6a95b9d`): narrate and a render
+overlapped five times and every chapter kept word timing. So the notify-and-continue pattern works when the session
 lives on; an interactive session was not tested.
 
 How long code lines were handled (68-column limit): no card wrapped. Claude cut long lines to a prefix: `add.js`
@@ -380,7 +382,8 @@ for layout, 0 motion errors. Warnings only: contrast on dimmed highlighted lines
 ### Step 4: Looking at it, and memory
 
 Frames at 0/10/30/50/70/95 % per chapter in `docs/phase-1/frames-rerun/<id>-<n>.png` plus `<id>-sheet.png`
-(1.0 MB in all).
+(1.0 MB in all). `the-request-arrives/chapter.mp4` in that folder is not the one the session made at 145 s: the R3
+reproduction re-rendered it with `--force` from the same build, so its frames and check rows come from that render.
 
 - Better: no wrapped code line anywhere; every card line has its line number. Cards are smaller and tidier.
 - Same: the 0 % frame is black in all four. Pieces still appear one at a time, centred, with much empty space;
@@ -425,7 +428,7 @@ cache-read, 627 output.
 |---|---|---|---|---|
 | R1 | The skill lets Claude end its turn while a background render runs ("I'll be notified when it finishes"). Under `claude -p` the process exits when the turn ends, the render is killed, the remaining chapters are never rendered and there is no hand-off. With the session kept alive, notifications resume the work and it finishes correctly. | same-command run: 1 of 4 mp4s, render output `[killed]`; experiment: 6 of 6 | Critical for headless or scripted use (it is this acceptance path); interactive sessions not tested | Left: how the skill waits for renders is pipeline design (for example, run the last render in the foreground, or never end a turn while a render runs) |
 | R2 | Code-card lines over 68 columns are shown as a cut prefix with no mark, so a partial line looks like the whole line, and narration can describe the part that was cut. Nothing checks that card text matches the file; once Claude wrote invented `... }` text and caught it itself. | `giving-it-an-id` card, `add.js:11`; experiment transcript at 106 s | Important | Left: decide on an elision mark and whether audit should compare card lines with the source |
-| R3 | Narrate fell back to sentence-level timing while a render ran: the whisper probe has a 15 s limit and took 20.15 s under memory pressure. | `giving-it-an-id/beats.json` `timing: sentence-share`; reproduction above | Important (silent quality drop) | Fixed in `6a95b9d` (narrate waits up to its 10-minute step limit; doctor keeps 15 s; test first) |
+| R3 | Narrate fell back to sentence-level timing while a render ran: the whisper probe has a 15 s limit and took 20.15 s under memory pressure. | `giving-it-an-id/beats.json` `timing: sentence-share`; reproduction above | Important (silent quality drop) | Fixed in `6a95b9d` (narrate waits up to its 10-minute step limit; doctor keeps 15 s; test first). The experiment ran with it: 5 overlaps, no sentence-share fallback |
 | R4 | F8's cause: `hyperframes tts --json` reports failures on stdout, so narrate printed only `exit code 1`. | reproduction with no venv | Minor | Fixed in `824278f` (shows the JSON error; test first) |
 | R5 | `yap render` prints every result line only when all chosen chapters are done (113 s of silence for three chapters). | Step 6 by hand: all four lines at 113 s | Minor | Left |
 | R6 | Claude.ai connector text leaks into the nested session despite `--setting-sources project,local`: the F1 probe's reply ended "The Mem0 connector also needs to be signed in". Extends F15. | `rerun/f1-doctor/out.json` | Minor | Left |
