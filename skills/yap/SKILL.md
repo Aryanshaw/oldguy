@@ -26,11 +26,13 @@ lists every command; each command prints its own usage when called wrongly.
 3. **Never invent a flow.** If the requested feature is not in the code, say so plainly in one or two sentences, ask
    ONE clarifying question, and stop. Create no chapters.
 4. **At most one clarifying question**, and only in the scope step. After that, decide and move on.
-5. **Never install anything.** If a tool is missing, show the user the doctor's `fix:` line and stop. No package
-   managers, no downloads, no system changes.
+5. **Never install the tools the doctor checks for.** If one is missing, show the user the doctor's `fix:` line and
+   stop. No package managers, no system changes. (The `npx --yes hyperframes@...` calls in these steps are fine:
+   they fetch the pinned Hyperframes into npm's cache and change nothing else.)
 6. **Never mention money or payment** anywhere: not in narration, not in chat, not in any file you write.
 7. **Every sentence is one sentence**, every claim sentence has a source, every chapter runs 20 to 40 seconds and
-   stands alone. The checks below enforce this; do not work around them.
+   stands alone. The CLI checks enforce the sentence and source rules; `yap narrate` prints each chapter's
+   seconds so you can check the length. Do not work around either.
 8. **Never edit `chapter.json` or `narration.txt` after `yap narrate`.** Fix the spec, delete the chapter folder,
    scaffold and narrate again.
 

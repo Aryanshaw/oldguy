@@ -25,8 +25,8 @@ the same sentences. The splitter looks for `.`, `!` or `?` followed by a space a
 a quote or a bracket. So:
 
 - End every entry with `.`, `!` or `?`. Start every entry with a capital letter or a digit.
-- No abbreviations with dots (`Dr.`, `approx.`, `no.`). Write the word out. `e.g.` and `i.e.` are tolerated, but
-  "for example" reads better aloud anyway.
+- No abbreviations with dots (`Dr.`, `approx.`, `no.`, `e.g.`, `i.e.`). Write the words out: "for example"
+  reads better aloud anyway.
 - File names and numbers inside a sentence are fine (`todos.py`, `3.5 seconds`) because no space follows the dot.
 - Wrap code names in backticks when they contain dots or marks: `` `app.run()` ``.
 - No semicolons chaining two thoughts: make two entries.
