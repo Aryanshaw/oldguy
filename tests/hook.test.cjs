@@ -27,11 +27,14 @@ function sampleStdin() {
   return JSON.parse(line);
 }
 
-// Runs the hook with the given stdin text and environment; the plugin data folder is only set when asked for.
-function runHook(stdin, { dataDir } = {}) {
+// Runs the hook with the given stdin text and environment; the plugin data folder and the Claude config folder are
+// only set when asked for.
+function runHook(stdin, { dataDir, configDir } = {}) {
   const env = { ...process.env };
   delete env.CLAUDE_PLUGIN_DATA;
+  delete env.CLAUDE_CONFIG_DIR;
   if (dataDir) env.CLAUDE_PLUGIN_DATA = dataDir;
+  if (configDir) env.CLAUDE_CONFIG_DIR = configDir;
   return spawnSync(process.execPath, [SCRIPT], { input: stdin, env, encoding: 'utf8', timeout: 10000 });
 }
 
@@ -203,27 +206,45 @@ test('a read-only cwd exits 0 and still hints', (t) => {
   assert.equal(hintLines(r).length, 1);
 });
 
-test('session.json records data_dir: the plugin data folder when set, else null', (t) => {
+test('session.json records data_dir: the plugin data folder when set inside the plugin data root, else null', (t) => {
   const cwd = tmp(t);
-  const dataDir = tmp(t);
-  runHook(JSON.stringify({ ...sampleStdin(), cwd }), { dataDir });
+  const configDir = tmp(t);
+  const dataDir = path.join(configDir, 'plugins', 'data', 'yap-inline');
+  runHook(JSON.stringify({ ...sampleStdin(), cwd }), { dataDir, configDir });
   assert.equal(readSession(cwd).data_dir, dataDir);
-  runHook(JSON.stringify({ ...sampleStdin(), cwd }));
+  runHook(JSON.stringify({ ...sampleStdin(), cwd }), { configDir });
+  assert.equal(readSession(cwd).data_dir, null);
+  // a plugin data folder outside <config>/plugins/data/ is still used for the hint, but never recorded
+  runHook(JSON.stringify({ ...sampleStdin(), cwd }), { dataDir: tmp(t), configDir });
   assert.equal(readSession(cwd).data_dir, null);
 });
 
 test('the hint finds the marker through a parent session.json, the same way the doctor does', (t) => {
   const project = tmp(t);
-  const dataDir = tmp(t);
+  const configDir = tmp(t);
+  const dataDir = path.join(configDir, 'plugins', 'data', 'yap-inline');
+  fs.mkdirSync(dataDir, { recursive: true });
   fs.writeFileSync(path.join(dataDir, 'doctor-ok'), 'ok');
   fs.mkdirSync(path.join(project, '.yap'));
   fs.writeFileSync(path.join(project, '.yap', 'session.json'), JSON.stringify({ session_id: 'x', data_dir: dataDir }));
   const sub = path.join(project, 'sub');
   fs.mkdirSync(sub);
   // no CLAUDE_PLUGIN_DATA: the hook's own session.json in sub has data_dir null, so the parent's one decides
-  const r = runHook(JSON.stringify({ ...sampleStdin(), cwd: sub }));
+  const r = runHook(JSON.stringify({ ...sampleStdin(), cwd: sub }), { configDir });
   assert.equal(r.status, 0);
   assert.equal(r.stdout, '');
   const { resolveDataDir } = require('../lib/data-dir.cjs');
-  assert.equal(resolveDataDir({ env: {}, cwd: sub, fs }), dataDir);
+  assert.equal(resolveDataDir({ env: { CLAUDE_CONFIG_DIR: configDir }, cwd: sub, fs }), dataDir);
+});
+
+test('the hint ignores a parent session.json whose data_dir is outside the plugin data root', (t) => {
+  const project = tmp(t);
+  const elsewhere = tmp(t);
+  fs.writeFileSync(path.join(elsewhere, 'doctor-ok'), 'ok');
+  fs.mkdirSync(path.join(project, '.yap'));
+  fs.writeFileSync(path.join(project, '.yap', 'session.json'), JSON.stringify({ session_id: 'x', data_dir: elsewhere }));
+  const sub = path.join(project, 'sub');
+  fs.mkdirSync(sub);
+  const r = runHook(JSON.stringify({ ...sampleStdin(), cwd: sub }), { configDir: tmp(t) });
+  assert.equal(hintLines(r).length, 1);
 });

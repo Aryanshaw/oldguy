@@ -349,7 +349,8 @@ test('data dir: CLAUDE_PLUGIN_DATA, else <cwd>/.yap, and --data-dir beats both',
 });
 
 test('data dir: without the flag or CLAUDE_PLUGIN_DATA, the doctor reads data_dir from .yap/session.json', async () => {
-  const dir = '/plugin-data';
+  // the session file is only trusted for a folder under <home>/.claude/plugins/data/, home being the machine's
+  const dir = `${HOME}/.claude/plugins/data/yap-inline`;
   const m = machine({ files: { [`${dir}/venv/bin/python`]: 1 }, exec: { [`${dir}/venv/bin/python`]: () => OK } });
   const sessions = { '/work/.yap/session.json': JSON.stringify({ session_id: 'a', data_dir: dir }) };
   const fs = { ...m.deps.fs, readFileSync: (p) => { if (p in sessions) return sessions[p]; throw new Error('ENOENT'); } };

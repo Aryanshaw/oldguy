@@ -36,6 +36,8 @@ function parseInput(text) {
 
 // Writes the session file through a temp file and a rename, so a reader never sees half a file.
 function writeSessionFile(cwd, input) {
+  // loaded here, not at the top, so even a missing library file ends in the quiet exit 0
+  const { trustedDataDir } = require('../lib/data-dir.cjs');
   const dir = path.join(cwd, '.yap');
   fs.mkdirSync(dir, { recursive: true });
   const record = {
@@ -43,8 +45,9 @@ function writeSessionFile(cwd, input) {
     transcript_path: input.transcript_path,
     cwd,
     source: input.source,
-    // Claude's own shell does not get CLAUDE_PLUGIN_DATA, so yap commands read the data folder from here
-    data_dir: process.env.CLAUDE_PLUGIN_DATA || null,
+    // Claude's own shell does not get CLAUDE_PLUGIN_DATA, so yap commands read the data folder from here;
+    // only a folder inside Claude Code's plugin data root is recorded, since readers trust nothing else
+    data_dir: trustedDataDir(process.env.CLAUDE_PLUGIN_DATA || null, { env: process.env }),
     updated_at: new Date().toISOString(),
   };
   const temp = path.join(dir, `session.json.${process.pid}.tmp`);
