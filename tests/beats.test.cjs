@@ -75,3 +75,52 @@ test('leadS shifts every time in both methods', () => {
 test('word beats fail clearly when there are no words', () => {
   assert.throws(() => beatsFromWords(sentences, [], { leadS: 0 }), /no words/i);
 });
+
+// Checks the invariants every beat list must keep: each sentence once and in order, finite, non-negative, non-decreasing, no overlap.
+function assertSound(beats, expectedSentences) {
+  assert.deepEqual(beats.map((b) => b.text), expectedSentences);
+  let previousEnd = 0;
+  beats.forEach((b, i) => {
+    assert.ok(Number.isFinite(b.start) && Number.isFinite(b.end), `beat ${i} has NaN or infinite time`);
+    assert.ok(b.start >= 0, `beat ${i} starts before 0`);
+    assert.ok(b.end >= b.start, `beat ${i} runs backwards`);
+    assert.ok(b.start >= previousEnd, `beat ${i} overlaps the one before`);
+    previousEnd = b.end;
+  });
+}
+
+test('degenerate transcripts: fewer words than sentences is refused clearly', () => {
+  assert.throws(() => beatsFromWords(sentences, words.slice(0, 2), { leadS: 0 }), /fewer words/i);
+});
+
+test('degenerate transcripts: a sentence the speaker never said still yields ordered beats', () => {
+  const extra = [...sentences.slice(0, 2), 'Zebras quietly juggle seventeen marmalade teapots.', sentences[2]];
+  assertSound(beatsFromWords(extra, words, { leadS: 0 }), extra);
+});
+
+test('degenerate transcripts: a dropped sentence-final word still yields ordered beats', () => {
+  const dropped = words.filter((w) => w.text !== 'database.');
+  assertSound(beatsFromWords(sentences, dropped, { leadS: 0 }), sentences);
+});
+
+test('degenerate transcripts: a merge across a sentence boundary still yields ordered beats', () => {
+  const at = words.findIndex((w) => w.text === 'button.');
+  const merged = words.slice();
+  merged.splice(at, 2, { text: 'button.The', start: words[at].start, end: words[at + 1].end });
+  assertSound(beatsFromWords(sentences, merged, { leadS: 0 }), sentences);
+});
+
+test('beatsFromDuration refuses a duration that is 0, negative, NaN or infinite', () => {
+  for (const bad of [0, -1, NaN, Infinity, -Infinity]) {
+    assert.throws(() => beatsFromDuration(sentences, bad, { leadS: 0 }), /duration must be a finite number greater than 0/, String(bad));
+  }
+});
+
+test('beatsFromDuration names the sentence that has no text', () => {
+  assert.throws(() => beatsFromDuration(['Fine.', ''], 5), /sentence 1/);
+  assert.throws(() => beatsFromDuration(['   \n\t', 'Fine.'], 5), /sentence 0/);
+});
+
+test('beatsFromDuration returns an empty list for no sentences', () => {
+  assert.deepEqual(beatsFromDuration([], 5), []);
+});

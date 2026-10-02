@@ -108,7 +108,7 @@ test('yap beats | yap captions writes the vtt and json files', () => {
 });
 
 test('beats and captions exit 2 with one stderr line on bad input', () => {
-  for (const args of [['beats'], ['beats', '/no/such/file.txt', '--duration', '5'], ['beats', path.join(FIX, 'narration.txt')], ['captions'], ['captions', '/no/such.json', '--vtt', '/tmp/x.vtt']]) {
+  for (const args of [['beats'], ['beats', '/no/such/file.txt', '--duration', '5'], ['beats', path.join(FIX, 'narration.txt')], ['beats', path.join(FIX, 'narration.txt'), '--duration', '0'], ['captions'], ['captions', '/no/such.json', '--vtt', '/tmp/x.vtt']]) {
     const r = spawnSync('node', [CLI, ...args], { encoding: 'utf8' });
     assert.equal(r.status, 2, args.join(' '));
     assert.equal(r.stderr.trim().split('\n').length, 1, args.join(' '));
