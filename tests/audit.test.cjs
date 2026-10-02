@@ -115,6 +115,47 @@ test('allows framing without sources', () => {
   });
 });
 
+// Audits one sentence with no sources at all and returns the failure reasons.
+function reasonsFor(root, sentence) {
+  return audit({ root, sources: [], sentences: [sentence] }).failures.map((f) => `${f.id}: ${f.reason}`);
+}
+
+test('a sentence with no kind is treated as a claim and fails without sources', () => {
+  withRepo(({ root }) => {
+    const r = reasonsFor(root, { text: 'a', source_ids: [] });
+    assert.ok(r.includes('sentence 0: claim has no source ids'), r.join('|'));
+    assert.ok(r.includes('sentence 0: unknown kind "undefined"'), r.join('|'));
+  });
+});
+
+test('kind "Claim" with no sources fails, and the odd kind is named', () => {
+  withRepo(({ root }) => {
+    const r = reasonsFor(root, { text: 'a', kind: 'Claim', source_ids: [] });
+    assert.deepEqual(r, ['sentence 0: claim has no source ids', 'sentence 0: unknown kind "Claim"']);
+  });
+});
+
+test('kind "framing" still passes with no sources', () => {
+  withRepo(({ root }) => {
+    assert.deepEqual(reasonsFor(root, { text: 'a', kind: 'framing', source_ids: [] }), []);
+  });
+});
+
+test('kind "Framing" is not case-folded: it fails as unknown kind', () => {
+  withRepo(({ root }) => {
+    const r = reasonsFor(root, { text: 'a', kind: 'Framing', source_ids: [] });
+    assert.ok(r.includes('sentence 0: unknown kind "Framing"'), r.join('|'));
+    assert.ok(r.includes('sentence 0: claim has no source ids'), r.join('|'));
+  });
+});
+
+test('a non-string kind (number) fails as a claim with an unknown-kind line', () => {
+  withRepo(({ root }) => {
+    const r = reasonsFor(root, { text: 'a', kind: 7, source_ids: [] });
+    assert.ok(r.includes('sentence 0: unknown kind "7"'), r.join('|'));
+  });
+});
+
 test('rejects an empty quote', () => {
   withRepo(({ root }) => {
     for (const quote of ['', '   \n\t ']) {
