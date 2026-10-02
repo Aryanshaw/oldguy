@@ -438,3 +438,114 @@ cache-read, 627 output.
 
 F1 to F5 are fixed as far as this run can see; F6 holds on real audio (every `captions.vtt` valid in both runs,
 144 cues in all); F7 holds (doctor's Chrome line is `ok`).
+
+## Verification of R1 and R2
+
+Date: 2026-10-03, branch `phase-1-generator` at `19af720` (R1 fix `24da488`, R2 fix `19af720`). `npm test` 287 of
+287. Same machine, same data dir and exports as the re-run (`source spikes/env.sh`,
+`CLAUDE_PLUGIN_DATA=<repo>/.superpowers/acceptance/data`); doctor exit 0, every line `ok`. Harness
+`.superpowers/acceptance/verify/run.sh` (git-ignored; logs in `verify/pos/`): a fresh copy of `fixtures/todo-app`
+in `/tmp/yap-verify-ReGx` (kept for inspection, 16 MB), then the first-run command verbatim, stdin closed:
+
+```
+claude -p --plugin-dir /Users/aryanshaw/Documents/pracice/yap --permission-mode bypassPermissions \
+  --max-budget-usd 10 --output-format json --setting-sources project,local "/yap how adding a todo works" </dev/null
+```
+
+### Verdict
+
+| Criterion | Result | Number |
+|---|---|---|
+| Run exits by itself with every chapter rendered | PASS | exit 0 at 322 s, 4 of 4 `chapter.mp4` |
+| Final reply lists the videos in story order | PASS | 4 paths, same order as `script.md` |
+| No render left running or killed | PASS | every render returned `ready` in the foreground; no `hyperframes`/Chrome process and no `work-*` folder after exit |
+| `hyperframes check` clean, no wrapped code lines | PASS | enforced inside each `yap render`; by hand: exit 0 on all 4, "0 issues across 9 sample(s)", no `clipped_text` |
+| `tests/acceptance-check.cjs` | PASS | exit 0, 40 of 40 |
+| `yap audit` on every chapter, with the code-card check | PASS | exit 0 on all 4; 36 card lines, all byte-equal to the file |
+| First playable chapter (goal under 300 s) | PASS | 147 s |
+| All chapters | PASS | 319 s for 113.9 s of video |
+
+### Timeline
+
+Started `Sat Oct 3 04:35:02 IST 2026`; process exited `04:40:24` (322 s), 15 turns, 98.7 s model time, $0.73.
+Tokens: 30 input, 46,475 cache-write, 707,138 cache-read, 10,661 output (3,991 thinking).
+
+| Chapter | Seconds | Beats | Timing | narration.wav | chapter.mp4 | Render took |
+|---|---|---|---|---|---|---|
+| where-the-request-arrives | 30.6 | 5 | words | 106 s | **147 s** (04:37:29) | 38 s |
+| checking-the-title | 26.2 | 5 | words | 167 s | 207 s (04:38:29) | 39 s |
+| giving-the-todo-an-id | 31.4 | 6 | words | 223 s | 263 s (04:39:25) | 36 s |
+| saving-and-replying | 25.7 | 5 | words | 278 s | 319 s (04:40:21) | 35 s |
+
+From the transcript (seconds from the request): 0 to 75 doctor, read code and every reference, scope, verify,
+storyboard and specs (one generator script); 79 `$Y scaffold` failed in zsh (F13, third time), fixed with a shell
+function at 82; then for each chapter, one after another in story order: scaffold + audit + narrate as one
+command, then `yap render ... --only <id>` as its own foreground command (105 to 143, 162 to 201, 222 to 258, 277 to
+312). No call used `run_in_background`; every Bash call for narrate and render passed `timeout=600000`. 315: the
+Step 6 confirm run over all four ids in story order, exit 0, each `ready (already rendered)`. 319: hand-off. The
+reply, verbatim:
+
+> I made a video in four chapters (about 2 minutes) explaining how adding a todo works. It follows one todo from
+> the `POST /todos` request in `server.js`, through `addTodo` in `add.js` and the save in `storage.js`, to the 201
+> reply. Every claim in it passed the source check against your code, and all four chapters are rendered. Watch
+> them in this order: (the four `.yap/add-todo/chapters/<id>/chapter.mp4` paths, in story order) A browser player
+> for watching them is coming in a later version.
+>
+> Separately, the Mem0 connector on claude.ai needs authorizing in your claude.ai connector settings. Until then
+> its tools can't be used.
+
+R1 is fixed: the turn ended only after the last render and the confirm run. The price is that nothing overlaps
+any more: each chapter costs about 15 to 20 s of narrate plus 35 to 39 s of render, back to back. A 3-minute video
+(about 7 chapters) would take an estimated 7 to 8 minutes, under 15 (extrapolated, not measured). Because renders
+no longer run beside a narrate, R3's trigger did not occur in this run; all four chapters have word timing, which
+says nothing new about R3's fix.
+
+### Mechanical checks
+
+`node tests/acceptance-check.cjs /tmp/yap-verify-ReGx`: exit 0, "all checks pass", 40 of 40 (files, audit,
+data-duration vs padded WAV 30.6/30.554, 26.2/26.123, 31.4/31.365, 25.7/25.611, mp4 duration equal, aac 48 kHz,
+mean -22.3 to -24.2 dB, no position references, 13 to 15 valid cues each). `yap audit <chapter.json> --root .`
+exit 0 on all four. `npx --yes hyperframes@0.8.112 check` by hand on each: exit 0, 0 errors, 0 layout issues;
+warnings only: contrast on dimmed highlighted lines (F10) and `clip_media_fit` on two chapters (F9).
+
+### Long source lines (R2)
+
+Claude measured line widths before writing specs (`awk` over `server.js`, `add.js`, `storage.js` at 51 s: seven
+lines over 68 columns: `server.js` 2, 20, 32, 34; `add.js` 10, 11; `storage.js` 6), said "I'll keep the long lines
+off the code cards", and did. All 36 card lines across 9 cards are exact copies of their file lines (longest 62
+columns); no line was cut, no `…` was used, no line was reworded. Two cards, as `chapter.json` gives them to the
+scaffold, against the file:
+
+- `giving-the-todo-an-id`, `storage.js` 8 to 12: `// Reads every saved todo; a missing file means an empty
+  list.` / `function loadTodos() {` / `  if (!fs.existsSync(DATA_FILE)) return [];` /
+  `  return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));` / `}`. Each equals `storage.js` lines 8 to 12.
+- `saving-and-replying`, `storage.js` 14 to 17: `// Writes the whole list back to the file.` /
+  `function saveTodos(todos) {` / `  fs.writeFileSync(DATA_FILE, JSON.stringify(todos, null, 2));` / `}`. Each
+  equals `storage.js` lines 14 to 17.
+
+So the live run shows no reworded or unmarked-cut line, but it did not exercise the `…` path. That path and the
+rejections were checked on copies of `saving-and-replying/chapter.json` with `add.js` line 11 (85 columns) added
+to its first card, audited against the run's project: `  const todo = { id, title: text, done: false,…` exit 0;
+the same without `…` exit 1 (`scene[1] line 11: truncated without …`); `... done: false, ... }` exit 1 (`text
+differs from the repository line`); a right text under the wrong line number exit 1.
+
+One cost of keeping long lines off: `giving-the-todo-an-id` narrates `add.js` lines 10 and 11 ("an empty list
+means the new todo gets the id 1", "the biggest id already used and adds one", "builds the todo with that id")
+but its only code card is `storage.js` 8 to 12, shown with steps and a callout instead. The chapter about the id
+never shows the id line. Not a defect: the skill offers "pick lines that fit" and the `…` cut as equal choices.
+
+### Memory
+
+Swap used 8.9 to 9.2 GB of 10 GB through the run; free pages 886 (about 14 MB) to 62,850 (about 1 GB); the doctor
+said "0.2 GB free, so 1 at a time". No crash, no `tts failed`, no whisper fallback.
+
+### Findings from the verification
+
+| # | What happened | Evidence | Severity | Status |
+|---|---|---|---|---|
+| R1 | Fixed: renders run in the foreground one at a time, the turn ends after the confirm run, the process exits with 4 of 4 rendered and a hand-off | timeline above | - | Verified |
+| R2 | Fixed: audit compares card lines with the file; live run all exact; `…` cut accepted, unmarked cut, rewording and wrong line number rejected | probes above | - | Verified (the `…` path by probe only; Claude avoided long lines) |
+| V1 | The skill never tells Claude to raise the Bash tool's time limit for `yap render`. Claude passed `timeout=600000` on its own; with the 2-minute default a slower render (longer chapter, heavier swap) could be stopped mid-render. | transcript; renders here took 35 to 39 s | Minor (hypothesis, not observed) | Left |
+| V2 | Claude wrote its spec generator to `/tmp/yap-gen-add-todo.cjs`, outside the project (second time, after `/tmp/yapgen/gen.cjs` in the re-run experiment). Removed afterwards. | transcript at 75 s | Minor | Left |
+| F13 | Recurs a third time: `Y="node .../yap.cjs"; $Y scaffold` exits 127 in zsh; recovered with a shell function. | transcript at 79 s | Minor | Left (recurring) |
+| R6, F14 | The hand-off ends with a sentence about the Mem0 connector, which is not part of the skill's hand-off. | reply above | Minor | Left |
