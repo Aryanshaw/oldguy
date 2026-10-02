@@ -115,3 +115,37 @@ test('no file uses a banned word or promises a command that does not exist', () 
     });
   }
 });
+
+// Every file under skills/, at any depth, as { file, text }.
+function everySkillFile(dir = path.join(__dirname, '..', 'skills')) {
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    const full = path.join(dir, e.name);
+    return e.isDirectory() ? everySkillFile(full) : [{ file: full, text: fs.readFileSync(full, 'utf8') }];
+  });
+}
+
+test('no skill file sends Claude to a hyperframes-* skill yap does not ship, or to search the disk', () => {
+  for (const { file, text } of everySkillFile()) {
+    text.split('\n').forEach((line, i) => {
+      assert.ok(!/\bhyperframes-[a-z]/i.test(line), `${path.relative(SKILL_DIR, file)}:${i + 1} names a hyperframes-* skill: ${line}`);
+      assert.ok(!/\bfind\s+\//.test(line), `${path.relative(SKILL_DIR, file)}:${i + 1} searches the disk: ${line}`);
+    });
+  }
+});
+
+// The flags each Hyperframes 0.8.112 command really has (from its --help, ACCEPTANCE.md open item e).
+const HYPERFRAMES_FLAGS = { check: ['--snapshots', '--at-transitions'], snapshot: ['--frames', '--at'] };
+
+test('render.md states the pinned check and snapshot commands inline, using only flags 0.8.112 has', () => {
+  const text = readText(path.join(REFS_DIR, 'render.md'));
+  for (const cmd of Object.keys(HYPERFRAMES_FLAGS)) {
+    assert.ok(text.includes(`npx --yes hyperframes@0.8.112 ${cmd} `), `render.md must show npx --yes hyperframes@0.8.112 ${cmd}`);
+  }
+  for (const { file, text: body } of everySkillFile()) {
+    for (const m of body.matchAll(/hyperframes@[\d.]+ (check|snapshot)\b([^\n`]*)/g)) {
+      for (const flag of m[2].match(/--[a-z-]+/g) || []) {
+        assert.ok(HYPERFRAMES_FLAGS[m[1]].includes(flag), `${path.basename(file)}: hyperframes ${m[1]} has no ${flag}`);
+      }
+    }
+  }
+});

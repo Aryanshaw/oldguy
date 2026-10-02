@@ -125,8 +125,8 @@ beat timings, the captions and the chapter page.
 
 ## Step 6: Gates and render
 
-**Read:** [references/render.md](references/render.md)
-**Read:** the `hyperframes-cli` skill, for the exact `check` and `snapshot` usage.
+**Read:** [references/render.md](references/render.md) (it has every Hyperframes command you need; there is no
+other skill to read and nothing to search for)
 
 Dry-run the render, run `hyperframes check` and snapshots on every chapter page, fix what they report, then run
 `yap render`. It re-checks the narration text, the claims and the build record and skips any chapter that fails.

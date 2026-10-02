@@ -26,7 +26,8 @@ Redo means: fix the spec, delete the chapter folder (`rm -r .yap/<slug>/chapters
 
 ## 2. Hyperframes check
 
-Read the `hyperframes-cli` skill for the exact flags. For each chapter page:
+Everything you need from Hyperframes is the two commands in this section and the next; do not look for another
+skill or search the disk. For each chapter page:
 
 ```
 npx --yes hyperframes@0.8.112 check .yap/<slug>/chapters/<id>
