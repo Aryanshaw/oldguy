@@ -4,7 +4,7 @@ const fsReal = require('node:fs');
 const osReal = require('node:os');
 const path = require('node:path');
 const { runDoctor, writeMarker } = require('../lib/doctor.cjs');
-const { runDoctorCli } = require('../lib/doctor-cli.cjs');
+const { runDoctorCli, realExec } = require('../lib/doctor-cli.cjs');
 
 const GB = 1024 ** 3;
 const DATA = '/data';
@@ -201,4 +201,74 @@ test('writeMarker creates doctor-ok inside the data directory', () => {
   } finally {
     fsReal.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('ffmpeg killed by a signal still shows the dyld text and the library fix', async () => {
+  const m = machine({ exec: { ffmpeg: () => ({ code: null, signal: 'SIGABRT', stdout: '', stderr: DYLD, timedOut: false }) } });
+  const c = byName(await runDoctor(m.deps), 'ffmpeg');
+  assert.equal(c.ok, false);
+  assert.match(c.detail, /Library not loaded: \/opt\/homebrew\/opt\/x265\/lib\/libx265\.216\.dylib/);
+  assert.match(c.fix, /library ffmpeg needs is missing/);
+});
+
+test('a timed-out ffmpeg is not ok and says it timed out', async () => {
+  const m = machine({ exec: { ffmpeg: () => ({ code: null, signal: 'SIGTERM', stdout: '', stderr: '', timedOut: true }) } });
+  const c = byName(await runDoctor(m.deps), 'ffmpeg');
+  assert.equal(c.ok, false);
+  assert.match(c.detail, /timed out/);
+});
+
+test('real exec wrapper resolves for a signal kill, a non-zero exit, a timeout and a missing program', async () => {
+  const killed = await realExec(process.execPath, ['-e', "process.kill(process.pid,'SIGKILL')"], { timeout: 10000 });
+  assert.equal(killed.code, null);
+  assert.equal(killed.signal, 'SIGKILL');
+  assert.equal(killed.timedOut, false);
+  const exited = await realExec(process.execPath, ['-e', 'process.exit(3)'], { timeout: 10000 });
+  assert.equal(exited.code, 3);
+  assert.equal(exited.signal, null);
+  const slow = await realExec(process.execPath, ['-e', 'setTimeout(()=>{},60000)'], { timeout: 200 });
+  assert.equal(slow.timedOut, true);
+  const missing = await realExec('yap-no-such-program-xyz', [], { timeout: 1000 });
+  assert.equal(missing.code, null);
+  assert.match(missing.stderr, /ENOENT/);
+  const fine = await realExec(process.execPath, ['-e', "process.stdout.write('hi')"], { timeout: 10000 });
+  assert.deepEqual([fine.code, fine.stdout, fine.timedOut], [0, 'hi', false]);
+});
+
+// Runs the doctor command with the real marker writer into a temp data dir; returns exit code and whether the marker exists.
+async function cliWithMarker(over) {
+  const dir = fsReal.mkdtempSync(path.join(osReal.tmpdir(), 'yap-doctor-'));
+  try {
+    const py = `${dir}/venv/bin/python`;
+    const m = machine({ ...over, files: { [py]: 1 }, exec: { [py]: () => OK, ...over.exec } });
+    const code = await runDoctorCli(['--data-dir', dir], { ...m.deps, stdout: () => {}, stderr: () => {} , marker: require('../lib/doctor.cjs').writeMarker });
+    return { code, marked: fsReal.existsSync(path.join(dir, 'doctor-ok')) };
+  } finally {
+    fsReal.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+test('a missing whisper-cli still exits 0 and writes the marker', async () => {
+  const r = await cliWithMarker({ exec: { 'whisper-cli': () => ({ code: 127, stdout: '', stderr: 'nope' }) } });
+  assert.deepEqual(r, { code: 0, marked: true });
+});
+
+test('a missing or unreadable Hyperframes Chrome check still exits 0 and writes the marker', async () => {
+  const absent = await cliWithMarker({ exec: { hyperframes: () => ({ code: 0, stdout: JSON.stringify({ ok: true, checks: [] }), stderr: '' }) } });
+  assert.deepEqual(absent, { code: 0, marked: true });
+  const junk = await cliWithMarker({ exec: { hyperframes: () => ({ code: 0, stdout: 'garbage', stderr: '' }) } });
+  assert.deepEqual(junk, { code: 0, marked: true });
+});
+
+test('data dir: CLAUDE_PLUGIN_DATA, else <cwd>/.yap, and --data-dir beats both', async () => {
+  // Machine whose venv exists under the directory the doctor should pick.
+  const run = async (args, env, cwd, dir) => {
+    const m = machine({ files: { [`${dir}/venv/bin/python`]: 1 }, exec: { [`${dir}/venv/bin/python`]: () => OK } });
+    let marked;
+    const code = await runDoctorCli(args, { ...m.deps, env, cwd, marker: (d) => { marked = d; }, stdout: () => {}, stderr: () => {} });
+    return { code, marked };
+  };
+  assert.deepEqual(await run([], { CLAUDE_PLUGIN_DATA: '/plugin' }, '/work', '/plugin'), { code: 0, marked: '/plugin' });
+  assert.deepEqual(await run([], {}, '/work', '/work/.yap'), { code: 0, marked: '/work/.yap' });
+  assert.deepEqual(await run(['--data-dir', '/flag'], { CLAUDE_PLUGIN_DATA: '/plugin' }, '/work', '/flag'), { code: 0, marked: '/flag' });
 });
