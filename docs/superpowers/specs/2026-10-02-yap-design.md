@@ -225,6 +225,19 @@ The server joins the chapters in manifest order with ffmpeg and writes, to a fol
 user picks: `<slug>.mp4`, `script.md`, `sources.json`. If some chapters are still
 `draft`, export offers to wait for the full-quality render or to export drafts.
 
+### 4.10 House style (v1 default)
+
+- **Look:** retro yellow, orange and black, for the player and as the scene kit's
+  default palette. The chapter segments, the pending ⏳ block and the buttons all use
+  it. The palette is a theme file, so a user can swap it.
+- **Voice:** polite, cheery and efficient. It explains hard ideas in short, digestible
+  chapters, like a friendly retro helper. The narration prompt in
+  `references/narrate.md` carries this tone.
+- **Mascot:** an original retro character with its own silhouette (for example a
+  wind-up alarm clock). In v1 it is a logo and an optional corner badge only. It must
+  not copy any existing character. A speaking, animated host is a v2 idea.
+- **Brand line:** "Claude yaps. You watch."
+
 ## 5. Generating a video (the skill's workflow)
 
 The skill is one `SKILL.md` that orchestrates the steps below; each step's detail is in
