@@ -1,7 +1,8 @@
 # Phase 1 summary: the generator
 
-Date: 2026-10-03. Branch `phase-1-generator`, 60 commits over the spec and Phase 0 work (first code commit
-`0459a17`, last `6a22b69`). `npm test`: 304 tests, 304 pass, 0 fail (Node 26.7.0, 1.5 s, no network).
+Date: 2026-10-03. Branch `phase-1-generator`: 41 commits above the plan commit `128fb0b` (first `0459a17`,
+last `6a22b69`), 60 in the repository in all counting the spec and Phase 0. `npm test`: 304 tests, 304 pass,
+0 fail (Node 26.7.0, 1.5 s, no network).
 
 This document is the roll-up the plan's Task 12 asks for. It is written for a reader who was not here: every
 term is explained the first time it is used. The detailed numbers and the real runs are in
@@ -113,7 +114,7 @@ chapter folders. One of them, sizes from the kept run folder:
 .yap/add-todo/chapters/checking-the-title/
   chapter.json      3,100 B   4 sources, 5 sentences (1 framing, 4 claims), 3 scene pieces
   narration.txt       429 B
-  narration.wav 1,253,932 B   26.2 s after padding
+  narration.wav 1,253,932 B   26.123 s after padding, so data-duration 26.2
   beats.json          841 B   timing "words", 5 beats
   captions.vtt        870 B   14 cues
   captions.json     7,345 B
@@ -197,7 +198,8 @@ real-run fix waves, then a final fix pass with a scoped re-review.
 - **Fix rounds.** Per-task: Tasks 1, 4, 6, 7 and 10 took one round each; Task 9 (the chapter pipeline) took
   three. After the real runs: fix wave 1 (five findings F1 to F5), fix wave 2 (R1, R2), and a final pass of four
   items from the whole-branch review (time-limit guidance, captions in the fingerprint, data-dir trust
-  boundary, the verified commit). Twelve fix commits in all.
+  boundary, the verified commit). Twelve fix rounds in all; 18 of the branch's 41 commits carry a `fix:`
+  subject, and several more fixes landed as `feat:` or `docs:` (for example `c8d2e5f`, `19af720`, `8ca8b53`).
 - **Classifier blocks.** Claude Code's auto-mode classifier blocked three review dispatches: one adversarial
   path-probing review of the audit (Task 1, not re-issued) and two Task-2-era reviewer prompts that asked the
   reviewer to run code. Reviewers worked read-only from then on; the trade-off is that every reviewer claim
