@@ -10,7 +10,7 @@ const { buildRecord } = require('../lib/build-record.cjs');
 const { scaffoldChapter } = require('../lib/chapter.cjs');
 const { narrateChapter } = require('../lib/narrate.cjs');
 
-const CHANGED = 'chapter changed after narrate: re-run narrate';
+const CHANGED = 'chapter changed after narrate: fix the spec, delete the chapter folder, then scaffold, audit and narrate again';
 
 const GOOD_SOURCE = { id: 's1', file: 'app.js', lines: [1, 1], quote: 'start()' };
 const CLAIM = { text: 'It calls start.', kind: 'claim', source_ids: ['s1'] };
@@ -142,7 +142,7 @@ test('folders without chapter.json and loose files are ignored; results follow f
   assert.deepEqual(results.map((r) => r.id), ['alpha', 'zeta']);
 });
 
-test('narration.txt edited after the audit: never rendered, failed with the re-scaffold message', async (t) => {
+test('narration.txt edited after the audit: never rendered, failed with the redo-the-chapter message', async (t) => {
   const { repo, chapters } = workspace(t);
   addChapter(chapters, 'edited', { narration: 'It calls stop.\n' });
   addChapter(chapters, 'extra', { narration: `${CLAIM.text} And then more.\n` });
@@ -152,7 +152,7 @@ test('narration.txt edited after the audit: never rendered, failed with the re-s
   assert.deepEqual(calls, ['spacing']);
   for (const r of results.slice(0, 2)) {
     assert.equal(r.status, 'failed');
-    assert.match(r.reason, /narration\.txt no longer matches chapter\.json: edit chapter\.json and re-scaffold/);
+    assert.match(r.reason, /narration\.txt no longer matches chapter\.json: fix the spec, delete the chapter folder, then scaffold, audit and narrate again/);
   }
   assert.equal(results[2].status, 'ready');
 });

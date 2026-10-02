@@ -59,6 +59,6 @@ yap audit .yap/<slug>/chapters/<id>/chapter.json --root <repo>
 
 `--root` here is the user's repository, not the `.yap` folder. Exit 0 means every source and sentence holds.
 Exit 1 prints one failure per line, such as `s1: quote not on lines 10-14` or `sentence 2: claim has no source ids`.
-Fix the spec, re-scaffold and run it again. Exit 2 means the file could not be read.
+Fix the spec, delete the chapter folder, run `yap scaffold` and audit again. Exit 2 means the file could not be read.
 
 **Gate:** `yap audit` exits 0 for every chapter, and every quote was copied from the file.

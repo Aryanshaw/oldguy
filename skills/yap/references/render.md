@@ -20,7 +20,8 @@ The reasons and what they mean:
 | `not narrated yet` | run `yap narrate` on it |
 | `chapter changed after narrate` | something changed since narrate: redo the chapter |
 
-Redo means: fix the spec, delete the chapter folder, scaffold, audit, narrate (see [narrate.md](narrate.md)).
+Redo means: fix the spec, delete the chapter folder (`rm -r .yap/<slug>/chapters/<id>`), then `yap scaffold`,
+`yap audit`, `yap narrate` (see [narrate.md](narrate.md)).
 
 ## 2. Hyperframes check
 
@@ -64,7 +65,8 @@ again on each run, so finish fixing before you run it.
 
 1. Read the reason on the `failed` line.
 2. Run `yap doctor`; show any fix text to the user and stop if a required check fails.
-3. Run `yap render` again, with `--cap 1` if memory looked tight. Other chapters are not affected.
+3. Run `yap render` again, with `--cap 1` if memory looked tight. Every chapter that passes the checks renders
+   again on each run, not only the one that failed.
 
 ## 6. Hand-off
 

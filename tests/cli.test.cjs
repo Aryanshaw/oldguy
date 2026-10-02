@@ -81,7 +81,7 @@ test('scaffold creates the chapter, prints its folder, and refuses a second run 
   assert.deepEqual(fs.readdirSync(dir).sort(), ['chapter.json', 'narration.txt']);
   const again = yap('scaffold', specFile, '--root', root);
   assert.equal(again.status, 1);
-  assert.match(again.stderr, /^yap scaffold: .*already exists/);
+  assert.match(again.stderr, /^yap scaffold: .*already exists: delete .* and scaffold again/);
 });
 
 test('scaffold with a bad callout direction exits 1 naming the allowed ones', (t) => {

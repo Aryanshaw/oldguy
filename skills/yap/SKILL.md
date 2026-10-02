@@ -29,12 +29,14 @@ lists every command; each command prints its own usage when called wrongly.
 5. **Never install the tools the doctor checks for.** If one is missing, show the user the doctor's `fix:` line and
    stop. No package managers, no system changes. (The `npx --yes hyperframes@...` calls in these steps are fine:
    they fetch the pinned Hyperframes into npm's cache and change nothing else.)
-6. **Never mention money or payment** anywhere: not in narration, not in chat, not in any file you write.
+6. **Never say what making a Yap video uses up or charges.** No amounts, estimates, totals or budgets about Yap
+   itself, in narration, chat or any file. Explaining the repository's own payment or checkout code is fine: it is
+   just another flow, so narrate what it really does.
 7. **Every sentence is one sentence**, every claim sentence has a source, every chapter runs 20 to 40 seconds and
-   stands alone. The CLI checks enforce the sentence and source rules; `yap narrate` prints each chapter's
-   seconds so you can check the length. Do not work around either.
-8. **Never edit `chapter.json` or `narration.txt` after `yap narrate`.** Fix the spec, delete the chapter folder,
-   scaffold and narrate again.
+   stands alone. The CLI checks enforce the sentence and source rules; narrating prints each chapter's seconds
+   so you can check the length. Do not work around either.
+8. **Never edit `chapter.json` or `narration.txt` after narrating.** Redo the chapter instead (see "Redoing a
+   chapter" below).
 
 ## Where things live
 
@@ -145,11 +147,21 @@ Then say in one line that the browser player arrives in a later version. Mention
 
 ---
 
+## Redoing a chapter
+
+The one recovery path, whatever failed (an audit failure, a wrong quote, a bad beat, a changed file, a chapter that
+runs too long). The CLI's own failure messages say the same thing:
+
+1. Fix `.yap/<slug>/specs/<id>.json`. Never remove a failing claim by relabelling it `framing`.
+2. Delete the chapter folder: `rm -r .yap/<slug>/chapters/<id>` (scaffold never overwrites).
+3. Run `yap scaffold`, then `yap audit`, then `yap narrate` for that chapter. Narrate does not audit; skipping the
+   audit makes speech for unchecked claims.
+
 ## When something fails
 
-- A claim fails the audit: fix the spec (the quote, the lines, or the sentence), delete that chapter's folder, run
-  `yap scaffold` and `yap narrate` again. Never remove a failing claim by relabelling it `framing`.
-- A render fails: run `yap doctor`, show any fix text, and retry `yap render`. Other chapters are unaffected.
+- A claim fails the audit, or a chapter is blocked at render: redo the chapter as above.
+- A render fails: run `yap doctor`, show any fix text, and retry `yap render`. Every chapter that passes the checks
+  renders again on each run, not just the failed one.
 - The feature is not in the code: hard rule 3. Do not pad the video with guesses.
 
 ## Voice

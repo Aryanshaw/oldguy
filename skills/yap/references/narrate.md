@@ -7,7 +7,8 @@ the audit approved.
 
 Polite, cheery and efficient: a friendly helper who likes explaining things. Short sentences. Plain words. Name the
 thing on screen ("this line", "the `add` function") rather than describing a picture. Say what happens and why,
-once, and move on. No filler ("so basically", "as you can see"), no jokes at the code's expense, no money talk.
+once, and move on. No filler ("so basically", "as you can see"), no jokes at the code's expense, and nothing about
+what making the video uses up (the repository's own payment code is a flow like any other: explain it).
 Audience is a beginner: explain a term the first time it appears, in half a sentence.
 
 Each entry is exactly one sentence, each chapter stands alone, and no sentence mentions another chapter or a time.
@@ -48,11 +49,12 @@ on purpose. You never write or edit `build.json` by hand.
 
 ## Redoing a chapter
 
-Never edit `chapter.json` or `narration.txt` after narrate. Instead:
+Never edit `chapter.json` or `narration.txt` after narrate. `chapter.json` may be fixed before narrate; after it,
+the CLI messages and this list agree on the one path:
 
 1. Fix `.yap/<slug>/specs/<id>.json`.
-2. Delete `.yap/<slug>/chapters/<id>/` (scaffold never overwrites).
-3. Run `yap scaffold`, `yap audit`, `yap narrate` again for that chapter only.
+2. Delete the chapter folder: `rm -r .yap/<slug>/chapters/<id>` (scaffold never overwrites).
+3. Run `yap scaffold`, then `yap audit`, then `yap narrate` for that chapter only.
 
 ## If it fails
 

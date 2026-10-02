@@ -93,6 +93,18 @@ test('every reference ends with a Gate line', () => {
   }
 });
 
+test('the money rule lets Claude explain the repository\'s own payment code', () => {
+  assert.ok(readText(SKILL).includes('Explaining the repository\'s own payment or checkout code is fine'),
+    'SKILL.md must say that explaining the repository\'s own payment or checkout code is fine');
+});
+
+test('every SKILL.md paragraph that re-runs yap narrate also names yap audit', () => {
+  const paragraphs = readText(SKILL).split(/\n\s*\n/);
+  for (const p of paragraphs) {
+    if (/`yap narrate`/.test(p)) assert.ok(/`yap audit`/.test(p), `paragraph mentions yap narrate without yap audit:\n${p}`);
+  }
+});
+
 test('no file uses a banned word or promises a command that does not exist', () => {
   for (const { file, text } of allFiles()) {
     text.split('\n').forEach((line, i) => {

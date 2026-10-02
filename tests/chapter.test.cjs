@@ -75,7 +75,7 @@ test('scaffold refuses to overwrite an existing chapter and leaves it untouched'
   const root = tempRoot(t);
   const dir = scaffoldChapter(spec(root));
   const before = fs.readFileSync(path.join(dir, 'chapter.json'), 'utf8');
-  assert.throws(() => scaffoldChapter(spec(root, { title: 'Other' })), /already exists/);
+  assert.throws(() => scaffoldChapter(spec(root, { title: 'Other' })), /already exists: delete .* and scaffold again/);
   assert.equal(fs.readFileSync(path.join(dir, 'chapter.json'), 'utf8'), before);
 });
 
@@ -220,9 +220,9 @@ test('checkNarrationText: narration matching the chapter sentences passes, CRLF 
   assert.doesNotThrow(() => checkNarrationText('  One   thing. Another thing.', sentences));
 });
 
-test('checkNarrationText: a changed word or an extra sentence fails with the re-scaffold message', () => {
+test('checkNarrationText: a changed word or an extra sentence fails with the redo-the-chapter message', () => {
   const sentences = [{ text: 'One thing.' }, { text: 'Another thing.' }];
-  const message = /narration\.txt no longer matches chapter\.json: edit chapter\.json and re-scaffold/;
+  const message = /narration\.txt no longer matches chapter\.json: fix the spec, delete the chapter folder, then scaffold, audit and narrate again/;
   assert.throws(() => checkNarrationText('One thing. Another stuff.', sentences), message);
   assert.throws(() => checkNarrationText('One thing. Another thing. A third.', sentences), message);
 });

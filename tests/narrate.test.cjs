@@ -184,7 +184,7 @@ test('narrate: a changed word in narration.txt fails before any tts is run', asy
   const file = path.join(dir, 'narration.txt');
   fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replace('button', 'switch'));
   const { run, calls } = fakeRun();
-  await assert.rejects(narrateChapter(dir, { run, venvPython: PYTHON, whisperAvailable: true }), /narration\.txt no longer matches chapter\.json: edit chapter\.json and re-scaffold/);
+  await assert.rejects(narrateChapter(dir, { run, venvPython: PYTHON, whisperAvailable: true }), /narration\.txt no longer matches chapter\.json: fix the spec, delete the chapter folder, then scaffold, audit and narrate again/);
   assert.equal(calls.length, 0);
   assert.deepEqual(fs.readdirSync(dir).sort(), SCAFFOLDED);
 });
