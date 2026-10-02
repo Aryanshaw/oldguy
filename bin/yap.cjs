@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 // yap CLI entry point: looks the command up in a table and runs it.
 
+const { runAudit } = require('../lib/audit-cli.cjs');
+
 // Stand-in for commands built in later tasks; swap a row's run to implement it.
 function notImplemented(name) {
   return () => {
@@ -12,7 +14,7 @@ function notImplemented(name) {
 // One row per command; later tasks only replace a row's run function.
 const COMMANDS = {
   doctor: { summary: 'check that the tools yap needs are installed', run: notImplemented('doctor') },
-  audit: { summary: 'check a video project against the house rules', run: notImplemented('audit') },
+  audit: { summary: 'check that every claim in a chapter points at real code', run: runAudit },
   beats: { summary: 'split narration into timed beats', run: notImplemented('beats') },
   captions: { summary: 'build captions from a transcript', run: notImplemented('captions') },
   'pad-wav': { summary: 'add silence to the end of a narration wav', run: notImplemented('pad-wav') },
@@ -27,8 +29,8 @@ function printHelp() {
   process.stdout.write(`usage: yap <command> [args]\n\ncommands:\n${lines.join('\n')}\n`);
 }
 
-// Runs the requested command and returns the exit code.
-function main(argv) {
+// Runs the requested command (waiting if it is async) and returns the exit code.
+async function main(argv) {
   const [name] = argv;
   if (name === undefined || name === '--help' || name === '-h') {
     printHelp();
@@ -39,7 +41,16 @@ function main(argv) {
     process.stderr.write(`usage: yap <${Object.keys(COMMANDS).join('|')}> (try --help)\n`);
     return 2;
   }
-  return command.run(argv.slice(1)) ?? 0;
+  return (await command.run(argv.slice(1))) ?? 0;
 }
 
-process.exitCode = main(process.argv.slice(2));
+// A command that crashes or rejects must not look like success.
+main(process.argv.slice(2)).then(
+  (code) => {
+    process.exitCode = code;
+  },
+  (err) => {
+    process.stderr.write(`yap: ${err && err.message ? err.message : err}\n`);
+    process.exitCode = 2;
+  },
+);
