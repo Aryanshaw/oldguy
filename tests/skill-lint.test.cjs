@@ -157,3 +157,23 @@ test('SKILL.md runs chapters one at a time in story order and renders each with 
   assert.ok(/`yap render [^`]*--only <id>`/.test(text), 'SKILL.md must render each chapter with `yap render ... --only <id>`');
   assert.ok(/--only <all ids in story order>/.test(text), 'SKILL.md must end with one --only run over every id in story order');
 });
+
+// The rule that keeps a headless session alive until every render it started has finished.
+const NEVER_END_TURN = 'Never end your turn while a render is running.';
+
+test('no skill file runs a render in the background, with &, or through run_in_background', () => {
+  for (const { file, text } of everySkillFile()) {
+    text.split('\n').forEach((line, i) => {
+      const where = `${path.relative(SKILL_DIR, file)}:${i + 1}`;
+      assert.ok(!/background/i.test(line), `${where} mentions running something in the background: ${line}`);
+      assert.ok(!/run_in_background/.test(line), `${where} mentions run_in_background: ${line}`);
+      assert.ok(!/yap render[^`\n]*&/.test(line), `${where} puts a yap render behind &: ${line}`);
+    });
+  }
+});
+
+test('SKILL.md says Claude never ends its turn while a render is running, and renders in the foreground', () => {
+  const text = readText(SKILL);
+  assert.ok(text.includes(NEVER_END_TURN), `SKILL.md must contain "${NEVER_END_TURN}"`);
+  assert.ok(/foreground/.test(text), 'SKILL.md must say renders run in the foreground');
+});

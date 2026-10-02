@@ -36,8 +36,8 @@ cuts captions from the audited sentences, and builds the chapter page. On succes
 
 and the folder gains `narration.wav`, `beats.json`, `captions.vtt`, `captions.json`, `index.html` and
 `build.json`. Run it once per chapter, in story order, right after that chapter's audit. As soon as it prints
-`narrated`, start that chapter's render (see [render.md](render.md)) and move on to the next chapter. It takes a
-while per chapter; never run two narrates at once.
+`narrated`, render that chapter (see [render.md](render.md)) in the foreground, wait for the render to finish, and
+only then move on to the next chapter. It takes a while per chapter; never run two narrates at once.
 
 Check the printed seconds: a chapter under 20 s or over 40 s goes back to the storyboard (add or trim sentences
 in the spec, then redo the chapter).

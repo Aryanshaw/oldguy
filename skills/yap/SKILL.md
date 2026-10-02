@@ -37,6 +37,9 @@ lists every command; each command prints its own usage when called wrongly.
    so you can check the length. Do not work around either.
 8. **Never edit `chapter.json` or `narration.txt` after narrating.** Redo the chapter instead (see "Redoing a
    chapter" below).
+9. **Never end your turn while a render is running.** Run every `yap render` in the foreground, as a normal
+   command, and wait for it to finish before doing anything else. The session can end when your answer ends, and a
+   render still running then is killed, so no video and no hand-off arrive.
 
 ## Where things live
 
@@ -122,27 +125,28 @@ playable long before the last one is written. For each chapter:
 1. `yap scaffold .yap/<slug>/specs/<id>.json --root .yap/<slug>` (it prints the chapter folder).
 2. Run `yap audit` on the chapter's `chapter.json` with `--root <repo>`; it must exit 0. Then run `yap narrate`
    on the chapter folder (never two narrates at once) and check the printed seconds are 20 to 40.
-3. Start `yap render .yap/<slug>/chapters --root <repo> --only <id>` for that chapter. It may run in the background
-   while you move on to the next chapter. Run at most as many renders at once as the doctor's "Free RAM" line
-   says ("N at a time"); when that many are running, wait for one to finish before starting another.
+3. Run `yap render .yap/<slug>/chapters --root <repo> --only <id>` for that chapter in the foreground and wait
+   for it to finish (hard rule 9). Only then move on to the next chapter. One render at a time.
 
-When a background render finishes, read its output. `<id>: ready` means `chapter.mp4` is done. A `failed` line
-means redo that chapter (below) and start its render again.
+Read the render's output. `<id>: ready` means `chapter.mp4` is done and playable. A `failed` line means redo that
+chapter (below) and render it again before moving on.
 
-**Gate:** every chapter was scaffolded, audited, narrated and had its render started, in story order.
+**Gate:** every chapter was scaffolded, audited, narrated and rendered, one at a time, in story order.
 
 ---
 
 ## Step 6: Confirm every chapter
 
-When no render is still running, run one last render over every chapter, ids in story order:
+After the last chapter's render has finished, run one last render over every chapter, ids in story order, also in
+the foreground:
 
 ```
 yap render .yap/<slug>/chapters --root <repo> --only <all ids in story order>
 ```
 
 (`--only` takes the ids separated by commas.) Chapters already rendered from their current build print
-`ready (already rendered)` and are not rendered again; anything else is checked and rendered now.
+`ready (already rendered)` and are not rendered again; anything else is checked and rendered now. Wait for it to
+finish before you write the hand-off.
 
 **Gate:** that run exited 0 with `ready` for every chapter, and each `chapter.mp4` exists.
 

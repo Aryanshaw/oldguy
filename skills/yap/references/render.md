@@ -5,16 +5,16 @@ Purpose: prove every chapter page is correct and still matches its audited text,
 
 ## 1. Render each chapter as soon as it is narrated
 
-Right after `yap narrate` prints `narrated` for a chapter, start its render:
+Right after `yap narrate` prints `narrated` for a chapter, render it, in the foreground, and wait for it to finish:
 
 ```
 yap render .yap/<slug>/chapters --root <repo> --only <id>
 ```
 
 `--root` is the user's repository. This is the only way a chapter is rendered; never call the render tool
-yourself. It may run in the background while you write, scaffold, audit and narrate the next chapter. Keep at most
-as many renders running as the doctor's "Free RAM" line says ("N at a time"); when that many are running, wait for
-one to finish before starting another.
+yourself. Run it as a normal command that you wait for: never detach it and never end your turn while it runs (the
+session can end with your answer, and a running render dies with it). One render at a time; move on to the next
+chapter only once it has printed its result.
 
 For each chapter it runs four gates, in this order, and stops at the first that fails: the narration text still
 matches `chapter.json`, the claim audit, the build record (nothing changed since narrate), and the layout check
@@ -51,7 +51,8 @@ label, a late first beat): fix the spec and redo that chapter. Never patch `inde
 
 ## 3. Confirm every chapter
 
-When no render is still running, run one render over all chapters, ids in story order separated by commas:
+After the last chapter's render has finished, run one render over all chapters, ids in story order separated by
+commas, also in the foreground:
 
 ```
 yap render .yap/<slug>/chapters --root <repo> --only <id1>,<id2>,<id3>
