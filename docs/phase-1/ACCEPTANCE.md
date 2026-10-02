@@ -234,3 +234,204 @@ here since it stopped at scope.
 | F13 | Claude's first scaffold call failed because it put the command in a variable (`$Y scaffold`), which zsh does not split; it fixed this itself with a shell function. | transcript at 64 s | Minor | Left |
 | F14 | Hand-off went slightly beyond Step 7: it added a sentence about the checks and the wrapped lines. No extra commands were mentioned. | reply above | Minor | Left |
 | F15 | When run from a shell that has the owner's user settings, the nested Claude picks up user plugins and hooks (including one that changes reply style). Real users will have the same mix, so the voice can be affected by unrelated plugins. | probe 1 transcript (`CAVEMAN MODE ACTIVE` hook) | Minor | Left: worth knowing; this run isolated it with `--setting-sources project,local` |
+
+## Re-run after the fix wave
+
+Date: 2026-10-03, branch `phase-1-generator` at `c8d2e5f` (fixes `c154361` F1, `9263977` F2, `9dfd292` F3,
+`f1bfcfa` F4, `c8d2e5f` F5). Same machine, same harness (`.superpowers/acceptance/rerun/run.sh`, a copy of `run.sh`
+that also records `date`; logs in `.superpowers/acceptance/rerun/`). `npm test`: 270 of 270 before, 272 of 272
+after the two fixes below.
+
+### Verdict
+
+| Goal | First run | Re-run | Result |
+|---|---|---|---|
+| First playable chapter under 300 s | 518 s | **145 s** (same command); 190 s in the stdin-open experiment | PASS |
+| All chapters, same command | 634 s, 5 of 5 | **1 of 4**: `claude -p` exited at 178 s while chapter 2 rendered in the background (finding R1) | **FAIL** |
+| All chapters when the session stays alive (experiment, not the acceptance command) | - | 6 of 6 at 407 s, hand-off at 412 s (161.7 s of video) | PASS |
+| Chapters made and rendered one by one, in story order | no (all narrated, then all rendered, alphabetical) | yes, in both runs | PASS |
+| `hyperframes check` clean on every chapter, no wrapped code lines | 3 of 5 failed `clipped_text` | 4 of 4 and 6 of 6 rendered through the enforced check; re-run by hand: exit 0, 0 layout issues, no `clipped_text` | PASS |
+| No whole-disk `find /` | 51 s search | none in either transcript | PASS |
+| Hand-off lists the videos in story order | yes | same command: no hand-off (R1); experiment: yes, 6 paths in story order plus the one player line | FAIL / PASS |
+| Mechanical checks (`tests/acceptance-check.cjs`) | 49 of 50 | 40 of 40 (same command, after Step 6 by hand) and 60 of 60 (experiment) | PASS |
+| Negative run: nothing made, one question | PASS | PASS, 16 s | PASS |
+| F1: yap commands find the data dir without the export | needed a hand export | yes, through `.yap/session.json` (observed, below) | PASS |
+| F2: doctor's venv fix text works word for word | failed | yes, 2 s from the uv cache | PASS |
+
+### Step 1: Doctor and F1, F2
+
+`source spikes/env.sh; node bin/yap.cjs doctor --data-dir .superpowers/acceptance/data`: exit 0, every line `ok`
+(Node 26.7.0, ffmpeg 6.0, venv imports kokoro_onnx and soundfile, Kokoro 326 MB, 7.6 GB disk, whisper-cli,
+"0.2 GB free, so 1 at a time", Chrome from the puppeteer cache). 5.0 s.
+
+F2: against an empty data dir the fix text is now `uv venv --python 3.12 <dir>/venv && uv pip install --python
+<dir>/venv/bin/python kokoro-onnx soundfile`; against a half-made `venv/` it is the same prefixed with
+`rm -r <dir>/venv`. Running the half-made one word for word in `/tmp` took 2.0 s (packages cached) and the next
+doctor said `ok`.
+
+F1, observed three ways:
+
+1. Nested Claude, `CLAUDE_PLUGIN_DATA` not exported (`rerun/probe.sh f1-doctor "/yap doctor"`, 14 s): the hook
+   wrote `"data_dir": "/Users/aryanshaw/.claude/plugins/data/yap-inline"` into `.yap/session.json`. Claude ran
+   plain `node .../bin/yap.cjs doctor` (no `--data-dir`), and the doctor looked in that folder:
+   `FAIL Python venv: no venv at /Users/aryanshaw/.claude/plugins/data/yap-inline/venv` with the uv fix text for
+   that folder. Claude showed the fix and stopped, as the skill says. The hook printed the doctor hint. So the
+   lookup works; that folder simply has no venv, and putting one there is outside what this run may touch.
+2. Marketplace install, observed in an isolated config dir (`CLAUDE_CONFIG_DIR=/tmp/yap-cfg-...`, a local
+   marketplace in `/tmp` wrapping a copy of the plugin, `claude plugin marketplace add` then
+   `claude plugin install yap@yaptest`): the session's SessionStart hook ran even though that config was not logged
+   in, and wrote `"data_dir": "/tmp/yap-cfg-.../plugins/data/yap-yaptest"`. So a marketplace install gets
+   `<config>/plugins/data/<plugin>-<marketplace>`, and the hook does receive it. With a venv linked into that folder
+   and no `CLAUDE_PLUGIN_DATA` in the shell, `yap doctor` run from a subfolder of the project found it
+   (`ok Python venv: /tmp/yap-cfg-.../plugins/data/yap-yaptest/venv`) and wrote `doctor-ok` there; the hook then
+   printed nothing (and still printed the hint for a data dir without the marker). `yap narrate` from the same
+   subfolder narrated a copied chapter (25 s, timing words); with the venv moved away it failed, so it was really
+   using the session's folder. The model was not run in this config (not logged in), so this is the CLI plus hook,
+   not a full Claude session.
+3. With the export (the acceptance runs): `.yap/session.json` still said `.../plugins/data/yap-inline`, while
+   narrate used the exported acceptance venv. So Claude Code sets the hook's `CLAUDE_PLUGIN_DATA` itself
+   (overriding the inherited value), but Claude's Bash shell inherits the outer export, and the explicit variable
+   wins over the session file in `resolveDataDir`.
+
+The acceptance runs below still export `CLAUDE_PLUGIN_DATA`: without it the real config's data dir has no venv
+and every run would stop at the doctor, which would measure the wrong thing.
+
+### Step 2: Positive run, `/yap how adding a todo works` (same command)
+
+Started `Sat Oct 3 03:53:52 IST 2026`, project `/tmp/yap-pos-wYZJ`. Exit 0, 14 turns, 178 s wall (86.8 s model
+time). Four chapters planned, in this story order:
+
+| Chapter | Seconds | Beats | Timing | narration.wav first seen | chapter.mp4 first seen |
+|---|---|---|---|---|---|
+| the-request-arrives | 31.7 | 6 | words | 100 s | **145 s** |
+| checking-the-title | 26.3 | 6 | words | 115 s | never (render killed, R1) |
+| giving-it-an-id | 25.1 | 6 | sentence-share (R3) | 145 s | never |
+| saving-and-replying | 31.3 | 6 | words | 170 s | never |
+
+From the transcript (seconds from the request): 0 to 72 doctor, read code and all references, scope, verify,
+storyboard and specs (one Python script); 75 scaffold failed with `$Y scaffold` in zsh, fixed with a shell
+function at 78 (F13, again); 78 to 94 chapter 1 scaffold, audit, narrate; 97 `yap render ... --only
+the-request-arrives` started in the background; 98 to 168 chapters 2, 3, 4 narrated while it rendered; 141 render
+done (44 s including the layout check); 148 chapter 2's render started in the background; 170 Claude loaded the
+Monitor tool, then ended its turn with "Chapter two is still rendering. I'll be notified when it finishes, and then
+I'll start the renders for chapters three and four." The `-p` process exited at 178 s and the chapter 2 render's
+output file reads `[killed]` (a `work-*` folder was left in its chapter). That reply was the whole hand-off.
+
+Then the skill's own Step 6 command was run by hand in that folder: `yap render .yap/add-todo/chapters --root .
+--only the-request-arrives,checking-the-title,giving-it-an-id,saving-and-replying`: exit 0 in 113 s,
+`the-request-arrives: ready (already rendered)` then the other three `ready` in story order (about 38 s each). The
+stale `work-*` folder was cleaned up. `--force --only giving-it-an-id` re-rendered it (32 s, new mtime), and a
+plain re-run printed `ready (already rendered)` in 0 s. Composite time to all four: 178 s + 113 s, but the session
+itself never got there.
+
+Tokens: 22 input, 49,944 cache-write, 501,189 cache-read, 9,773 output (3,651 thinking).
+
+Experiment, to tell "broken only headless" from "broken everywhere": the same invocation with
+`--input-format stream-json --output-format stream-json --verbose` and stdin held open by a fifo
+(`rerun/run-stream.sh`), started `Sat Oct 3 04:06:57 IST 2026`, project `/tmp/yap-posstream-gVaR`. Claude ended its
+turn the same way at 249 s, but because the process stayed alive, the background render's notification started a
+new turn (255 s), and the last one a third (408 s). Six chapters, all timing `words`:
+
+| Chapter | Seconds | narration.wav | chapter.mp4 |
+|---|---|---|---|
+| the-request-arrives | 27.1 | 140 s | 190 s |
+| reading-the-body | 31.9 | 160 s | 246 s |
+| checking-the-title | 31.5 | 185 s | 322 s |
+| picking-an-id | 25.0 | 200 s | 352 s |
+| saving-to-disk | 26.1 | 226 s | 382 s |
+| the-reply | 26.2 | 246 s | 407 s |
+
+Chapters 3 to 6 were rendered by the Step 6 confirm run itself (255 to 404 s, one at a time, story order). The
+hand-off at 412 s listed the six `chapter.mp4` paths in story order and said the player arrives later. Note: it
+wrote its spec builder to `/tmp/yapgen/gen.cjs`, outside the project (removed afterwards). The process does not
+exit on stdin EOF; it was stopped after the hand-off. So the notify-and-continue pattern works when the session
+lives on; an interactive session was not tested.
+
+How long code lines were handled (68-column limit): no card wrapped. Claude cut long lines to a prefix: `add.js`
+line 11 (85 columns) is shown as `const todo = { id, title: text, done: false,` and `server.js` line 20 (79) as
+`try { resolve(raw ? JSON.parse(raw) : {}); }`. Neither card marks the cut, and the `giving-it-an-id` card is
+spoken over with "...and the time it was created", the part that was cut off. In the experiment Claude first wrote
+an abbreviated line `done: false, ... }` (not real code), noticed it and dropped it before scaffolding. Nothing in
+yap compares code-card text with the file (finding R2).
+
+### Step 3: Mechanical checks (`tests/acceptance-check.cjs /tmp/yap-pos-wYZJ`)
+
+Run after Step 6 by hand (so all four have an mp4): exit 0, "all checks pass".
+
+| Check | the-request-arrives | checking-the-title | giving-it-an-id | saving-and-replying |
+|---|---|---|---|---|
+| files present | PASS | PASS | PASS | PASS |
+| yap audit clean | PASS | PASS | PASS | PASS |
+| data-duration = padded wav | PASS 31.7 / 31.685 | PASS 26.3 / 26.208 | PASS 25.1 / 25.099 | PASS 31.3 / 31.258 |
+| 20 to 40 s | PASS | PASS | PASS | PASS |
+| mp4 duration ~ data-duration | PASS 31.700 | PASS 26.300 | PASS 25.100 | PASS 31.300 |
+| mp4 has audio (aac 48 kHz) | PASS | PASS | PASS | PASS |
+| audio length ~ video | PASS | PASS | PASS | PASS |
+| not silent (mean dB) | PASS -22.4 | PASS -24.3 | PASS -22.6 | PASS -23.2 |
+| no position references | PASS | PASS | PASS | PASS |
+| captions.vtt valid | PASS 14 cues | PASS 14 cues | PASS 13 cues | PASS 15 cues |
+
+The experiment's six chapters: 60 of 60 PASS (mean -22.5 to -24.1 dB, 13 to 16 cues each).
+
+`npx --yes hyperframes@0.8.112 check <chapter>` by hand on the four: exit 0 each, "0 issues across 9 sample(s)"
+for layout, 0 motion errors. Warnings only: contrast on dimmed highlighted lines (1.04:1 and 1.65:1, F10) and one
+`clip_media_fit` (F9).
+
+### Step 4: Looking at it, and memory
+
+Frames at 0/10/30/50/70/95 % per chapter in `docs/phase-1/frames-rerun/<id>-<n>.png` plus `<id>-sheet.png`
+(1.0 MB in all).
+
+- Better: no wrapped code line anywhere; every card line has its line number. Cards are smaller and tidier.
+- Same: the 0 % frame is black in all four. Pieces still appear one at a time, centred, with much empty space;
+  the callout still floats alone with its tail pointing at nothing (`the-request-arrives-5`,
+  `checking-the-title-5`). A highlighted line before its beat is still orange text on an orange bar (`server.js`
+  lines 18, 20, 28 in `the-request-arrives-2/4`; `storage.js` 16 in `saving-and-replying-2`) (F10). A new code
+  card still shows an empty body for a moment (`the-request-arrives-3`, `saving-and-replying-1`).
+- New to notice: between two pieces the screen goes almost fully black for about 0.5 s (measured in
+  `giving-it-an-id` from 12.2 to 12.7 s, luma max 31 of 255), which is what `giving-it-an-id-3` caught. It is
+  the old piece fading out before the new one fades in, so it is a design look, not a defect.
+- Worse: a truncated code line looks like a whole line (`giving-it-an-id-5`, R2).
+
+Memory: macOS swap was at 9.0 to 9.5 GB of 10 GB through the runs, free pages near zero, and the doctor said
+"1 at a time". Nothing crashed and no `tts failed` happened in any run (narrate and a background render overlapped
+three times in the acceptance run and five in the experiment). One effect was found: `giving-it-an-id` narrated
+(116 to 143 s) while chapter 1 rendered and came out with `sentence-share` timing instead of word timing. A
+reproduction (a forced render in the background, narrate on a copy of that chapter, and `whisper-cli --help` timed
+every second) measured the first `whisper-cli --help` at **20.15 s** (then 0.1 to 0.35 s), over the 15 s limit
+narrate borrowed from the doctor. Fixed in `6a95b9d` (R3). The first run's unexplained `hyperframes tts failed:
+exit code 1` (F8) was reproduced exactly by pointing narrate at a data dir with no venv: Hyperframes prints
+`{"ok":false,"error":"The kokoro-onnx package is not installed..."}` on stdout and nothing on stderr. Fixed in
+`824278f` (narrate now shows that error). That re-narrate in the first run most likely ran without the export and
+so without the venv; this is a strong hypothesis, not proven.
+
+### Step 5: Negative run, `/yap how billing works`
+
+`/tmp/yap-neg-6mWo`, exit 0, 3 turns, 16 s. It read the doctor and scope references, ran `yap doctor` (passed),
+listed the files and grepped for billing words. Only `.yap/session.json` exists afterwards. The reply, verbatim:
+
+> I couldn't find any billing in this project. It's a small todo app (`add.js`, `list.js`, `complete.js`,
+> `storage.js`, `server.js`), and nothing in it handles payments, invoices, prices, plans or subscriptions.
+>
+> Did you mean another flow here, such as how adding a todo works (from `POST /todos` in `server.js` to the save
+> in `storage.js`), or is the billing code in a different repository?
+
+One question (one `?`), plain statement, no chapters: PASS. Tokens: 6 input, 27,672 cache-write, 62,221
+cache-read, 627 output.
+
+### Findings from the re-run
+
+| # | What happened | Evidence | Severity | Status |
+|---|---|---|---|---|
+| R1 | The skill lets Claude end its turn while a background render runs ("I'll be notified when it finishes"). Under `claude -p` the process exits when the turn ends, the render is killed, the remaining chapters are never rendered and there is no hand-off. With the session kept alive, notifications resume the work and it finishes correctly. | same-command run: 1 of 4 mp4s, render output `[killed]`; experiment: 6 of 6 | Critical for headless or scripted use (it is this acceptance path); interactive sessions not tested | Left: how the skill waits for renders is pipeline design (for example, run the last render in the foreground, or never end a turn while a render runs) |
+| R2 | Code-card lines over 68 columns are shown as a cut prefix with no mark, so a partial line looks like the whole line, and narration can describe the part that was cut. Nothing checks that card text matches the file; once Claude wrote invented `... }` text and caught it itself. | `giving-it-an-id` card, `add.js:11`; experiment transcript at 106 s | Important | Left: decide on an elision mark and whether audit should compare card lines with the source |
+| R3 | Narrate fell back to sentence-level timing while a render ran: the whisper probe has a 15 s limit and took 20.15 s under memory pressure. | `giving-it-an-id/beats.json` `timing: sentence-share`; reproduction above | Important (silent quality drop) | Fixed in `6a95b9d` (narrate waits up to its 10-minute step limit; doctor keeps 15 s; test first) |
+| R4 | F8's cause: `hyperframes tts --json` reports failures on stdout, so narrate printed only `exit code 1`. | reproduction with no venv | Minor | Fixed in `824278f` (shows the JSON error; test first) |
+| R5 | `yap render` prints every result line only when all chosen chapters are done (113 s of silence for three chapters). | Step 6 by hand: all four lines at 113 s | Minor | Left |
+| R6 | Claude.ai connector text leaks into the nested session despite `--setting-sources project,local`: the F1 probe's reply ended "The Mem0 connector also needs to be signed in". Extends F15. | `rerun/f1-doctor/out.json` | Minor | Left |
+| F13 | Still happens: `Y="node .../yap.cjs"; $Y scaffold` fails in zsh (exit 127) in both runs; Claude recovers with a shell function. | transcripts at 75 s and 108 s | Minor | Left (recurring) |
+| F11 | Still mild: "Now the new todo is ready to be stored for good.", "Once a new todo is saved, ...". | `script.md` | Minor | Left |
+| F9, F10, F12 | Unchanged. | check output, frames | Minor | Left |
+
+F1 to F5 are fixed as far as this run can see; F6 holds on real audio (every `captions.vtt` valid in both runs,
+144 cues in all); F7 holds (doctor's Chrome line is `ok`).
