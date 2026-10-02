@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fsReal = require('node:fs');
 const osReal = require('node:os');
 const path = require('node:path');
-const { runDoctor, writeMarker } = require('../lib/doctor.cjs');
+const { runDoctor, writeMarker, checkWhisper } = require('../lib/doctor.cjs');
 const { runDoctorCli, realExec } = require('../lib/doctor-cli.cjs');
 const { HYPERFRAMES_VERSION } = require('../lib/hyperframes.cjs');
 
@@ -173,6 +173,15 @@ test('missing whisper-cli is advisory and does not fail the run', async () => {
   assert.equal(c.ok, false);
   assert.equal(c.required, false);
   assert.equal(r.filter((x) => x.required && !x.ok).length, 0);
+});
+
+// a busy machine (a render running beside narrate) once took 20 s to answer `whisper-cli --help`
+test('the whisper check waits as long as its caller allows, 15 s when not told', async () => {
+  const m = machine();
+  await checkWhisper(m.deps.exec);
+  await checkWhisper(m.deps.exec, 600000);
+  const timeouts = m.calls.filter(([cmd]) => cmd === 'whisper-cli').map(([, , opts]) => opts.timeout);
+  assert.deepEqual(timeouts, [15000, 600000]);
 });
 
 test('disk of 0.5 GB fails', async () => {
