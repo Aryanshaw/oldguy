@@ -13,7 +13,7 @@ render(){ ( cd "$1" && npx hyperframes render . -q draft -w "$W" -o "../out/$1-$
 case $MODE in
   single) render p1;;
   seq) for p in p1 p2 p3; do render $p; done;;
-  par) for p in p1 p2 p3; do render $p & done; wait;;
+  par) PIDS=""; for p in p1 p2 p3; do render $p & PIDS="$PIDS $!"; done; wait $PIDS;;
 esac
 END=$(date +%s); kill $SP 2>/dev/null
 echo "mode=$MODE workers=$W wall=$((END-START))s peak_mb=$(sort -n out/mem.txt | tail -1) base_mb=$(head -1 out/mem.txt)"

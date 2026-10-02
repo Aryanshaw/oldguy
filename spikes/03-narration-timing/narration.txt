@@ -1,0 +1,1 @@
+A job starts when you press a button. The planner checks the request, then saves a pending row in the database. A worker later picks that row up and runs it.
