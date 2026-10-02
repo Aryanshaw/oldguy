@@ -55,26 +55,35 @@ function writeSessionFile(cwd, input) {
   }
 }
 
-// Prints the one-line hint when `yap doctor` has not left its pass marker in the data folder (same folder rule as the doctor).
-function hintIfDoctorNotRun(cwd) {
-  const dataDir = process.env.CLAUDE_PLUGIN_DATA || path.join(cwd, '.yap');
-  if (!fs.existsSync(path.join(dataDir, 'doctor-ok'))) {
+// Works out where the doctor's pass marker lives (same rule as the doctor); null when no folder can be trusted.
+function resolveDataDir(cwd) {
+  if (process.env.CLAUDE_PLUGIN_DATA) return process.env.CLAUDE_PLUGIN_DATA;
+  return typeof cwd === 'string' && path.isAbsolute(cwd) ? path.join(cwd, '.yap') : null;
+}
+
+// Prints the one-line hint when `yap doctor` has not left its pass marker in the data folder.
+function hintIfDoctorNotRun(dataDir) {
+  if (dataDir && !fs.existsSync(path.join(dataDir, 'doctor-ok'))) {
     process.stdout.write('yap: run /yap doctor once to check this machine can make videos.\n');
+  }
+}
+
+// Records the session when the input is usable; only an absolute cwd is trusted as a write target.
+function recordSession(input) {
+  if (typeof input.session_id !== 'string' || input.session_id === '') return;
+  if (typeof input.cwd !== 'string' || !path.isAbsolute(input.cwd)) return;
+  try {
+    writeSessionFile(input.cwd, input);
+  } catch {
+    // An unwritable folder must not stop the session or the hint.
   }
 }
 
 // Does the hook's work; the caller turns any failure into a quiet exit 0.
 async function main() {
   const input = parseInput(await readStdin());
-  if (!input || typeof input.session_id !== 'string' || input.session_id === '') return;
-  // Only an absolute cwd is trusted; anything else could point the write somewhere unexpected.
-  if (typeof input.cwd !== 'string' || !path.isAbsolute(input.cwd)) return;
-  try {
-    writeSessionFile(input.cwd, input);
-  } catch {
-    // An unwritable folder must not stop the session or the hint below.
-  }
-  hintIfDoctorNotRun(input.cwd);
+  if (input) recordSession(input);
+  hintIfDoctorNotRun(resolveDataDir(input && input.cwd));
 }
 
 main().catch(() => {}).finally(() => process.exit(0));

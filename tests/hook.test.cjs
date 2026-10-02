@@ -152,3 +152,53 @@ test('hooks.json wires one SessionStart command hook with a 5 second timeout', (
   assert.equal(typeof hook.timeout, 'number');
   assert.equal(hook.timeout, 5);
 });
+
+// Counts the hint lines a run printed.
+function hintLines(r) {
+  return r.stdout.split('\n').filter((l) => /\/yap doctor/.test(l));
+}
+
+test('an empty session_id writes nothing but still hints when the marker is missing', (t) => {
+  const cwd = tmp(t);
+  const r = runHook(JSON.stringify({ cwd, session_id: '' }), { dataDir: tmp(t) });
+  assert.equal(r.status, 0);
+  assert.equal(hintLines(r).length, 1);
+  assert.equal(fs.existsSync(path.join(cwd, '.yap')), false);
+});
+
+test('an empty session_id with the marker present prints nothing', (t) => {
+  const dataDir = tmp(t);
+  fs.writeFileSync(path.join(dataDir, 'doctor-ok'), 'ok');
+  const r = runHook(JSON.stringify({ cwd: tmp(t), session_id: '' }), { dataDir });
+  assert.equal(r.status, 0);
+  assert.equal(r.stdout, '');
+});
+
+test('a relative cwd with CLAUDE_PLUGIN_DATA set and no marker hints but writes nothing', (t) => {
+  const here = tmp(t);
+  const env = { ...process.env, CLAUDE_PLUGIN_DATA: tmp(t) };
+  const r = spawnSync(process.execPath, [SCRIPT], {
+    input: JSON.stringify({ session_id: 'abc', cwd: 'relative/dir' }), cwd: here, env, encoding: 'utf8', timeout: 10000,
+  });
+  assert.equal(r.status, 0);
+  assert.equal(hintLines(r).length, 1);
+  assert.equal(fs.existsSync(path.join(here, '.yap')), false);
+  assert.equal(fs.existsSync(path.join(here, 'relative')), false);
+});
+
+test('an unwritable cwd (a file, not a folder) exits 0 and still hints', (t) => {
+  const file = path.join(tmp(t), 'not-a-dir');
+  fs.writeFileSync(file, 'x');
+  const r = runHook(JSON.stringify({ ...sampleStdin(), cwd: file }), { dataDir: tmp(t) });
+  assert.equal(r.status, 0);
+  assert.equal(hintLines(r).length, 1);
+});
+
+test('a read-only cwd exits 0 and still hints', (t) => {
+  if (process.getuid && process.getuid() === 0) return t.skip('root ignores read-only folders');
+  const cwd = tmp(t);
+  fs.chmodSync(cwd, 0o555);
+  const r = runHook(JSON.stringify({ ...sampleStdin(), cwd }), { dataDir: tmp(t) });
+  assert.equal(r.status, 0);
+  assert.equal(hintLines(r).length, 1);
+});
