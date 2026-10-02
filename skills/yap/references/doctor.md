@@ -18,7 +18,8 @@ yap doctor --data-dir <dir>
 ```
 
 `--data-dir` is where the Python venv and the "doctor passed" marker live. Leave it out: the default is the plugin's
-data folder, or `./.yap` when there is none. `--json` prints `{ ok, checks }` for scripts.
+data folder (the session hook records it in `.yap/session.json`, which every yap command reads), or `./.yap` when
+there is none. `--json` prints `{ ok, checks }` for scripts.
 
 ## What it checks
 

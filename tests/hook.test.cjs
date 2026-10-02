@@ -202,3 +202,28 @@ test('a read-only cwd exits 0 and still hints', (t) => {
   assert.equal(r.status, 0);
   assert.equal(hintLines(r).length, 1);
 });
+
+test('session.json records data_dir: the plugin data folder when set, else null', (t) => {
+  const cwd = tmp(t);
+  const dataDir = tmp(t);
+  runHook(JSON.stringify({ ...sampleStdin(), cwd }), { dataDir });
+  assert.equal(readSession(cwd).data_dir, dataDir);
+  runHook(JSON.stringify({ ...sampleStdin(), cwd }));
+  assert.equal(readSession(cwd).data_dir, null);
+});
+
+test('the hint finds the marker through a parent session.json, the same way the doctor does', (t) => {
+  const project = tmp(t);
+  const dataDir = tmp(t);
+  fs.writeFileSync(path.join(dataDir, 'doctor-ok'), 'ok');
+  fs.mkdirSync(path.join(project, '.yap'));
+  fs.writeFileSync(path.join(project, '.yap', 'session.json'), JSON.stringify({ session_id: 'x', data_dir: dataDir }));
+  const sub = path.join(project, 'sub');
+  fs.mkdirSync(sub);
+  // no CLAUDE_PLUGIN_DATA: the hook's own session.json in sub has data_dir null, so the parent's one decides
+  const r = runHook(JSON.stringify({ ...sampleStdin(), cwd: sub }));
+  assert.equal(r.status, 0);
+  assert.equal(r.stdout, '');
+  const { resolveDataDir } = require('../lib/data-dir.cjs');
+  assert.equal(resolveDataDir({ env: {}, cwd: sub, fs }), dataDir);
+});

@@ -43,6 +43,8 @@ function writeSessionFile(cwd, input) {
     transcript_path: input.transcript_path,
     cwd,
     source: input.source,
+    // Claude's own shell does not get CLAUDE_PLUGIN_DATA, so yap commands read the data folder from here
+    data_dir: process.env.CLAUDE_PLUGIN_DATA || null,
     updated_at: new Date().toISOString(),
   };
   const temp = path.join(dir, `session.json.${process.pid}.tmp`);
@@ -53,12 +55,6 @@ function writeSessionFile(cwd, input) {
     fs.rmSync(temp, { force: true });
     throw err;
   }
-}
-
-// Works out where the doctor's pass marker lives (same rule as the doctor); null when no folder can be trusted.
-function resolveDataDir(cwd) {
-  if (process.env.CLAUDE_PLUGIN_DATA) return process.env.CLAUDE_PLUGIN_DATA;
-  return typeof cwd === 'string' && path.isAbsolute(cwd) ? path.join(cwd, '.yap') : null;
 }
 
 // Prints the one-line hint when `yap doctor` has not left its pass marker in the data folder.
@@ -83,7 +79,10 @@ function recordSession(input) {
 async function main() {
   const input = parseInput(await readStdin());
   if (input) recordSession(input);
-  hintIfDoctorNotRun(resolveDataDir(input && input.cwd));
+  // loaded here, not at the top, so even a missing library file ends in the quiet exit 0 below
+  const { resolveDataDir } = require('../lib/data-dir.cjs');
+  // the marker is looked for exactly where the doctor writes it; null when no folder can be trusted
+  hintIfDoctorNotRun(resolveDataDir({ env: process.env, cwd: input && input.cwd, fs }));
 }
 
 main().catch(() => {}).finally(() => process.exit(0));

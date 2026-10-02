@@ -286,3 +286,13 @@ test('data dir: CLAUDE_PLUGIN_DATA, else <cwd>/.yap, and --data-dir beats both',
   assert.deepEqual(await run([], {}, '/work', '/work/.yap'), { code: 0, marked: '/work/.yap' });
   assert.deepEqual(await run(['--data-dir', '/flag'], { CLAUDE_PLUGIN_DATA: '/plugin' }, '/work', '/flag'), { code: 0, marked: '/flag' });
 });
+
+test('data dir: without the flag or CLAUDE_PLUGIN_DATA, the doctor reads data_dir from .yap/session.json', async () => {
+  const dir = '/plugin-data';
+  const m = machine({ files: { [`${dir}/venv/bin/python`]: 1 }, exec: { [`${dir}/venv/bin/python`]: () => OK } });
+  const sessions = { '/work/.yap/session.json': JSON.stringify({ session_id: 'a', data_dir: dir }) };
+  const fs = { ...m.deps.fs, readFileSync: (p) => { if (p in sessions) return sessions[p]; throw new Error('ENOENT'); } };
+  let marked;
+  const code = await runDoctorCli([], { ...m.deps, fs, env: {}, cwd: '/work/src', marker: (d) => { marked = d; }, stdout: () => {}, stderr: () => {} });
+  assert.deepEqual({ code, marked }, { code: 0, marked: dir });
+});
