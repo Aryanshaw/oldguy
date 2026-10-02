@@ -5,6 +5,7 @@ const osReal = require('node:os');
 const path = require('node:path');
 const { runDoctor, writeMarker } = require('../lib/doctor.cjs');
 const { runDoctorCli, realExec } = require('../lib/doctor-cli.cjs');
+const { HYPERFRAMES_VERSION } = require('../lib/hyperframes.cjs');
 
 const GB = 1024 ** 3;
 const DATA = '/data';
@@ -31,7 +32,9 @@ function machine(over = {}) {
     deps: {
       exec: async (cmd, args, opts) => {
         calls.push([cmd, args, opts]);
-        const h = handlers[cmd];
+        // the pinned `npx --yes hyperframes@<version> ...` reaches the pretend hyperframes; bare `hyperframes` is not on PATH
+        if (cmd === 'npx' && args[0] === '--yes' && args[1] === `hyperframes@${HYPERFRAMES_VERSION}`) return handlers.hyperframes(args.slice(2));
+        const h = cmd === 'hyperframes' ? null : handlers[cmd];
         if (!h) return { code: 127, stdout: '', stderr: 'not found' };
         return h(args);
       },
@@ -144,6 +147,17 @@ test('Hyperframes Chrome check failing is advisory; bad output does not crash', 
   assert.equal(c.required, false);
   const junk = machine({ exec: { hyperframes: () => ({ code: 0, stdout: 'not json', stderr: '' }) } });
   assert.equal(byName(await runDoctor(junk.deps), 'Chrome').ok, false);
+});
+
+test('Chrome check asks the pinned Hyperframes through npx, and its fix names the pinned command', async () => {
+  const m = machine();
+  const c = byName(await runDoctor(m.deps), 'Chrome');
+  assert.equal(c.ok, true);
+  const hf = m.calls.filter(([cmd, args]) => cmd === 'hyperframes' || (cmd === 'npx' && String(args[1]).startsWith('hyperframes')));
+  assert.deepEqual(hf.map(([cmd, args]) => [cmd, args]), [['npx', ['--yes', `hyperframes@${HYPERFRAMES_VERSION}`, 'doctor', '--json']]]);
+  const missing = machine({ exec: { hyperframes: () => ({ code: 0, stdout: JSON.stringify({ checks: [] }), stderr: '' }) } });
+  const fix = byName(await runDoctor(missing.deps), 'Chrome').fix;
+  assert.match(fix, new RegExp(`npx --yes hyperframes@${HYPERFRAMES_VERSION.replace(/\./g, '\\.')} browser ensure`));
 });
 
 test('every outside call is given a timeout', async () => {
