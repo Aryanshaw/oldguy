@@ -7,6 +7,7 @@ const path = require('node:path');
 const { narrateChapter } = require('../lib/narrate.cjs');
 const { scaffoldChapter } = require('../lib/chapter.cjs');
 const { parseWav } = require('../lib/wav.cjs');
+const { HYPERFRAMES_VERSION } = require('../lib/hyperframes.cjs');
 
 const FIXTURES = path.join(__dirname, 'fixtures');
 const RAW_WAV = path.join(FIXTURES, 'narration.wav');
@@ -37,13 +38,13 @@ function fakeRun({ fail } = {}) {
   const calls = [];
   const run = async (cmd, args, env) => {
     calls.push({ cmd, args, env });
-    const step = args[1];
+    const step = args[2];
     if (step === fail) return { code: 1, stdout: '', stderr: `${step}: kokoro exploded\n` };
     if (step === 'tts') {
       fs.copyFileSync(RAW_WAV, args[args.indexOf('-o') + 1]);
       return { code: 0, stdout: '{"ok":true}\n', stderr: '' };
     }
-    const transcriptPath = path.join(path.dirname(args[2]), 'transcript.json');
+    const transcriptPath = path.join(path.dirname(args[3]), 'transcript.json');
     fs.copyFileSync(TRANSCRIPT, transcriptPath);
     return { code: 0, stdout: `${JSON.stringify({ ok: true, transcriptPath })}\n`, stderr: '' };
   };
@@ -59,13 +60,16 @@ test('narrate (whisper available): tts then transcribe through npx hyperframes, 
   const dir = chapterDir(t);
   const { run, calls } = fakeRun();
   await narrateChapter(dir, { run, venvPython: PYTHON, whisperAvailable: true });
-  assert.deepEqual(calls.map((c) => [c.cmd, c.args[0], c.args[1]]), [['npx', 'hyperframes', 'tts'], ['npx', 'hyperframes', 'transcribe']]);
+  // both steps run the pinned Hyperframes through npx --yes, so no prompt and no surprise upgrade
+  const pinned = `hyperframes@${HYPERFRAMES_VERSION}`;
+  assert.equal(HYPERFRAMES_VERSION, '0.8.112');
+  assert.deepEqual(calls.map((c) => [c.cmd, c.args[0], c.args[1], c.args[2]]), [['npx', '--yes', pinned, 'tts'], ['npx', '--yes', pinned, 'transcribe']]);
   const tts = calls[0].args;
-  assert.equal(tts[2], path.join(dir, 'narration.txt'));
+  assert.equal(tts[3], path.join(dir, 'narration.txt'));
   assert.equal(path.basename(tts[tts.indexOf('-o') + 1]), 'narration.raw.wav');
   assert.ok(tts.includes('--json'));
   assert.equal(calls[0].env.HYPERFRAMES_PYTHON, PYTHON);
-  assert.equal(path.basename(calls[1].args[2]), 'narration.wav');
+  assert.equal(path.basename(calls[1].args[3]), 'narration.wav');
   assert.ok(calls[1].args.includes('--json'));
 });
 
@@ -123,7 +127,7 @@ test('narrate (no whisper): never transcribes, times by sentence share and recor
   const dir = chapterDir(t);
   const { run, calls } = fakeRun();
   const result = await narrateChapter(dir, { run, venvPython: PYTHON, whisperAvailable: false });
-  assert.deepEqual(calls.map((c) => c.args[1]), ['tts']);
+  assert.deepEqual(calls.map((c) => c.args[2]), ['tts']);
   const beats = readJson(dir, 'beats.json');
   assert.equal(beats.timing, 'sentence-share');
   assert.equal(result.timing, 'sentence-share');
@@ -162,11 +166,36 @@ test('narrate: re-narrating replaces the earlier outputs', async (t) => {
   assert.deepEqual(fs.readdirSync(dir).sort(), NARRATED);
 });
 
-test('narrate: narration with a different sentence count fails before any tts is run', async (t) => {
+test('narrate: narration with an extra sentence fails the text audit before any tts is run', async (t) => {
   const dir = chapterDir(t);
   fs.appendFileSync(path.join(dir, 'narration.txt'), 'And one more sentence.\n');
   const { run, calls } = fakeRun();
-  await assert.rejects(narrateChapter(dir, { run, venvPython: PYTHON, whisperAvailable: true }), /4 sentences.*3/);
+  await assert.rejects(narrateChapter(dir, { run, venvPython: PYTHON, whisperAvailable: true }), /narration\.txt no longer matches chapter\.json/);
   assert.equal(calls.length, 0);
   assert.deepEqual(fs.readdirSync(dir).sort(), SCAFFOLDED);
+});
+
+test('narrate: a changed word in narration.txt fails before any tts is run', async (t) => {
+  const dir = chapterDir(t);
+  const file = path.join(dir, 'narration.txt');
+  fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replace('button', 'switch'));
+  const { run, calls } = fakeRun();
+  await assert.rejects(narrateChapter(dir, { run, venvPython: PYTHON, whisperAvailable: true }), /narration\.txt no longer matches chapter\.json: edit chapter\.json and re-scaffold/);
+  assert.equal(calls.length, 0);
+  assert.deepEqual(fs.readdirSync(dir).sort(), SCAFFOLDED);
+});
+
+test('narrate: index.html plays the padded narration.wav that sits beside it', async (t) => {
+  const dir = chapterDir(t);
+  await narrateChapter(dir, { ...fakeRun(), venvPython: PYTHON, whisperAvailable: true });
+  const html = fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
+  const audio = html.match(/<audio[^>]*>/g);
+  assert.equal(audio.length, 1);
+  const src = /src="([^"]+)"/.exec(audio[0])[1];
+  assert.equal(src, 'narration.wav');
+  assert.match(audio[0], /data-duration="9.5"/);
+  // the file it points at is the padded one: 0.16 s longer than the tts output
+  const raw = parseWav(fs.readFileSync(RAW_WAV)).durationS;
+  const played = parseWav(fs.readFileSync(path.join(dir, src))).durationS;
+  assert.ok(Math.abs(played - raw - 0.16) < 1e-9);
 });

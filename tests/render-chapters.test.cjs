@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { renderChapters, renderArgs } = require('../lib/render-chapters.cjs');
+const { HYPERFRAMES_VERSION } = require('../lib/hyperframes.cjs');
 
 const GOOD_SOURCE = { id: 's1', file: 'app.js', lines: [1, 1], quote: 'start()' };
 const CLAIM = { text: 'It calls start.', kind: 'claim', source_ids: ['s1'] };
@@ -21,11 +22,12 @@ function workspace(t) {
   return { repo, chapters };
 }
 
-// Writes one chapter folder; `narrated` adds the index.html that narrate would have written.
-function addChapter(chapters, id, { sources = [GOOD_SOURCE], narrated = true } = {}) {
+// Writes one chapter folder with matching narration.txt; `narrated` adds the index.html that narrate would have written.
+function addChapter(chapters, id, { sources = [GOOD_SOURCE], narrated = true, narration = `${CLAIM.text}\n` } = {}) {
   const dir = path.join(chapters, id);
   fs.mkdirSync(dir);
   fs.writeFileSync(path.join(dir, 'chapter.json'), JSON.stringify({ id, title: id, sources, sentences: [CLAIM], scene: [] }));
+  fs.writeFileSync(path.join(dir, 'narration.txt'), narration);
   if (narrated) fs.writeFileSync(path.join(dir, 'index.html'), '<!doctype html>');
   return dir;
 }
@@ -40,8 +42,9 @@ function fakeRender(failOnce = []) {
   return { render, calls };
 }
 
-test('renderArgs: npx hyperframes render, draft quality, 2 workers, chapter.mp4 inside the chapter', () => {
-  assert.deepEqual(renderArgs('/w/chapters/intro'), ['hyperframes', 'render', '/w/chapters/intro', '-q', 'draft', '-w', '2', '-o', '/w/chapters/intro/chapter.mp4']);
+test('renderArgs: pinned hyperframes via npx --yes, draft quality, 2 workers, chapter.mp4 inside the chapter', () => {
+  assert.equal(HYPERFRAMES_VERSION, '0.8.112');
+  assert.deepEqual(renderArgs('/w/chapters/intro'), ['--yes', 'hyperframes@0.8.112', 'render', '/w/chapters/intro', '-q', 'draft', '-w', '2', '-o', '/w/chapters/intro/chapter.mp4']);
 });
 
 test('chapters that pass the audit and are narrated are rendered and ready', async (t) => {
@@ -126,4 +129,26 @@ test('folders without chapter.json and loose files are ignored; results follow f
   fs.writeFileSync(path.join(chapters, 'README.txt'), 'x');
   const results = await renderChapters(chapters, { root: repo, cap: 1, render: async () => {} });
   assert.deepEqual(results.map((r) => r.id), ['alpha', 'zeta']);
+});
+
+test('narration.txt edited after the audit: never rendered, failed with the re-scaffold message', async (t) => {
+  const { repo, chapters } = workspace(t);
+  addChapter(chapters, 'edited', { narration: 'It calls stop.\n' });
+  addChapter(chapters, 'extra', { narration: `${CLAIM.text} And then more.\n` });
+  addChapter(chapters, 'spacing', { narration: '  It   calls\r\nstart.\r\n' });
+  const { render, calls } = fakeRender();
+  const results = await renderChapters(chapters, { root: repo, cap: 1, render });
+  assert.deepEqual(calls, ['spacing']);
+  for (const r of results.slice(0, 2)) {
+    assert.equal(r.status, 'failed');
+    assert.match(r.reason, /narration\.txt no longer matches chapter\.json: edit chapter\.json and re-scaffold/);
+  }
+  assert.equal(results[2].status, 'ready');
+});
+
+test('the narration check runs before the claim audit', async (t) => {
+  const { repo, chapters } = workspace(t);
+  addChapter(chapters, 'both', { sources: [{ ...GOOD_SOURCE, quote: 'stop()' }], narration: 'Something else.\n' });
+  const results = await renderChapters(chapters, { root: repo, cap: 1, render: async () => {} });
+  assert.match(results[0].reason, /^narration\.txt no longer matches/);
 });

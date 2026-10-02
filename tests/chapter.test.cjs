@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const {
-  slugChapterId, scaffoldChapter, buildRootComposition, pieceWindows, roundUpTenth, narrationSentences,
+  slugChapterId, scaffoldChapter, buildRootComposition, pieceWindows, roundUpTenth, narrationSentences, checkNarrationText,
 } = require('../lib/chapter.cjs');
 
 const SOURCES = [{ id: 's1', file: 'app.js', lines: [1, 2], quote: 'start()' }];
@@ -184,4 +184,29 @@ test('root composition: same input gives byte-identical output', () => {
 
 test('root composition: an unknown piece is an error naming it', () => {
   assert.throws(() => buildRootComposition({ id: 'c', durationS: 1, pieces: [{ piece: 'nope', params: {}, startS: 0, durationS: 1 }] }), /"nope"/);
+});
+
+test('root composition: carries the narration as one audio element spanning the whole chapter', () => {
+  const html = buildRootComposition({ id: 'c', durationS: 9.5, pieces: PIECES });
+  const audios = html.match(/<audio[^>]*>/g);
+  assert.equal(audios.length, 1);
+  assert.equal(audios[0], '<audio id="narration" src="narration.wav" data-start="0" data-duration="9.5" data-track-index="10" data-volume="1">');
+  assert.ok(html.includes('</audio>'));
+  assert.doesNotMatch(html, /crossorigin/i);
+  assert.doesNotMatch(html, /\.(play|pause)\(/);
+  // the audio sits inside the root composition
+  assert.ok(html.indexOf('<audio') > html.indexOf('<div id="root"') && html.indexOf('<audio') < html.lastIndexOf('</div>'));
+});
+
+test('checkNarrationText: narration matching the chapter sentences passes, CRLF and extra spaces tolerated', () => {
+  const sentences = [{ text: 'One thing.' }, { text: 'Another  thing.' }];
+  assert.doesNotThrow(() => checkNarrationText('One thing.\r\nAnother thing.\n', sentences));
+  assert.doesNotThrow(() => checkNarrationText('  One   thing. Another thing.', sentences));
+});
+
+test('checkNarrationText: a changed word or an extra sentence fails with the re-scaffold message', () => {
+  const sentences = [{ text: 'One thing.' }, { text: 'Another thing.' }];
+  const message = /narration\.txt no longer matches chapter\.json: edit chapter\.json and re-scaffold/;
+  assert.throws(() => checkNarrationText('One thing. Another stuff.', sentences), message);
+  assert.throws(() => checkNarrationText('One thing. Another thing. A third.', sentences), message);
 });

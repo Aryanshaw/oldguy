@@ -109,6 +109,7 @@ function renderWorkspace(t, { withBad = true } = {}) {
     fs.mkdirSync(path.join(chapters, id), { recursive: true });
     const sources = [{ ...SPEC.sources[0], quote }];
     fs.writeFileSync(path.join(chapters, id, 'chapter.json'), JSON.stringify({ ...SPEC, id, sources }));
+    fs.writeFileSync(path.join(chapters, id, 'narration.txt'), `${SPEC.sentences.map((s) => s.text).join(' ')}\n`);
     fs.writeFileSync(path.join(chapters, id, 'index.html'), '<!doctype html>');
   };
   write('good', 'start()');
@@ -121,7 +122,7 @@ test('render --dry-run prints the render command for passing chapters and fails 
   const r = yap('render', chapters, '--root', repo, '--cap', '2', '--dry-run');
   assert.equal(r.status, 1, r.stderr);
   const good = path.join(chapters, 'good');
-  assert.ok(r.stdout.includes(`would run: npx hyperframes render ${good} -q draft -w 2 -o ${path.join(good, 'chapter.mp4')}\n`), r.stdout);
+  assert.ok(r.stdout.includes(`would run: npx --yes hyperframes@0.8.112 render ${good} -q draft -w 2 -o ${path.join(good, 'chapter.mp4')}\n`), r.stdout);
   assert.doesNotMatch(r.stdout, /would run: .*bad/);
   assert.match(r.stdout, /^bad: failed \(audit: s1: quote not on lines 1-1\)$/m);
   assert.match(r.stdout, /^good: ready$/m);
