@@ -88,24 +88,76 @@ test('Node 20 fails and names the version', async () => {
   assert.match(c.fix, /22/);
 });
 
-test('missing venv gives the exact create and install commands', async () => {
-  const m = machine();
-  delete m.deps.fs.existsSync; // rebuild without the venv python
-  const files = { [MODEL]: 325e6 };
+const VENV = `${DATA}/venv`;
+const UV_CREATE = `uv venv --python 3.12 ${VENV} && uv pip install --python ${VENV_PY} kokoro-onnx soundfile`;
+
+// A machine with no venv python; `venvFolder` leaves a half-made venv folder behind; `exec` adds tools on PATH.
+function noVenv({ venvFolder = false, exec = {} } = {}) {
+  const m = machine({ exec });
+  const files = { [MODEL]: 325e6, ...(venvFolder ? { [VENV]: 1 } : {}) };
   m.deps.fs.existsSync = (p) => p in files;
   m.deps.fs.statSync = (p) => ({ size: files[p] });
-  const c = byName(await runDoctor(m.deps), 'Python venv');
+  return m;
+}
+
+test('missing venv with uv on PATH: the fix makes a Python 3.12 venv with uv', async () => {
+  const c = byName(await runDoctor(noVenv({ exec: { uv: () => OK } }).deps), 'Python venv');
   assert.equal(c.ok, false);
-  assert.equal(c.fix, `python3 -m venv ${DATA}/venv && ${DATA}/venv/bin/pip install kokoro-onnx soundfile`);
+  assert.equal(c.detail, `no venv at ${VENV}`);
+  assert.equal(c.fix, UV_CREATE);
 });
 
-test('venv that cannot import kokoro_onnx fails with the install command', async () => {
-  const m = machine({ exec: { [VENV_PY]: () => ({ code: 1, stdout: '', stderr: 'ModuleNotFoundError' }) } });
-  const c = byName(await runDoctor(m.deps), 'Python venv');
+test('missing venv without uv: the fix uses the newest of python3.12, 3.11, 3.10 on PATH', async () => {
+  const both = noVenv({ exec: { 'python3.11': () => OK, 'python3.12': () => OK } });
+  assert.equal(byName(await runDoctor(both.deps), 'Python venv').fix,
+    `python3.12 -m venv ${VENV} && ${VENV}/bin/pip install kokoro-onnx soundfile`);
+  const old = noVenv({ exec: { 'python3.10': () => OK } });
+  assert.equal(byName(await runDoctor(old.deps), 'Python venv').fix,
+    `python3.10 -m venv ${VENV} && ${VENV}/bin/pip install kokoro-onnx soundfile`);
+});
+
+test('missing venv with no uv and no Python 3.10 to 3.12: the fix says plainly what to install', async () => {
+  const c = byName(await runDoctor(noVenv({ exec: { python3: () => OK } }).deps), 'Python venv');
   assert.equal(c.ok, false);
-  assert.match(c.fix, /pip install kokoro-onnx soundfile/);
-  const call = m.calls.find(([cmd]) => cmd === VENV_PY);
+  assert.match(c.fix, /Python 3\.10 to 3\.12 is needed/);
+  assert.match(c.fix, /install/);
+  assert.doesNotMatch(c.fix, /python3 -m venv/);
+});
+
+test('a half-made venv (folder but no bin/python) says so and the fix removes it first', async () => {
+  const c = byName(await runDoctor(noVenv({ venvFolder: true, exec: { uv: () => OK } }).deps), 'Python venv');
+  assert.equal(c.ok, false);
+  assert.match(c.detail, /half-made/);
+  assert.match(c.detail, /no working bin\/python/);
+  assert.equal(c.fix, `rm -r ${VENV} && ${UV_CREATE}`);
+});
+
+test('a venv whose bin/python does not run is half-made too', async () => {
+  const m = machine({ exec: { [VENV_PY]: () => ({ code: 1, stdout: '', stderr: 'dyld: image not found' }), 'python3.12': () => OK } });
+  const c = byName(await runDoctor(m.deps), 'Python venv');
+  assert.match(c.detail, /half-made/);
+  assert.equal(c.fix, `rm -r ${VENV} && python3.12 -m venv ${VENV} && ${VENV}/bin/pip install kokoro-onnx soundfile`);
+});
+
+// The venv python runs (--version works) but cannot import the packages.
+const IMPORT_FAILS = { [VENV_PY]: (args) => (args[0] === '--version' ? OK : { code: 1, stdout: '', stderr: 'ModuleNotFoundError' }) };
+
+test('venv that cannot import kokoro_onnx: the fix is only the install line (uv when present, else the venv pip)', async () => {
+  const withUv = machine({ exec: { ...IMPORT_FAILS, uv: () => OK } });
+  const c = byName(await runDoctor(withUv.deps), 'Python venv');
+  assert.equal(c.ok, false);
+  assert.match(c.detail, /cannot import kokoro_onnx and soundfile/);
+  assert.equal(c.fix, `uv pip install --python ${VENV_PY} kokoro-onnx soundfile`);
+  const call = withUv.calls.find(([cmd, args]) => cmd === VENV_PY && args[0] === '-c');
   assert.deepEqual(call[1], ['-c', 'import kokoro_onnx, soundfile']);
+  const noUv = machine({ exec: IMPORT_FAILS });
+  assert.equal(byName(await runDoctor(noUv.deps), 'Python venv').fix, `${VENV}/bin/pip install kokoro-onnx soundfile`);
+});
+
+test('a working venv probes neither uv nor any python3.x', async () => {
+  const m = machine({ exec: { uv: () => OK, 'python3.12': () => OK } });
+  await runDoctor(m.deps);
+  assert.deepEqual(m.calls.filter(([cmd]) => /^(uv|python3)/.test(cmd)), []);
 });
 
 test('a 10 MB Kokoro model file is too small', async () => {
