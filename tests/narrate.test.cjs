@@ -169,6 +169,17 @@ test('narrate: a failing tts surfaces its stderr and writes no files', async (t)
   assert.deepEqual(fs.readdirSync(dir).sort(), SCAFFOLDED);
 });
 
+// with --json, Hyperframes puts its reason on stdout (seen for real with a missing venv) and leaves stderr empty
+test('narrate: a failing tts with an empty stderr surfaces the error from its JSON stdout', async (t) => {
+  const dir = chapterDir(t);
+  const reason = 'The kokoro-onnx package is not installed.';
+  const run = async () => ({ code: 1, stdout: `${JSON.stringify({ ok: false, error: reason })}\n`, stderr: '' });
+  await assert.rejects(
+    narrateChapter(dir, { run, venvPython: PYTHON, whisperAvailable: true }),
+    /hyperframes tts failed: The kokoro-onnx package is not installed\./,
+  );
+});
+
 test('narrate: a failing transcribe also fails (no silent fallback) and writes no files', async (t) => {
   const dir = chapterDir(t);
   await assert.rejects(
