@@ -352,3 +352,17 @@ yap/
 
 Podcast/reel formats, characters, voice cloning, other agents, hosting, sharing,
 drag-reorder, stale-code warning, accounts.
+
+## 13. Build phases (agreed with the owner)
+
+One spec, but not one plan. Each phase gets its own short plan, written just before it
+starts, because earlier phases change what later ones need.
+
+| Phase | Result | Why this order |
+|---|---|---|
+| 0. Spikes | Pass/fail answers to the 7 items in section 9 | Two can change the design: the `claude -p --resume` fallback and parallel chapter renders |
+| 1. Generator | One verified, narrated, draft-rendered chapter from a feature request | The core value; everything else wraps it |
+| 2. Chapters and server | Several chapters in a manifest, served locally, with API and tests | The data model the player needs |
+| 3. Player | Browser UI: timeline, tabs, pending segment, export | Worth building only once real chapters exist |
+| 4. Chat bridge | Browser questions become answers and new chapters | Riskiest and most novel, so it comes after the parts it needs are proven |
+| Polish | README, a demo video made by Yap about Yap, the doctor | Last |
