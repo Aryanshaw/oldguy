@@ -1,0 +1,7 @@
+{
+  "hooks": {
+    "SessionStart": [
+      { "matcher": "", "hooks": [ { "type": "command", "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/record.sh SessionStart", "timeout": 5 } ] }
+    ]
+  }
+}
