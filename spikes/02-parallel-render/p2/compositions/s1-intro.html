@@ -1,0 +1,724 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <template>
+      <style>
+/* shared visual system: navy canvas, API amber, worker green, Postgres blue, Redis coral, browser neutral */
+.sc-wrap {
+  position: absolute;
+  inset: 0;
+}
+.mono {
+  font-family: "JetBrains Mono", monospace;
+}
+.kicker {
+  position: absolute;
+  left: 100px;
+  top: 58px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 22px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #9db0d0;
+  white-space: nowrap;
+}
+.kicker b {
+  color: #5ea2ff;
+  font-weight: 700;
+}
+.title {
+  position: absolute;
+  left: 100px;
+  top: 92px;
+  font-size: 50px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+/* caption bar: one line on screen at a time, max two wrapped lines */
+.cap-box {
+  position: absolute;
+  left: 200px;
+  width: 1520px;
+  bottom: 40px;
+  height: 120px;
+}
+.cap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 34px;
+  line-height: 1.3;
+  font-weight: 400;
+  color: #eaf0fa;
+  background: rgba(7, 13, 28, 0.88);
+  border: 2px solid #2a3d63;
+  border-radius: 16px;
+  padding: 0 56px;
+  opacity: 0;
+}
+.cap p {
+  margin: 0;
+}
+.cap em {
+  font-style: normal;
+  font-weight: 700;
+  color: #ffffff;
+}
+.card {
+  position: absolute;
+  background: #111d35;
+  border: 2px solid #2a3d63;
+  border-radius: 14px;
+}
+.c-api {
+  color: #f5b544;
+}
+.c-wk {
+  color: #3ed598;
+}
+.c-db {
+  color: #5ea2ff;
+}
+.c-rd {
+  color: #ff7a6b;
+}
+.c-br {
+  color: #d6deec;
+}
+.c-mu {
+  color: #9db0d0;
+}
+/* lane header pill: coloured dot + name */
+.lane {
+  position: absolute;
+  top: 176px;
+  height: 712px;
+  border-radius: 18px;
+  background: rgba(17, 29, 53, 0.55);
+  border: 2px solid rgba(42, 61, 99, 0.8);
+}
+.lane-head {
+  position: absolute;
+  left: 20px;
+  top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.dot {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+}
+/* table card: blue header with table name, rows below */
+.tbl {
+  position: absolute;
+  background: #0f1a30;
+  border: 2px solid #3a5f99;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.tbl-h {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: rgba(94, 162, 255, 0.16);
+  border-bottom: 2px solid #3a5f99;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 22px;
+  font-weight: 700;
+  color: #8fc0ff;
+  white-space: nowrap;
+}
+.tbl-op {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0b1426;
+  background: #5ea2ff;
+  border-radius: 6px;
+  padding: 2px 10px;
+}
+.tbl-r {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 16px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 19px;
+  color: #d6deec;
+  white-space: nowrap;
+  border-bottom: 2px solid rgba(58, 95, 153, 0.35);
+}
+.pill {
+  display: inline-block;
+  border-radius: 8px;
+  padding: 2px 10px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 18px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.p-pend {
+  background: rgba(157, 176, 208, 0.2);
+  color: #d6deec;
+}
+.p-run {
+  background: rgba(245, 181, 68, 0.2);
+  color: #f5b544;
+}
+.p-ok {
+  background: rgba(62, 213, 152, 0.2);
+  color: #3ed598;
+}
+.p-fail {
+  background: rgba(255, 122, 107, 0.22);
+  color: #ff7a6b;
+}
+/* step card in the API / worker lane */
+.step {
+  position: absolute;
+  height: 70px;
+  border-radius: 12px;
+  background: #13213d;
+  border: 2px solid #2a3d63;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 18px;
+  white-space: nowrap;
+}
+.step-n {
+  display: block;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 38px;
+  text-align: center;
+  color: #0b1426;
+}
+.step-t {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.step-a {
+  font-size: 23px;
+  font-weight: 700;
+  color: #eaf0fa;
+}
+.step-b {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 18px;
+  color: #9db0d0;
+}
+.commit {
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 700;
+  color: #0b1426;
+  background: #5ea2ff;
+  border-radius: 8px;
+  padding: 4px 14px;
+}
+svg.wires {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  overflow: visible;
+}
+svg.wires path {
+  fill: none;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.packet {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 40px;
+  border-radius: 20px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0b1426;
+  white-space: nowrap;
+  opacity: 0;
+}
+/* fixed lane positions shared by scenes 3-5: Browser | API | Redis | Worker | Postgres */
+.ln-br {
+  left: 56px;
+  width: 200px;
+}
+.ln-api {
+  left: 268px;
+  width: 460px;
+}
+.ln-rd {
+  left: 740px;
+  width: 220px;
+}
+.ln-wk {
+  left: 972px;
+  width: 460px;
+}
+.ln-db {
+  left: 1444px;
+  width: 420px;
+}
+.callout {
+  position: absolute;
+  left: 972px;
+  width: 460px;
+  background: #0f1a30;
+  border-radius: 16px;
+  padding: 22px 26px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+.co-t {
+  display: block;
+  font-size: 26px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.co-r {
+  display: block;
+  margin-top: 14px;
+}
+.co-k {
+  display: block;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 20px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.co-v {
+  display: block;
+  margin-top: 2px;
+  font-size: 20px;
+  color: #c6d3ea;
+  white-space: nowrap;
+}
+
+      </style>
+      <style>
+        #root {
+          position: absolute;
+          inset: 0;
+          font-family: Montserrat, sans-serif;
+          color: #eaf0fa;
+        }
+        #s1-ghost {
+          position: absolute;
+          right: -40px;
+          top: 640px;
+          font-size: 260px;
+          font-weight: 700;
+          color: rgba(94, 162, 255, 0.1);
+          white-space: nowrap;
+        }
+        #s1-titleblock {
+          position: absolute;
+          left: 100px;
+          top: 250px;
+          width: 1720px;
+        }
+        .s1-t1 {
+          display: block;
+          font-size: 116px;
+          font-weight: 900;
+          letter-spacing: -0.035em;
+          line-height: 1.05;
+          white-space: nowrap;
+        }
+        .s1-t2 {
+          display: block;
+          margin-top: 14px;
+          font-size: 60px;
+          font-weight: 400;
+          letter-spacing: -0.02em;
+          color: #c6d3ea;
+          white-space: nowrap;
+        }
+        #s1-pills {
+          position: absolute;
+          left: 100px;
+          top: 580px;
+          display: flex;
+          gap: 24px;
+        }
+        .s1-pill {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          height: 64px;
+          padding: 0 28px;
+          border-radius: 32px;
+          border: 2px solid #2a3d63;
+          background: rgba(17, 29, 53, 0.8);
+          font-size: 28px;
+          font-weight: 700;
+          white-space: nowrap;
+        }
+        .s1-panel {
+          position: absolute;
+          top: 190px;
+          width: 820px;
+          height: 640px;
+        }
+        #s1-before {
+          left: 100px;
+        }
+        #s1-after {
+          left: 1000px;
+        }
+        .s1-ph {
+          position: absolute;
+          left: 36px;
+          top: 26px;
+          font-family: "JetBrains Mono", monospace;
+          font-size: 24px;
+          font-weight: 700;
+          letter-spacing: 0.14em;
+          white-space: nowrap;
+        }
+        .s1-row {
+          position: absolute;
+          left: 36px;
+          height: 48px;
+          display: flex;
+          align-items: center;
+          gap: 18px;
+        }
+        .s1-name {
+          display: block;
+          width: 230px;
+          font-family: "JetBrains Mono", monospace;
+          font-size: 21px;
+          color: #d6deec;
+          white-space: nowrap;
+        }
+        .s1-strip {
+          display: flex;
+          align-items: center;
+          width: 500px;
+          height: 44px;
+          padding: 0 16px;
+          border-radius: 8px;
+          border: 2px dashed #4a5e85;
+          background: rgba(157, 176, 208, 0.08);
+          font-family: "JetBrains Mono", monospace;
+          font-size: 18px;
+          color: #b8c6de;
+          white-space: nowrap;
+        }
+        .s1-stat {
+          position: absolute;
+          top: 520px;
+          width: 360px;
+          display: flex;
+          align-items: center;
+          gap: 18px;
+        }
+        .s1-num {
+          display: block;
+          font-size: 84px;
+          font-weight: 900;
+          letter-spacing: -0.03em;
+          line-height: 1;
+        }
+        .s1-lab {
+          display: block;
+          width: 200px;
+          font-size: 22px;
+          line-height: 1.3;
+          color: #c6d3ea;
+        }
+        .s1-spec {
+          position: absolute;
+          left: 36px;
+          width: 250px;
+          height: 48px;
+          display: flex;
+          align-items: center;
+          padding: 0 16px;
+          border-radius: 10px;
+          background: #13213d;
+          border: 2px solid #4a5e85;
+          font-family: "JetBrains Mono", monospace;
+          font-size: 20px;
+          font-weight: 700;
+          color: #eaf0fa;
+          white-space: nowrap;
+        }
+        .s1-box {
+          position: absolute;
+          left: 430px;
+          width: 354px;
+          height: 170px;
+          border-radius: 16px;
+          background: #13213d;
+          padding: 22px 26px;
+        }
+        #s1-planner {
+          top: 96px;
+          border: 3px solid #f5b544;
+        }
+        #s1-runner {
+          top: 316px;
+          border: 3px solid #3ed598;
+        }
+        .s1-bn {
+          display: block;
+          font-size: 38px;
+          font-weight: 900;
+          letter-spacing: -0.02em;
+          white-space: nowrap;
+        }
+        .s1-bd {
+          display: block;
+          margin-top: 6px;
+          font-size: 24px;
+          color: #eaf0fa;
+          white-space: nowrap;
+        }
+        .s1-bm {
+          display: block;
+          margin-top: 10px;
+          font-family: "JetBrains Mono", monospace;
+          font-size: 18px;
+          color: #9db0d0;
+          white-space: nowrap;
+        }
+        #s1-sum {
+          position: absolute;
+          left: 36px;
+          top: 540px;
+          font-size: 30px;
+          font-weight: 700;
+          white-space: nowrap;
+        }
+        #s1-sum span {
+          color: #9db0d0;
+          font-weight: 400;
+        }
+      </style>
+
+      <div id="root" data-composition-id="s1-intro" data-width="1920" data-height="1080">
+        <div id="s1-wrap" class="sc-wrap">
+          <div id="s1-kicker" class="kicker"><b>01</b> · vindex api · after the part c refactor</div>
+
+          <div id="s1-ghost" class="mono">JobSpec</div>
+          <div id="s1-titlegroup">
+            <div id="s1-titleblock">
+              <span class="s1-t1">How a background job</span>
+              <span class="s1-t2">is registered, started and run</span>
+            </div>
+            <div id="s1-pills">
+              <div class="s1-pill" id="s1-pill-1"><i class="dot" style="background: #d6deec"></i>Registered at startup</div>
+              <div class="s1-pill" id="s1-pill-2"><i class="dot" style="background: #f5b544"></i>Started by the API</div>
+              <div class="s1-pill" id="s1-pill-3"><i class="dot" style="background: #3ed598"></i>Run by the worker</div>
+            </div>
+          </div>
+
+          <div id="s1-before" class="card s1-panel">
+            <div class="s1-ph c-mu">BEFORE PART C</div>
+            <div class="s1-row" style="top: 84px"><span class="s1-name">analysis</span><span class="s1-strip">claim · progress · heartbeat · finish · fail</span></div>
+            <div class="s1-row" style="top: 142px"><span class="s1-name">reply</span><span class="s1-strip">claim · progress · heartbeat · finish · fail</span></div>
+            <div class="s1-row" style="top: 200px"><span class="s1-name">research</span><span class="s1-strip">claim · progress · heartbeat · finish · fail</span></div>
+            <div class="s1-row" style="top: 258px"><span class="s1-name">document parse</span><span class="s1-strip">claim · progress · heartbeat · finish · fail</span></div>
+            <div class="s1-row" style="top: 316px"><span class="s1-name">analysis eval</span><span class="s1-strip">claim · progress · heartbeat · finish · fail</span></div>
+            <div class="s1-row" style="top: 374px"><span class="s1-name">reply eval</span><span class="s1-strip">claim · progress · heartbeat · finish · fail</span></div>
+            <div class="s1-row" style="top: 432px"><span class="s1-name">chat research</span><span class="s1-strip">claim · progress · heartbeat · finish · fail</span></div>
+            <div class="s1-stat" style="left: 36px" id="s1-stat-a">
+              <span class="s1-num">×7</span><span class="s1-lab">copies of the job lifecycle</span>
+            </div>
+            <div class="s1-stat" style="left: 420px" id="s1-stat-b">
+              <span class="s1-num">×6</span><span class="s1-lab">copies of the enqueue code</span>
+            </div>
+          </div>
+
+          <div id="s1-after" class="card s1-panel">
+            <div class="s1-ph c-wk">AFTER PART C</div>
+            <svg class="wires" style="width: 820px; height: 640px" viewBox="0 0 820 640">
+              <path id="s1-w0" pathLength="1" stroke="#4a5e85" d="M286 108 C330 108 330 295 372 295" />
+              <path id="s1-w1" pathLength="1" stroke="#4a5e85" d="M286 166 C330 166 330 295 372 295" />
+              <path id="s1-w2" pathLength="1" stroke="#4a5e85" d="M286 224 C330 224 330 295 372 295" />
+              <path id="s1-w3" pathLength="1" stroke="#4a5e85" d="M286 282 C330 282 330 295 372 295" />
+              <path id="s1-w4" pathLength="1" stroke="#4a5e85" d="M286 340 C330 340 330 295 372 295" />
+              <path id="s1-w5" pathLength="1" stroke="#4a5e85" d="M286 398 C330 398 330 295 372 295" />
+              <path id="s1-w6" pathLength="1" stroke="#4a5e85" d="M286 456 C330 456 330 295 372 295" />
+              <path id="s1-wp" pathLength="1" stroke="#f5b544" d="M372 295 C400 295 400 181 428 181" />
+              <path id="s1-wr" pathLength="1" stroke="#3ed598" d="M372 295 C400 295 400 401 428 401" />
+            </svg>
+            <div class="s1-spec" style="top: 84px">ANALYSIS</div>
+            <div class="s1-spec" style="top: 142px">REPLY</div>
+            <div class="s1-spec" style="top: 200px">RESEARCH</div>
+            <div class="s1-spec" style="top: 258px">DOCUMENT_PARSE</div>
+            <div class="s1-spec" style="top: 316px">ANALYSIS_EVAL</div>
+            <div class="s1-spec" style="top: 374px">REPLY_EVAL</div>
+            <div class="s1-spec" style="top: 432px">CHAT_RESEARCH</div>
+            <div id="s1-planner" class="s1-box">
+              <span class="s1-bn c-api">JobPlanner</span>
+              <span class="s1-bd">starts every job</span>
+              <span class="s1-bm">the only caller of enqueue</span>
+            </div>
+            <div id="s1-runner" class="s1-box">
+              <span class="s1-bn c-wk">JobRunner</span>
+              <span class="s1-bd">runs every job</span>
+              <span class="s1-bm">claim → work → finish or fail</span>
+            </div>
+            <div id="s1-sum">7 JobSpecs <span>→</span> 1 planner <span>→</span> 1 runner</div>
+          </div>
+
+          <div class="cap-box">
+            <div class="cap" data-in="0.8" data-out="5.4"><p>Slow work, like reading a notice or drafting a reply, runs as a&nbsp;<em>background job</em>, outside the web request.</p></div>
+            <div class="cap" data-in="5.8" data-out="11.5"><p><em>Before Part C</em>, each of the 7 jobs wrote out its own lifecycle, and the enqueue code was copied 6 times.</p></div>
+            <div class="cap" data-in="11.8" data-out="16.3"><p><em>After</em>: each job is described once, as a&nbsp;<em>JobSpec</em>. One planner starts every job; one runner runs it.</p></div>
+            <div class="cap" data-in="16.6" data-out="19.5"><p>The rest of this video follows one job from app startup to its finished result.</p></div>
+          </div>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+              // fade each caption in at data-in and out at data-out (scene-local seconds)
+      function hfCaps(tl, root) {
+        document.querySelectorAll(root + " .cap").forEach((c) => {
+          const a = parseFloat(c.dataset.in);
+          const b = parseFloat(c.dataset.out);
+          tl.fromTo(c, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" }, a);
+          tl.to(c, { opacity: 0, y: -8, duration: 0.3, ease: "power1.in" }, b - 0.3);
+        });
+      }
+      // draw an svg wire (pathLength=1) from nothing to full
+      function hfDraw(tl, sel, t, dur) {
+        tl.fromTo(sel, { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: dur || 0.6, ease: "power2.inOut" }, t);
+      }
+      // spring a card into place
+      function hfPop(tl, sel, t, from) {
+        tl.fromTo(
+          sel,
+          Object.assign({ opacity: 0, scale: 0.9, y: 18 }, from || {}),
+          { opacity: 1, scale: 1, y: 0, x: 0, duration: 0.55, ease: "back.out(1.6)" },
+          t,
+        );
+      }
+      // slide a row / step in from the left
+      function hfSlide(tl, sel, t, dx) {
+        tl.fromTo(sel, { opacity: 0, x: dx || -40 }, { opacity: 1, x: 0, duration: 0.45, ease: "power3.out" }, t);
+      }
+      // fade the whole scene in at the start and out before its slot ends
+      function hfScene(tl, wrap, dur) {
+        tl.fromTo(wrap, { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power1.out" }, 0);
+        tl.to(wrap, { opacity: 0, duration: 0.5, ease: "power1.in" }, dur - 0.55);
+      }
+      // carry a labelled packet from one point to another (authored pixel constants)
+      function hfPacket(tl, sel, a, b, t, dur) {
+        const d = dur || 0.8;
+        tl.fromTo(sel, { x: a[0], y: a[1] - 20 }, { x: b[0], y: b[1] - 20, duration: d, ease: "power2.inOut" }, t);
+        tl.fromTo(sel, { opacity: 0 }, { opacity: 1, duration: 0.15, ease: "none" }, t);
+        tl.to(sel, { opacity: 0, duration: 0.2, ease: "none" }, t + d);
+      }
+      // pulse a card border to show it was just written
+      function hfFlash(tl, sel, t, from, to) {
+        tl.fromTo(
+          sel,
+          { borderColor: from || "#3a5f99" },
+          { borderColor: to || "#bfe0ff", duration: 0.25, yoyo: true, repeat: 1, ease: "power1.inOut", immediateRender: false },
+          t,
+        );
+      }
+      // mark a step card active (amber/green border) and release the previous one
+      function hfActivate(tl, sel, t, color, until) {
+        tl.fromTo(sel, { borderColor: "#2a3d63" }, { borderColor: color, duration: 0.3, ease: "power1.out", immediateRender: false }, t);
+        if (until) tl.to(sel, { borderColor: "#2a3d63", duration: 0.3, ease: "power1.in" }, until);
+      }
+
+        // scene 1: title, then the before / after comparison
+        const tl = gsap.timeline({ paused: true });
+        const R = "#s1-wrap";
+        hfScene(tl, "#s1-wrap", 20);
+        hfSlide(tl, "#s1-kicker", 0.2, -30);
+        // title lines rise in, then the three promise pills pop one by one
+        tl.fromTo(".s1-t1", { opacity: 0, y: 60 }, { opacity: 1, y: 0, duration: 0.8, ease: "expo.out" }, 0.3);
+        tl.fromTo(".s1-t2", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.7, ease: "power3.out" }, 0.6);
+        hfPop(tl, "#s1-pill-1", 1.3);
+        hfPop(tl, "#s1-pill-2", 1.6);
+        hfPop(tl, "#s1-pill-3", 1.9);
+        // title clears upward to make room for the comparison
+        tl.fromTo("#s1-ghost", { opacity: 0, x: 80 }, { opacity: 1, x: 0, duration: 4.6, ease: "power1.out" }, 0.4);
+        tl.to("#s1-ghost", { opacity: 0, duration: 0.5, ease: "power1.in" }, 5.3);
+        tl.to("#s1-titlegroup", { opacity: 0, y: -60, duration: 0.5, ease: "power2.in" }, 5.3);
+
+        // before: seven rows of the same copied lifecycle, then the two counts
+        hfPop(tl, "#s1-before", 5.8, { x: -40 });
+        hfSlide(tl, "#s1-before .s1-ph", 6.0);
+        tl.fromTo(
+          "#s1-before .s1-row",
+          { opacity: 0, x: -30 },
+          { opacity: 1, x: 0, duration: 0.4, ease: "power3.out", stagger: 0.08 },
+          6.2,
+        );
+        // the copies flash together to show they are the same code
+        tl.fromTo(
+          "#s1-before .s1-strip",
+          { borderColor: "#4a5e85" },
+          { borderColor: "#ff7a6b", duration: 0.25, yoyo: true, repeat: 3, ease: "power1.inOut" },
+          7.4,
+        );
+        hfPop(tl, "#s1-stat-a", 8.6);
+        hfPop(tl, "#s1-stat-b", 9.2);
+        // before panel steps back once the after panel arrives
+        tl.to("#s1-before", { opacity: 0.45, duration: 0.6, ease: "power1.inOut" }, 11.6);
+
+        // after: seven specs, wires converge, then planner and runner
+        hfPop(tl, "#s1-after", 11.6, { x: 40 });
+        hfSlide(tl, "#s1-after .s1-ph", 11.8);
+        tl.fromTo(
+          "#s1-after .s1-spec",
+          { opacity: 0, x: -24 },
+          { opacity: 1, x: 0, duration: 0.4, ease: "power3.out", stagger: 0.07 },
+          12.0,
+        );
+        ["#s1-w0", "#s1-w1", "#s1-w2", "#s1-w3", "#s1-w4", "#s1-w5", "#s1-w6"].forEach((w, i) =>
+          hfDraw(tl, w, 12.7 + i * 0.05, 0.6),
+        );
+        hfDraw(tl, "#s1-wp", 13.4, 0.5);
+        hfDraw(tl, "#s1-wr", 13.6, 0.5);
+        hfPop(tl, "#s1-planner", 13.8, { x: 30 });
+        hfPop(tl, "#s1-runner", 14.2, { x: 30 });
+        hfSlide(tl, "#s1-sum", 15.0, -20);
+
+        hfCaps(tl, R);
+        window.__timelines["s1-intro"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

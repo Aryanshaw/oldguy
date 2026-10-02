@@ -1,0 +1,749 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <template>
+      <style>
+/* shared visual system: navy canvas, API amber, worker green, Postgres blue, Redis coral, browser neutral */
+.sc-wrap {
+  position: absolute;
+  inset: 0;
+}
+.mono {
+  font-family: "JetBrains Mono", monospace;
+}
+.kicker {
+  position: absolute;
+  left: 100px;
+  top: 58px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 22px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #9db0d0;
+  white-space: nowrap;
+}
+.kicker b {
+  color: #5ea2ff;
+  font-weight: 700;
+}
+.title {
+  position: absolute;
+  left: 100px;
+  top: 92px;
+  font-size: 50px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+/* caption bar: one line on screen at a time, max two wrapped lines */
+.cap-box {
+  position: absolute;
+  left: 200px;
+  width: 1520px;
+  bottom: 40px;
+  height: 120px;
+}
+.cap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 34px;
+  line-height: 1.3;
+  font-weight: 400;
+  color: #eaf0fa;
+  background: rgba(7, 13, 28, 0.88);
+  border: 2px solid #2a3d63;
+  border-radius: 16px;
+  padding: 0 56px;
+  opacity: 0;
+}
+.cap p {
+  margin: 0;
+}
+.cap em {
+  font-style: normal;
+  font-weight: 700;
+  color: #ffffff;
+}
+.card {
+  position: absolute;
+  background: #111d35;
+  border: 2px solid #2a3d63;
+  border-radius: 14px;
+}
+.c-api {
+  color: #f5b544;
+}
+.c-wk {
+  color: #3ed598;
+}
+.c-db {
+  color: #5ea2ff;
+}
+.c-rd {
+  color: #ff7a6b;
+}
+.c-br {
+  color: #d6deec;
+}
+.c-mu {
+  color: #9db0d0;
+}
+/* lane header pill: coloured dot + name */
+.lane {
+  position: absolute;
+  top: 176px;
+  height: 712px;
+  border-radius: 18px;
+  background: rgba(17, 29, 53, 0.55);
+  border: 2px solid rgba(42, 61, 99, 0.8);
+}
+.lane-head {
+  position: absolute;
+  left: 20px;
+  top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.dot {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+}
+/* table card: blue header with table name, rows below */
+.tbl {
+  position: absolute;
+  background: #0f1a30;
+  border: 2px solid #3a5f99;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.tbl-h {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: rgba(94, 162, 255, 0.16);
+  border-bottom: 2px solid #3a5f99;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 22px;
+  font-weight: 700;
+  color: #8fc0ff;
+  white-space: nowrap;
+}
+.tbl-op {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0b1426;
+  background: #5ea2ff;
+  border-radius: 6px;
+  padding: 2px 10px;
+}
+.tbl-r {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 16px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 19px;
+  color: #d6deec;
+  white-space: nowrap;
+  border-bottom: 2px solid rgba(58, 95, 153, 0.35);
+}
+.pill {
+  display: inline-block;
+  border-radius: 8px;
+  padding: 2px 10px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 18px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.p-pend {
+  background: rgba(157, 176, 208, 0.2);
+  color: #d6deec;
+}
+.p-run {
+  background: rgba(245, 181, 68, 0.2);
+  color: #f5b544;
+}
+.p-ok {
+  background: rgba(62, 213, 152, 0.2);
+  color: #3ed598;
+}
+.p-fail {
+  background: rgba(255, 122, 107, 0.22);
+  color: #ff7a6b;
+}
+/* step card in the API / worker lane */
+.step {
+  position: absolute;
+  height: 70px;
+  border-radius: 12px;
+  background: #13213d;
+  border: 2px solid #2a3d63;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 18px;
+  white-space: nowrap;
+}
+.step-n {
+  display: block;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 38px;
+  text-align: center;
+  color: #0b1426;
+}
+.step-t {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.step-a {
+  font-size: 23px;
+  font-weight: 700;
+  color: #eaf0fa;
+}
+.step-b {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 18px;
+  color: #9db0d0;
+}
+.commit {
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 700;
+  color: #0b1426;
+  background: #5ea2ff;
+  border-radius: 8px;
+  padding: 4px 14px;
+}
+svg.wires {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  overflow: visible;
+}
+svg.wires path {
+  fill: none;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.packet {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 40px;
+  border-radius: 20px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0b1426;
+  white-space: nowrap;
+  opacity: 0;
+}
+/* fixed lane positions shared by scenes 3-5: Browser | API | Redis | Worker | Postgres */
+.ln-br {
+  left: 56px;
+  width: 200px;
+}
+.ln-api {
+  left: 268px;
+  width: 460px;
+}
+.ln-rd {
+  left: 740px;
+  width: 220px;
+}
+.ln-wk {
+  left: 972px;
+  width: 460px;
+}
+.ln-db {
+  left: 1444px;
+  width: 420px;
+}
+.callout {
+  position: absolute;
+  left: 972px;
+  width: 460px;
+  background: #0f1a30;
+  border-radius: 16px;
+  padding: 22px 26px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+.co-t {
+  display: block;
+  font-size: 26px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.co-r {
+  display: block;
+  margin-top: 14px;
+}
+.co-k {
+  display: block;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 20px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.co-v {
+  display: block;
+  margin-top: 2px;
+  font-size: 20px;
+  color: #c6d3ea;
+  white-space: nowrap;
+}
+
+      </style>
+      <style>
+        #root {
+          position: absolute;
+          inset: 0;
+          font-family: Montserrat, sans-serif;
+          color: #eaf0fa;
+        }
+        .s6-panel {
+          position: absolute;
+          top: 180px;
+          width: 840px;
+          height: 690px;
+        }
+        #s6-left {
+          left: 100px;
+        }
+        #s6-right {
+          left: 980px;
+        }
+        .s6-ph {
+          position: absolute;
+          left: 36px;
+          top: 24px;
+          font-size: 30px;
+          font-weight: 900;
+          letter-spacing: -0.01em;
+          white-space: nowrap;
+        }
+        .s6-chip {
+          position: absolute;
+          top: 84px;
+          height: 52px;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          padding: 0 18px;
+          font-family: "JetBrains Mono", monospace;
+          font-size: 20px;
+          font-weight: 700;
+          white-space: nowrap;
+        }
+        #s6-exec {
+          left: 36px;
+          background: #13213d;
+          border: 2px solid #3ed598;
+          color: #3ed598;
+        }
+        #s6-err {
+          left: 330px;
+          background: rgba(255, 122, 107, 0.16);
+          border: 2px solid #ff7a6b;
+          color: #ff7a6b;
+        }
+        #s6-fail {
+          position: absolute;
+          left: 36px;
+          top: 160px;
+          width: 768px;
+          height: 372px;
+          border-radius: 14px;
+          border: 3px solid #ff7a6b;
+          background: rgba(255, 122, 107, 0.05);
+        }
+        #s6-fail-h {
+          position: absolute;
+          left: 20px;
+          top: 14px;
+          font-family: "JetBrains Mono", monospace;
+          font-size: 21px;
+          font-weight: 700;
+          color: #ff7a6b;
+          white-space: nowrap;
+        }
+        .s6-row {
+          position: absolute;
+          left: 18px;
+          width: 726px;
+          height: 66px;
+          border-radius: 10px;
+          background: #13213d;
+          border: 2px solid #2a3d63;
+          padding: 6px 16px;
+        }
+        .s6-rk {
+          display: block;
+          font-family: "JetBrains Mono", monospace;
+          font-size: 20px;
+          font-weight: 700;
+          white-space: nowrap;
+        }
+        .s6-rv {
+          display: block;
+          margin-top: 2px;
+          font-size: 19px;
+          color: #c6d3ea;
+          white-space: nowrap;
+        }
+        #s6-raw {
+          position: absolute;
+          right: 16px;
+          top: 16px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          padding: 0 10px;
+          border-radius: 6px;
+          background: rgba(255, 122, 107, 0.14);
+          font-family: "JetBrains Mono", monospace;
+          font-size: 17px;
+          color: #ff7a6b;
+          white-space: nowrap;
+        }
+        #s6-strike {
+          position: absolute;
+          left: 6px;
+          right: 6px;
+          top: 15px;
+          height: 3px;
+          background: #ff7a6b;
+          transform-origin: 0 50%;
+        }
+        #s6-reraise {
+          position: absolute;
+          left: 36px;
+          top: 552px;
+          font-size: 22px;
+          font-weight: 700;
+          white-space: nowrap;
+        }
+        #s6-reraise span {
+          font-weight: 400;
+          color: #9db0d0;
+        }
+        #s6-edge {
+          position: absolute;
+          left: 36px;
+          top: 596px;
+          width: 768px;
+          border-radius: 10px;
+          border: 2px dashed #4a5e85;
+          padding: 10px 16px;
+          font-size: 19px;
+          line-height: 1.35;
+          color: #c6d3ea;
+        }
+        #s6-edge b {
+          color: #eaf0fa;
+        }
+        #s6-ecg-label {
+          position: absolute;
+          left: 36px;
+          top: 196px;
+          font-size: 19px;
+          color: #3ed598;
+          white-space: nowrap;
+        }
+        #s6-gap-label {
+          position: absolute;
+          left: 410px;
+          top: 196px;
+          font-size: 19px;
+          font-weight: 700;
+          color: #ff7a6b;
+          white-space: nowrap;
+        }
+        #s6-crash {
+          position: absolute;
+          left: 316px;
+          top: 98px;
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          background: #ff7a6b;
+          color: #0b1426;
+          font-size: 24px;
+          font-weight: 900;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        #s6-sub {
+          position: absolute;
+          left: 36px;
+          top: 70px;
+          font-family: "JetBrains Mono", monospace;
+          font-size: 19px;
+          color: #9db0d0;
+          white-space: nowrap;
+        }
+        .s6-key {
+          display: block;
+          width: 140px;
+          color: #9db0d0;
+        }
+        .s6-swap {
+          position: relative;
+          display: block;
+          width: 160px;
+          height: 30px;
+        }
+        .s6-swap > * {
+          position: absolute;
+          left: 0;
+          top: 2px;
+        }
+        .s6-rs {
+          position: absolute;
+          left: 446px;
+          width: 358px;
+          height: 62px;
+          border-radius: 10px;
+          background: #13213d;
+          border: 2px solid #2a3d63;
+          padding: 6px 14px;
+        }
+        .s6-rs b {
+          display: block;
+          font-family: "JetBrains Mono", monospace;
+          font-size: 18px;
+          white-space: nowrap;
+        }
+        .s6-rs span {
+          display: block;
+          margin-top: 2px;
+          font-size: 18px;
+          color: #c6d3ea;
+          white-space: nowrap;
+        }
+        #s6-foot {
+          position: absolute;
+          left: 36px;
+          top: 596px;
+          width: 768px;
+          border-radius: 10px;
+          border: 2px dashed #4a5e85;
+          padding: 10px 16px;
+          font-size: 19px;
+          line-height: 1.35;
+          color: #c6d3ea;
+        }
+      </style>
+
+      <div id="root" data-composition-id="s6-failure" data-width="1920" data-height="1080">
+        <div id="s6-wrap" class="sc-wrap">
+          <div id="s6-kicker" class="kicker"><b>06</b> · when things go wrong</div>
+          <div id="s6-title" class="title">Failure path, and the reaper safety net</div>
+
+          <div id="s6-left" class="card s6-panel">
+            <div class="s6-ph c-rd">An error before the commit</div>
+            <div id="s6-exec" class="s6-chip">spec.execute(run)</div>
+            <div id="s6-err" class="s6-chip">✗ an exception is raised</div>
+            <div id="s6-fail">
+              <div id="s6-fail-h">_fail(): one transaction</div>
+              <div class="s6-row" id="s6-r1" style="top: 52px">
+                <span class="s6-rk">mark_failed(code, message)</span>
+                <span class="s6-rv">message = the spec's own text</span>
+                <div id="s6-raw">raw error text<i id="s6-strike"></i></div>
+              </div>
+              <div class="s6-row" id="s6-r2" style="top: 128px">
+                <span class="s6-rk">spec.bill_partial → billing_charges</span>
+                <span class="s6-rv">bill the spend already made (out of credits, or always for reply)</span>
+              </div>
+              <div class="s6-row" id="s6-r3" style="top: 204px">
+                <span class="s6-rk">refresh matter + “failed” event</span>
+                <span class="s6-rv">matters UPDATE · job_events stage_terminal</span>
+              </div>
+              <div class="s6-row" id="s6-r4" style="top: 280px">
+                <span class="s6-rk">COMMIT, then publish</span>
+                <span class="s6-rv">the browser hears about it only after the save</span>
+              </div>
+            </div>
+            <div id="s6-reraise">then re-raise the error <span>(evals set reraise=False)</span></div>
+            <div id="s6-edge"><b>If that commit itself fails:</b> after_terminal is skipped, the row stays “running”, and the reaper takes over.</div>
+          </div>
+
+          <div id="s6-right" class="card s6-panel">
+            <div class="s6-ph">The reaper (a cron sweep)</div>
+            <div id="s6-sub">reap_stale(older_than = 1200 s)</div>
+            <svg class="wires" style="width: 840px; height: 690px" viewBox="0 0 840 690">
+              <path id="s6-ecg" pathLength="1" stroke="#3ed598" d="M36 160 L60 160 L68 128 L78 184 L86 150 L92 160 L120 160 L128 128 L138 184 L146 150 L152 160 L180 160 L188 128 L198 184 L206 150 L212 160 L240 160 L248 128 L258 184 L266 150 L272 160 L300 160 L308 128 L318 184" />
+              <path id="s6-flat" pathLength="1" stroke="#ff7a6b" d="M336 160 L780 160" />
+              <path id="s6-cut" pathLength="1" stroke="#ff7a6b" d="M780 112 L780 208" />
+            </svg>
+            <div id="s6-crash">✗</div>
+            <div id="s6-ecg-label">heartbeat every 30 s</div>
+            <div id="s6-gap-label">silent for over 1200 s → reap</div>
+
+            <div id="s6-t-jobs" class="tbl" style="left: 36px; top: 268px; width: 380px">
+              <div class="tbl-h">jobs<span class="tbl-op">UPDATE</span></div>
+              <div class="tbl-r">
+                <span class="s6-key">status</span>
+                <span class="s6-swap"><span id="s6-run" data-layout-allow-overlap data-layout-allow-occlusion class="pill p-run">running</span><span id="s6-failed" data-layout-allow-overlap data-layout-allow-occlusion class="pill p-fail">failed</span></span>
+              </div>
+              <div class="tbl-r" style="border-bottom: 0"><span class="s6-key">updated_at</span>stale</div>
+            </div>
+
+            <div class="s6-rs" id="s6-rs1" style="top: 268px"><b class="c-rd">mark it failed</b><span>status = 'failed'</span></div>
+            <div class="s6-rs" id="s6-rs2" style="top: 340px"><b>announce it</b><span>the browser hears it failed</span></div>
+            <div class="s6-rs" id="s6-rs3" style="top: 412px"><b>spec.on_reaped</b><span>settles chat cards</span></div>
+            <div class="s6-rs" id="s6-rs4" style="top: 484px"><b class="c-wk">subject freed</b><span>a retry can start a new job</span></div>
+            <div id="s6-foot">A healthy job beats every 30 s, far inside the 1200 s cutoff, so only a dead worker's job is reaped.</div>
+          </div>
+
+          <div class="cap-box">
+            <div class="cap" data-in="0.6" data-out="5.0"><p>What if the work fails <em>before</em> the commit? The runner's <em>_fail</em> handles it in one transaction.</p></div>
+            <div class="cap" data-in="5.2" data-out="9.6"><p>The job is marked failed with the spec's own message. Raw error text never reaches the user.</p></div>
+            <div class="cap" data-in="9.8" data-out="13.8"><p>Spend already made is billed, the matter refreshed, a “failed” event saved. Then commit, publish, re-raise.</p></div>
+            <div class="cap" data-in="14.0" data-out="18.4"><p>And if the worker dies mid-job? Its <em>heartbeat</em> stops, and the job goes silent.</p></div>
+            <div class="cap" data-in="18.6" data-out="22.6"><p>The <em>reaper</em>, a cron sweep, fails any running job silent for over 1200 seconds, and calls <em>spec.on_reaped</em>.</p></div>
+            <div class="cap" data-in="22.8" data-out="25.5"><p>That frees the subject, so a retry can start a new live job.</p></div>
+          </div>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+              // fade each caption in at data-in and out at data-out (scene-local seconds)
+      function hfCaps(tl, root) {
+        document.querySelectorAll(root + " .cap").forEach((c) => {
+          const a = parseFloat(c.dataset.in);
+          const b = parseFloat(c.dataset.out);
+          tl.fromTo(c, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" }, a);
+          tl.to(c, { opacity: 0, y: -8, duration: 0.3, ease: "power1.in" }, b - 0.3);
+        });
+      }
+      // draw an svg wire (pathLength=1) from nothing to full
+      function hfDraw(tl, sel, t, dur) {
+        tl.fromTo(sel, { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: dur || 0.6, ease: "power2.inOut" }, t);
+      }
+      // spring a card into place
+      function hfPop(tl, sel, t, from) {
+        tl.fromTo(
+          sel,
+          Object.assign({ opacity: 0, scale: 0.9, y: 18 }, from || {}),
+          { opacity: 1, scale: 1, y: 0, x: 0, duration: 0.55, ease: "back.out(1.6)" },
+          t,
+        );
+      }
+      // slide a row / step in from the left
+      function hfSlide(tl, sel, t, dx) {
+        tl.fromTo(sel, { opacity: 0, x: dx || -40 }, { opacity: 1, x: 0, duration: 0.45, ease: "power3.out" }, t);
+      }
+      // fade the whole scene in at the start and out before its slot ends
+      function hfScene(tl, wrap, dur) {
+        tl.fromTo(wrap, { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power1.out" }, 0);
+        tl.to(wrap, { opacity: 0, duration: 0.5, ease: "power1.in" }, dur - 0.55);
+      }
+      // carry a labelled packet from one point to another (authored pixel constants)
+      function hfPacket(tl, sel, a, b, t, dur) {
+        const d = dur || 0.8;
+        tl.fromTo(sel, { x: a[0], y: a[1] - 20 }, { x: b[0], y: b[1] - 20, duration: d, ease: "power2.inOut" }, t);
+        tl.fromTo(sel, { opacity: 0 }, { opacity: 1, duration: 0.15, ease: "none" }, t);
+        tl.to(sel, { opacity: 0, duration: 0.2, ease: "none" }, t + d);
+      }
+      // pulse a card border to show it was just written
+      function hfFlash(tl, sel, t, from, to) {
+        tl.fromTo(
+          sel,
+          { borderColor: from || "#3a5f99" },
+          { borderColor: to || "#bfe0ff", duration: 0.25, yoyo: true, repeat: 1, ease: "power1.inOut", immediateRender: false },
+          t,
+        );
+      }
+      // mark a step card active (amber/green border) and release the previous one
+      function hfActivate(tl, sel, t, color, until) {
+        tl.fromTo(sel, { borderColor: "#2a3d63" }, { borderColor: color, duration: 0.3, ease: "power1.out", immediateRender: false }, t);
+        if (until) tl.to(sel, { borderColor: "#2a3d63", duration: 0.3, ease: "power1.in" }, until);
+      }
+
+        // scene 6: _fail in one transaction (left), then the reaper sweep (right)
+        const tl = gsap.timeline({ paused: true });
+        hfScene(tl, "#s6-wrap", 26);
+        hfSlide(tl, "#s6-kicker", 0.2, -30);
+        hfSlide(tl, "#s6-title", 0.35, -30);
+
+        // an error escapes execute
+        hfPop(tl, "#s6-left", 0.5, { x: -30 });
+        hfSlide(tl, "#s6-exec", 1.0, -20);
+        tl.fromTo("#s6-err", { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: 0.35, ease: "back.out(2.5)" }, 1.8);
+        tl.fromTo("#s6-err", { x: 0 }, { x: 10, duration: 0.07, yoyo: true, repeat: 5, ease: "power1.inOut", immediateRender: false }, 2.2);
+        hfPop(tl, "#s6-fail", 2.8);
+
+        // the four writes of _fail
+        hfSlide(tl, "#s6-r1", 5.3, -24);
+        tl.fromTo("#s6-raw", { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "none" }, 6.0);
+        tl.fromTo("#s6-strike", { scaleX: 0 }, { scaleX: 1, duration: 0.4, ease: "power2.inOut" }, 7.0);
+        tl.to("#s6-raw", { opacity: 0.45, duration: 0.4, ease: "power1.inOut" }, 7.5);
+        hfSlide(tl, "#s6-r2", 9.9, -24);
+        hfSlide(tl, "#s6-r3", 11.1, -24);
+        hfSlide(tl, "#s6-r4", 12.2, -24);
+        hfSlide(tl, "#s6-reraise", 12.9, -20);
+        hfPop(tl, "#s6-edge", 13.3);
+
+        // right: heartbeat runs, the worker dies, silence until the cutoff
+        tl.to("#s6-left", { opacity: 0.5, duration: 0.5, ease: "power1.inOut" }, 14.0);
+        hfPop(tl, "#s6-right", 14.0, { x: 30 });
+        hfSlide(tl, "#s6-sub", 14.3, -20);
+        hfDraw(tl, "#s6-ecg", 14.5, 1.4);
+        hfSlide(tl, "#s6-ecg-label", 14.8, -20);
+        tl.fromTo("#s6-crash", { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.35, ease: "back.out(2.5)" }, 16.0);
+        hfDraw(tl, "#s6-flat", 16.4, 1.6);
+        hfDraw(tl, "#s6-cut", 18.0, 0.3);
+        hfSlide(tl, "#s6-gap-label", 17.2, -20);
+
+        // the sweep: jobs row flips to failed, then the follow-ups
+        hfPop(tl, "#s6-t-jobs", 18.7, { x: -20 });
+        tl.fromTo("#s6-run", { opacity: 1 }, { opacity: 0, duration: 0.2, ease: "none" }, 19.4);
+        tl.fromTo("#s6-failed", { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(2.4)" }, 19.45);
+        hfSlide(tl, "#s6-rs1", 19.6, 30);
+        hfSlide(tl, "#s6-rs2", 20.3, 30);
+        hfSlide(tl, "#s6-rs3", 21.0, 30);
+        hfSlide(tl, "#s6-rs4", 22.9, 30);
+        hfPop(tl, "#s6-foot", 23.5);
+
+        hfCaps(tl, "#s6-wrap");
+        window.__timelines["s6-failure"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

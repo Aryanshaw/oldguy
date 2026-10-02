@@ -1,0 +1,78 @@
+<!doctype html>
+<!-- THROWAWAY spike 6: gap between back-to-back chapter MP4s. Open with ?mode=plain|overlap -->
+<meta charset="utf-8">
+<style>
+  body { font: 14px monospace; background: #111; color: #eee; margin: 16px }
+  .stack { position: relative; width: 640px; height: 360px; background: #000 }
+  video { position: absolute; inset: 0; width: 640px; height: 360px; opacity: 0 }
+  video.on { opacity: 1 }
+  pre { white-space: pre-wrap }
+</style>
+<div class="stack"><video id="a" muted playsinline preload="auto"></video><video id="b" muted playsinline preload="auto"></video></div>
+<p><button id="go">play chapters</button> <button id="seek">seek test</button></p>
+<pre id="log"></pre>
+<script>
+  const params = new URLSearchParams(location.search);
+  const MODE = params.get("mode") || "plain";            // plain: switch on `ended`; overlap: start next 100 ms early
+  const CLIPS = ["c1.mp4", "c2.mp4", "c3.mp4"];
+  const OVERLAP_S = 0.1;
+  const els = [document.getElementById("a"), document.getElementById("b")];
+  const log = (m) => { document.getElementById("log").textContent += m + "\n"; console.log("[spike6] " + m); };
+  const gaps = [];
+  let cur = 0, idx = 0, endedAt = 0, switching = false;
+
+  // load a clip into one of the two video elements and wait until it can play
+  function load(el, i) {
+    el.src = CLIPS[i % CLIPS.length]; el.load();
+    return new Promise((r) => el.addEventListener("canplaythrough", r, { once: true }));
+  }
+
+  // show the next clip: swap which element is visible and start playing it
+  async function swapTo(i, early) {
+    const nxt = els[1 - cur], old = els[cur];
+    const t0 = performance.now();
+    await nxt.play();
+    nxt.classList.add("on");
+    await new Promise((r) => nxt.requestVideoFrameCallback(() => r()));  // first painted frame
+    const t1 = performance.now();
+    if (!early) gaps.push(t1 - endedAt); else gaps.push(t1 - t0);
+    old.classList.remove("on"); old.pause(); cur = 1 - cur; idx = i; switching = false;
+    log(`${MODE}: clip ${i} first frame ${early ? "since play()" : "since ended"} = ${(gaps[gaps.length - 1]).toFixed(1)} ms`);
+    // preload the one after next into the element that just went idle
+    load(old, i + 1);
+  }
+
+  // wire up the current element so it triggers the swap (on `ended`, or slightly before the end)
+  function arm(el) {
+    el.ontimeupdate = () => {
+      if (MODE === "overlap" && !switching && el.duration && el.duration - el.currentTime <= OVERLAP_S && idx + 1 < CLIPS.length) {
+        switching = true; swapTo(idx + 1, true).then(() => arm(els[cur]));
+      }
+    };
+    el.onended = () => {
+      if (MODE === "plain" && idx + 1 < CLIPS.length) { endedAt = performance.now(); switching = true; swapTo(idx + 1, false).then(() => arm(els[cur])); }
+      else if (idx + 1 >= CLIPS.length) { log("done. gaps(ms): " + gaps.map((g) => g.toFixed(1)).join(", ")); window.__gaps = gaps; }
+    };
+  }
+
+  document.getElementById("go").onclick = async () => {
+    await load(els[0], 0); await load(els[1], 1);
+    els[0].classList.add("on"); cur = 0; idx = 0; arm(els[0]); await els[0].play();
+  };
+
+  // seek test: jump to a random point of a random clip and time until a frame is painted
+  document.getElementById("seek").onclick = async () => {
+    const results = [];
+    for (let n = 0; n < 6; n++) {
+      const i = n % CLIPS.length, el = els[cur];
+      el.src = CLIPS[i]; await new Promise((r) => el.addEventListener("loadedmetadata", r, { once: true }));
+      el.classList.add("on");
+      const target = 1 + Math.random() * (el.duration - 2), t0 = performance.now();
+      el.currentTime = target;
+      await new Promise((r) => el.requestVideoFrameCallback(() => r()));
+      results.push(performance.now() - t0);
+    }
+    log("seek_to_frame_ms: " + results.map((x) => x.toFixed(0)).join(", "));
+    window.__seeks = results;
+  };
+</script>

@@ -1,3 +1,5 @@
 .superpowers/
 spikes/.tools/
 node_modules/
+spikes/*/out/
+*.mp4

@@ -1,0 +1,618 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <template>
+      <style>
+/* shared visual system: navy canvas, API amber, worker green, Postgres blue, Redis coral, browser neutral */
+.sc-wrap {
+  position: absolute;
+  inset: 0;
+}
+.mono {
+  font-family: "JetBrains Mono", monospace;
+}
+.kicker {
+  position: absolute;
+  left: 100px;
+  top: 58px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 22px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #9db0d0;
+  white-space: nowrap;
+}
+.kicker b {
+  color: #5ea2ff;
+  font-weight: 700;
+}
+.title {
+  position: absolute;
+  left: 100px;
+  top: 92px;
+  font-size: 50px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+/* caption bar: one line on screen at a time, max two wrapped lines */
+.cap-box {
+  position: absolute;
+  left: 200px;
+  width: 1520px;
+  bottom: 40px;
+  height: 120px;
+}
+.cap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 34px;
+  line-height: 1.3;
+  font-weight: 400;
+  color: #eaf0fa;
+  background: rgba(7, 13, 28, 0.88);
+  border: 2px solid #2a3d63;
+  border-radius: 16px;
+  padding: 0 56px;
+  opacity: 0;
+}
+.cap p {
+  margin: 0;
+}
+.cap em {
+  font-style: normal;
+  font-weight: 700;
+  color: #ffffff;
+}
+.card {
+  position: absolute;
+  background: #111d35;
+  border: 2px solid #2a3d63;
+  border-radius: 14px;
+}
+.c-api {
+  color: #f5b544;
+}
+.c-wk {
+  color: #3ed598;
+}
+.c-db {
+  color: #5ea2ff;
+}
+.c-rd {
+  color: #ff7a6b;
+}
+.c-br {
+  color: #d6deec;
+}
+.c-mu {
+  color: #9db0d0;
+}
+/* lane header pill: coloured dot + name */
+.lane {
+  position: absolute;
+  top: 176px;
+  height: 712px;
+  border-radius: 18px;
+  background: rgba(17, 29, 53, 0.55);
+  border: 2px solid rgba(42, 61, 99, 0.8);
+}
+.lane-head {
+  position: absolute;
+  left: 20px;
+  top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.dot {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+}
+/* table card: blue header with table name, rows below */
+.tbl {
+  position: absolute;
+  background: #0f1a30;
+  border: 2px solid #3a5f99;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.tbl-h {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: rgba(94, 162, 255, 0.16);
+  border-bottom: 2px solid #3a5f99;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 22px;
+  font-weight: 700;
+  color: #8fc0ff;
+  white-space: nowrap;
+}
+.tbl-op {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0b1426;
+  background: #5ea2ff;
+  border-radius: 6px;
+  padding: 2px 10px;
+}
+.tbl-r {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 16px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 19px;
+  color: #d6deec;
+  white-space: nowrap;
+  border-bottom: 2px solid rgba(58, 95, 153, 0.35);
+}
+.pill {
+  display: inline-block;
+  border-radius: 8px;
+  padding: 2px 10px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 18px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.p-pend {
+  background: rgba(157, 176, 208, 0.2);
+  color: #d6deec;
+}
+.p-run {
+  background: rgba(245, 181, 68, 0.2);
+  color: #f5b544;
+}
+.p-ok {
+  background: rgba(62, 213, 152, 0.2);
+  color: #3ed598;
+}
+.p-fail {
+  background: rgba(255, 122, 107, 0.22);
+  color: #ff7a6b;
+}
+/* step card in the API / worker lane */
+.step {
+  position: absolute;
+  height: 70px;
+  border-radius: 12px;
+  background: #13213d;
+  border: 2px solid #2a3d63;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 18px;
+  white-space: nowrap;
+}
+.step-n {
+  display: block;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 38px;
+  text-align: center;
+  color: #0b1426;
+}
+.step-t {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.step-a {
+  font-size: 23px;
+  font-weight: 700;
+  color: #eaf0fa;
+}
+.step-b {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 18px;
+  color: #9db0d0;
+}
+.commit {
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 700;
+  color: #0b1426;
+  background: #5ea2ff;
+  border-radius: 8px;
+  padding: 4px 14px;
+}
+svg.wires {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  overflow: visible;
+}
+svg.wires path {
+  fill: none;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.packet {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 40px;
+  border-radius: 20px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0b1426;
+  white-space: nowrap;
+  opacity: 0;
+}
+/* fixed lane positions shared by scenes 3-5: Browser | API | Redis | Worker | Postgres */
+.ln-br {
+  left: 56px;
+  width: 200px;
+}
+.ln-api {
+  left: 268px;
+  width: 460px;
+}
+.ln-rd {
+  left: 740px;
+  width: 220px;
+}
+.ln-wk {
+  left: 972px;
+  width: 460px;
+}
+.ln-db {
+  left: 1444px;
+  width: 420px;
+}
+.callout {
+  position: absolute;
+  left: 972px;
+  width: 460px;
+  background: #0f1a30;
+  border-radius: 16px;
+  padding: 22px 26px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+.co-t {
+  display: block;
+  font-size: 26px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.co-r {
+  display: block;
+  margin-top: 14px;
+}
+.co-k {
+  display: block;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 20px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.co-v {
+  display: block;
+  margin-top: 2px;
+  font-size: 20px;
+  color: #c6d3ea;
+  white-space: nowrap;
+}
+
+      </style>
+      <style>
+        #root {
+          position: absolute;
+          inset: 0;
+          font-family: Montserrat, sans-serif;
+          color: #eaf0fa;
+        }
+        .s7-panel {
+          position: absolute;
+          top: 190px;
+          height: 650px;
+        }
+        #s7-dev {
+          left: 100px;
+          width: 920px;
+        }
+        #s7-guar {
+          left: 1060px;
+          width: 760px;
+        }
+        .s7-ph {
+          position: absolute;
+          left: 36px;
+          top: 26px;
+          font-size: 34px;
+          font-weight: 900;
+          letter-spacing: -0.01em;
+          white-space: nowrap;
+        }
+        .s7-step {
+          position: absolute;
+          left: 36px;
+          font-size: 24px;
+          font-weight: 700;
+          color: #c6d3ea;
+          white-space: nowrap;
+        }
+        .s7-code {
+          position: absolute;
+          left: 36px;
+          width: 848px;
+          border-radius: 12px;
+          background: #0a1222;
+          border: 2px solid #2a3d63;
+          padding: 16px 22px;
+          font-family: "JetBrains Mono", monospace;
+          font-size: 21px;
+          line-height: 1.45;
+          color: #d6deec;
+          white-space: pre;
+        }
+        .s7-code b {
+          color: #f5b544;
+        }
+        .s7-code u {
+          text-decoration: none;
+          color: #5ea2ff;
+        }
+        #s7-add {
+          color: #3ed598;
+          background: rgba(62, 213, 152, 0.08);
+          border-color: #3ed598;
+        }
+        .s7-check {
+          position: absolute;
+          left: 36px;
+          display: flex;
+          align-items: center;
+          gap: 18px;
+          font-size: 30px;
+          font-weight: 700;
+          white-space: nowrap;
+        }
+        .s7-check i {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 44px;
+          height: 44px;
+          border-radius: 50%;
+          background: rgba(62, 213, 152, 0.18);
+          border: 2px solid #3ed598;
+          color: #3ed598;
+          font-style: normal;
+          font-size: 24px;
+        }
+        #s7-chain {
+          position: absolute;
+          left: 36px;
+          top: 520px;
+          display: flex;
+          align-items: center;
+          gap: 14px;
+        }
+        .s7-pill {
+          display: block;
+          height: 60px;
+          line-height: 56px;
+          padding: 0 22px;
+          border-radius: 30px;
+          border: 2px solid;
+          font-size: 24px;
+          font-weight: 700;
+          white-space: nowrap;
+        }
+        .s7-arrow {
+          display: block;
+          font-size: 28px;
+          color: #9db0d0;
+        }
+        #s7-final {
+          position: absolute;
+          left: 100px;
+          top: 330px;
+          width: 1720px;
+        }
+        #s7-final-a {
+          display: block;
+          font-size: 92px;
+          font-weight: 900;
+          letter-spacing: -0.035em;
+          white-space: nowrap;
+        }
+        #s7-final-b {
+          display: block;
+          margin-top: 20px;
+          font-size: 92px;
+          font-weight: 900;
+          letter-spacing: -0.035em;
+          white-space: nowrap;
+        }
+        #s7-final-c {
+          display: block;
+          margin-top: 36px;
+          font-family: "JetBrains Mono", monospace;
+          font-size: 26px;
+          color: #9db0d0;
+          white-space: nowrap;
+        }
+      </style>
+
+      <div id="root" data-composition-id="s7-recap" data-width="1920" data-height="1080">
+        <div id="s7-wrap" class="sc-wrap">
+          <div id="s7-kicker" class="kicker"><b>07</b> · recap</div>
+          <div id="s7-title" class="title">What changed for developers</div>
+
+          <div id="s7-panels">
+            <div id="s7-dev" class="card s7-panel">
+              <div class="s7-ph c-api">Adding a new job</div>
+              <div class="s7-step" id="s7-step1" style="top: 92px">1 · write its job.py, ending with:</div>
+              <div class="s7-code" id="s7-spec" style="top: 136px"><b>MY_JOB</b> = register(
+    JobSpec(
+        kind=<u>JobKind.MY_JOB</u>,
+        queue="run_my_job",
+        check=…, create_row=…,
+        load=…, execute=…,
+    )
+)</div>
+              <div class="s7-step" id="s7-step2" style="top: 480px">2 · add one import line to loader.py:</div>
+              <div class="s7-code" id="s7-add" style="top: 524px">+ from app.my_feature import job as _my_job  # noqa: F401</div>
+            </div>
+
+            <div id="s7-guar" class="card s7-panel">
+              <div class="s7-ph c-wk">No behaviour change</div>
+              <div class="s7-check" id="s7-c1" style="top: 112px"><i>✓</i>same database rows</div>
+              <div class="s7-check" id="s7-c2" style="top: 182px"><i>✓</i>same progress events</div>
+              <div class="s7-check" id="s7-c3" style="top: 252px"><i>✓</i>same bills</div>
+              <div class="s7-check" id="s7-c4" style="top: 322px"><i>✓</i>same queue names</div>
+              <div class="s7-step" style="top: 440px">and every job now follows one path:</div>
+              <div id="s7-chain">
+                <span class="s7-pill" style="border-color: #d6deec; color: #d6deec">register</span>
+                <span class="s7-arrow">→</span>
+                <span class="s7-pill" style="border-color: #f5b544; color: #f5b544">plan</span>
+                <span class="s7-arrow">→</span>
+                <span class="s7-pill" style="border-color: #3ed598; color: #3ed598">run</span>
+              </div>
+            </div>
+          </div>
+
+          <div id="s7-final">
+            <span id="s7-final-a">One JobSpec per job.</span>
+            <span id="s7-final-b"><span class="c-api">One planner.</span> <span class="c-wk">One runner.</span></span>
+            <span id="s7-final-c">vindex api · app/jobs/ · spec.py · planner.py · runner.py</span>
+          </div>
+
+          <div class="cap-box">
+            <div class="cap" data-in="0.6" data-out="5.8"><p>For developers, a new job is one <em>job.py</em> ending in <em>register(JobSpec(…))</em>, plus one import line in <em>loader.py</em>.</p></div>
+            <div class="cap" data-in="6.0" data-out="11.6"><p>And the refactor changed no behaviour: the same rows, events, bills and queue names as before.</p></div>
+            <div class="cap" data-in="12.4" data-out="17.4"><p>Every job is registered at startup, started by one planner, and run by one runner.</p></div>
+          </div>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+              // fade each caption in at data-in and out at data-out (scene-local seconds)
+      function hfCaps(tl, root) {
+        document.querySelectorAll(root + " .cap").forEach((c) => {
+          const a = parseFloat(c.dataset.in);
+          const b = parseFloat(c.dataset.out);
+          tl.fromTo(c, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" }, a);
+          tl.to(c, { opacity: 0, y: -8, duration: 0.3, ease: "power1.in" }, b - 0.3);
+        });
+      }
+      // draw an svg wire (pathLength=1) from nothing to full
+      function hfDraw(tl, sel, t, dur) {
+        tl.fromTo(sel, { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: dur || 0.6, ease: "power2.inOut" }, t);
+      }
+      // spring a card into place
+      function hfPop(tl, sel, t, from) {
+        tl.fromTo(
+          sel,
+          Object.assign({ opacity: 0, scale: 0.9, y: 18 }, from || {}),
+          { opacity: 1, scale: 1, y: 0, x: 0, duration: 0.55, ease: "back.out(1.6)" },
+          t,
+        );
+      }
+      // slide a row / step in from the left
+      function hfSlide(tl, sel, t, dx) {
+        tl.fromTo(sel, { opacity: 0, x: dx || -40 }, { opacity: 1, x: 0, duration: 0.45, ease: "power3.out" }, t);
+      }
+      // fade the whole scene in at the start and out before its slot ends
+      function hfScene(tl, wrap, dur) {
+        tl.fromTo(wrap, { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power1.out" }, 0);
+        tl.to(wrap, { opacity: 0, duration: 0.5, ease: "power1.in" }, dur - 0.55);
+      }
+      // carry a labelled packet from one point to another (authored pixel constants)
+      function hfPacket(tl, sel, a, b, t, dur) {
+        const d = dur || 0.8;
+        tl.fromTo(sel, { x: a[0], y: a[1] - 20 }, { x: b[0], y: b[1] - 20, duration: d, ease: "power2.inOut" }, t);
+        tl.fromTo(sel, { opacity: 0 }, { opacity: 1, duration: 0.15, ease: "none" }, t);
+        tl.to(sel, { opacity: 0, duration: 0.2, ease: "none" }, t + d);
+      }
+      // pulse a card border to show it was just written
+      function hfFlash(tl, sel, t, from, to) {
+        tl.fromTo(
+          sel,
+          { borderColor: from || "#3a5f99" },
+          { borderColor: to || "#bfe0ff", duration: 0.25, yoyo: true, repeat: 1, ease: "power1.inOut", immediateRender: false },
+          t,
+        );
+      }
+      // mark a step card active (amber/green border) and release the previous one
+      function hfActivate(tl, sel, t, color, until) {
+        tl.fromTo(sel, { borderColor: "#2a3d63" }, { borderColor: color, duration: 0.3, ease: "power1.out", immediateRender: false }, t);
+        if (until) tl.to(sel, { borderColor: "#2a3d63", duration: 0.3, ease: "power1.in" }, until);
+      }
+
+        // scene 7: how to add a job, the no-behaviour-change guarantee, then the closing line
+        const tl = gsap.timeline({ paused: true });
+        hfScene(tl, "#s7-wrap", 18);
+        hfSlide(tl, "#s7-kicker", 0.2, -30);
+        hfSlide(tl, "#s7-title", 0.35, -30);
+
+        hfPop(tl, "#s7-dev", 0.6, { x: -30 });
+        hfSlide(tl, "#s7-step1", 1.1, -20);
+        hfPop(tl, "#s7-spec", 1.5);
+        hfSlide(tl, "#s7-step2", 3.2, -20);
+        hfPop(tl, "#s7-add", 3.6);
+        // the added import line glows once
+        tl.fromTo("#s7-add", { boxShadow: "0 0 0 rgba(62,213,152,0)" }, { boxShadow: "0 0 36px rgba(62,213,152,0.55)", duration: 0.5, yoyo: true, repeat: 1, ease: "power1.inOut", immediateRender: false }, 4.3);
+
+        hfPop(tl, "#s7-guar", 6.0, { x: 30 });
+        tl.fromTo(
+          ["#s7-c1", "#s7-c2", "#s7-c3", "#s7-c4"],
+          { opacity: 0, x: -24 },
+          { opacity: 1, x: 0, duration: 0.4, ease: "power3.out", stagger: 0.45 },
+          6.6,
+        );
+        hfSlide(tl, "#s7-guar .s7-step", 8.9, -20);
+        tl.fromTo(
+          "#s7-chain > *",
+          { opacity: 0, scale: 0.8 },
+          { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(2)", stagger: 0.15 },
+          9.3,
+        );
+
+        // close: panels clear, the one-line takeaway lands
+        tl.to(["#s7-panels", "#s7-title"], { opacity: 0, y: -30, duration: 0.5, ease: "power2.in" }, 11.8);
+        tl.fromTo("#s7-final-a", { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 0.7, ease: "expo.out" }, 12.4);
+        tl.fromTo("#s7-final-b", { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 0.7, ease: "expo.out" }, 12.8);
+        tl.fromTo("#s7-final-c", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power1.out" }, 13.5);
+
+        hfCaps(tl, "#s7-wrap");
+        window.__timelines["s7-recap"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

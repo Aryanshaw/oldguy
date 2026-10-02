@@ -1,0 +1,760 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <template>
+      <style>
+/* shared visual system: navy canvas, API amber, worker green, Postgres blue, Redis coral, browser neutral */
+.sc-wrap {
+  position: absolute;
+  inset: 0;
+}
+.mono {
+  font-family: "JetBrains Mono", monospace;
+}
+.kicker {
+  position: absolute;
+  left: 100px;
+  top: 58px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 22px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #9db0d0;
+  white-space: nowrap;
+}
+.kicker b {
+  color: #5ea2ff;
+  font-weight: 700;
+}
+.title {
+  position: absolute;
+  left: 100px;
+  top: 92px;
+  font-size: 50px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+/* caption bar: one line on screen at a time, max two wrapped lines */
+.cap-box {
+  position: absolute;
+  left: 200px;
+  width: 1520px;
+  bottom: 40px;
+  height: 120px;
+}
+.cap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 34px;
+  line-height: 1.3;
+  font-weight: 400;
+  color: #eaf0fa;
+  background: rgba(7, 13, 28, 0.88);
+  border: 2px solid #2a3d63;
+  border-radius: 16px;
+  padding: 0 56px;
+  opacity: 0;
+}
+.cap p {
+  margin: 0;
+}
+.cap em {
+  font-style: normal;
+  font-weight: 700;
+  color: #ffffff;
+}
+.card {
+  position: absolute;
+  background: #111d35;
+  border: 2px solid #2a3d63;
+  border-radius: 14px;
+}
+.c-api {
+  color: #f5b544;
+}
+.c-wk {
+  color: #3ed598;
+}
+.c-db {
+  color: #5ea2ff;
+}
+.c-rd {
+  color: #ff7a6b;
+}
+.c-br {
+  color: #d6deec;
+}
+.c-mu {
+  color: #9db0d0;
+}
+/* lane header pill: coloured dot + name */
+.lane {
+  position: absolute;
+  top: 176px;
+  height: 712px;
+  border-radius: 18px;
+  background: rgba(17, 29, 53, 0.55);
+  border: 2px solid rgba(42, 61, 99, 0.8);
+}
+.lane-head {
+  position: absolute;
+  left: 20px;
+  top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.dot {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+}
+/* table card: blue header with table name, rows below */
+.tbl {
+  position: absolute;
+  background: #0f1a30;
+  border: 2px solid #3a5f99;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.tbl-h {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: rgba(94, 162, 255, 0.16);
+  border-bottom: 2px solid #3a5f99;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 22px;
+  font-weight: 700;
+  color: #8fc0ff;
+  white-space: nowrap;
+}
+.tbl-op {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0b1426;
+  background: #5ea2ff;
+  border-radius: 6px;
+  padding: 2px 10px;
+}
+.tbl-r {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 16px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 19px;
+  color: #d6deec;
+  white-space: nowrap;
+  border-bottom: 2px solid rgba(58, 95, 153, 0.35);
+}
+.pill {
+  display: inline-block;
+  border-radius: 8px;
+  padding: 2px 10px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 18px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.p-pend {
+  background: rgba(157, 176, 208, 0.2);
+  color: #d6deec;
+}
+.p-run {
+  background: rgba(245, 181, 68, 0.2);
+  color: #f5b544;
+}
+.p-ok {
+  background: rgba(62, 213, 152, 0.2);
+  color: #3ed598;
+}
+.p-fail {
+  background: rgba(255, 122, 107, 0.22);
+  color: #ff7a6b;
+}
+/* step card in the API / worker lane */
+.step {
+  position: absolute;
+  height: 70px;
+  border-radius: 12px;
+  background: #13213d;
+  border: 2px solid #2a3d63;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 18px;
+  white-space: nowrap;
+}
+.step-n {
+  display: block;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 38px;
+  text-align: center;
+  color: #0b1426;
+}
+.step-t {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.step-a {
+  font-size: 23px;
+  font-weight: 700;
+  color: #eaf0fa;
+}
+.step-b {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 18px;
+  color: #9db0d0;
+}
+.commit {
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 700;
+  color: #0b1426;
+  background: #5ea2ff;
+  border-radius: 8px;
+  padding: 4px 14px;
+}
+svg.wires {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  overflow: visible;
+}
+svg.wires path {
+  fill: none;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.packet {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 40px;
+  border-radius: 20px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0b1426;
+  white-space: nowrap;
+  opacity: 0;
+}
+/* fixed lane positions shared by scenes 3-5: Browser | API | Redis | Worker | Postgres */
+.ln-br {
+  left: 56px;
+  width: 200px;
+}
+.ln-api {
+  left: 268px;
+  width: 460px;
+}
+.ln-rd {
+  left: 740px;
+  width: 220px;
+}
+.ln-wk {
+  left: 972px;
+  width: 460px;
+}
+.ln-db {
+  left: 1444px;
+  width: 420px;
+}
+.callout {
+  position: absolute;
+  left: 972px;
+  width: 460px;
+  background: #0f1a30;
+  border-radius: 16px;
+  padding: 22px 26px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+.co-t {
+  display: block;
+  font-size: 26px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.co-r {
+  display: block;
+  margin-top: 14px;
+}
+.co-k {
+  display: block;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 20px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.co-v {
+  display: block;
+  margin-top: 2px;
+  font-size: 20px;
+  color: #c6d3ea;
+  white-space: nowrap;
+}
+
+      </style>
+      <style>
+        #root {
+          position: absolute;
+          inset: 0;
+          font-family: Montserrat, sans-serif;
+          color: #eaf0fa;
+        }
+        #s3-post {
+          position: absolute;
+          left: 20px;
+          top: 56px;
+          font-family: "JetBrains Mono", monospace;
+          font-size: 18px;
+          color: #9db0d0;
+          white-space: nowrap;
+        }
+        #s3-btn {
+          position: absolute;
+          left: 72px;
+          top: 300px;
+          width: 168px;
+          height: 60px;
+          border-radius: 12px;
+          background: #eaf0fa;
+          color: #0b1426;
+          font-size: 21px;
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          white-space: nowrap;
+        }
+        #s3-cursor {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 34px;
+          height: 40px;
+        }
+        #s3-wk-note {
+          position: absolute;
+          left: 20px;
+          top: 70px;
+          font-size: 21px;
+          color: #9db0d0;
+          white-space: nowrap;
+        }
+        #s3-queue {
+          position: absolute;
+          left: 756px;
+          top: 288px;
+          width: 188px;
+          height: 300px;
+          border-radius: 14px;
+          border: 2px solid #ff7a6b;
+          background: rgba(255, 122, 107, 0.07);
+        }
+        #s3-queue-h {
+          position: absolute;
+          left: 16px;
+          top: 14px;
+          font-family: "JetBrains Mono", monospace;
+          font-size: 20px;
+          font-weight: 700;
+          color: #ff7a6b;
+          white-space: nowrap;
+        }
+        #s3-token {
+          position: absolute;
+          left: 16px;
+          top: 92px;
+          width: 152px;
+          height: 46px;
+          border-radius: 10px;
+          background: #ff7a6b;
+          color: #0b1426;
+          font-family: "JetBrains Mono", monospace;
+          font-size: 19px;
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          white-space: nowrap;
+        }
+        #s3-qnote {
+          position: absolute;
+          left: 756px;
+          top: 604px;
+          width: 188px;
+          font-size: 19px;
+          line-height: 1.35;
+          color: #c6d3ea;
+        }
+        .s3-key {
+          display: block;
+          width: 160px;
+          color: #9db0d0;
+        }
+        #s3-lock {
+          position: absolute;
+          left: 1462px;
+          top: 422px;
+          width: 384px;
+          height: 66px;
+          border-radius: 10px;
+          border: 2px solid #5ea2ff;
+          background: rgba(94, 162, 255, 0.1);
+          padding: 6px 14px;
+        }
+        #s3-lock b {
+          display: block;
+          font-family: "JetBrains Mono", monospace;
+          font-size: 18px;
+          color: #8fc0ff;
+          white-space: nowrap;
+        }
+        #s3-lock span {
+          display: block;
+          font-size: 18px;
+          color: #c6d3ea;
+          white-space: nowrap;
+        }
+        #s3-ghost {
+          position: absolute;
+          left: 1462px;
+          top: 498px;
+          width: 384px;
+          height: 40px;
+          border-radius: 10px;
+          border: 2px dashed #ff7a6b;
+          background: rgba(255, 122, 107, 0.1);
+          display: flex;
+          align-items: center;
+          padding: 0 14px;
+          font-family: "JetBrains Mono", monospace;
+          font-size: 18px;
+          font-weight: 700;
+          color: #ff7a6b;
+          white-space: nowrap;
+        }
+        #s3-commitbar {
+          position: absolute;
+          left: 1462px;
+          top: 804px;
+          width: 384px;
+          height: 52px;
+          border-radius: 10px;
+          background: #5ea2ff;
+          color: #0b1426;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-family: "JetBrains Mono", monospace;
+          font-size: 22px;
+          font-weight: 700;
+          white-space: nowrap;
+          transform-origin: 0 50%;
+        }
+        #s3-qid-new {
+          color: #3ed598;
+        }
+      </style>
+
+      <div id="root" data-composition-id="s3-start" data-width="1920" data-height="1080">
+        <div id="s3-wrap" class="sc-wrap">
+          <div id="s3-kicker" class="kicker"><b>03</b> · starting a job · api side</div>
+          <div id="s3-title" class="title">Starting a job: someone clicks “Run analysis”</div>
+
+          <div id="s3-ln-br" class="lane ln-br">
+            <div class="lane-head c-br"><i class="dot" style="background: #d6deec"></i>Browser</div>
+          </div>
+          <div id="s3-ln-api" class="lane ln-api">
+            <div class="lane-head c-api"><i class="dot" style="background: #f5b544"></i>API</div>
+            <div id="s3-post">POST /matters/{id}/phase/analysis</div>
+          </div>
+          <div id="s3-ln-rd" class="lane ln-rd">
+            <div class="lane-head c-rd"><i class="dot" style="background: #ff7a6b"></i>Redis</div>
+          </div>
+          <div id="s3-ln-wk" class="lane ln-wk">
+            <div class="lane-head c-wk"><i class="dot" style="background: #3ed598"></i>Worker</div>
+            <div id="s3-wk-note">idle: waits on the queue</div>
+          </div>
+          <div id="s3-ln-db" class="lane ln-db">
+            <div class="lane-head c-db"><i class="dot" style="background: #5ea2ff"></i>Postgres</div>
+          </div>
+
+          <div id="s3-btn">Run analysis</div>
+
+          <div id="s3-st0" class="step" style="left: 284px; top: 288px; width: 428px">
+            <i class="step-n" style="background: #f5b544">1</i>
+            <span class="step-t"><span class="step-a">Check the request</span><span class="step-b">plan() → spec.check()</span></span>
+          </div>
+          <div id="s3-st1" class="step" style="left: 284px; top: 360px; width: 428px">
+            <i class="step-n" style="background: #f5b544">2</i>
+            <span class="step-t"><span class="step-a">Claim the subject</span><span class="step-b">try_create_live: INSERT jobs</span></span>
+          </div>
+          <div id="s3-st2" class="step" style="left: 284px; top: 432px; width: 428px">
+            <i class="step-n" style="background: #f5b544">3</i>
+            <span class="step-t"><span class="step-a">Already a live job?</span><span class="step-b">spec.on_live policy</span></span>
+          </div>
+          <div id="s3-st3" class="step" style="left: 284px; top: 504px; width: 428px">
+            <i class="step-n" style="background: #f5b544">4</i>
+            <span class="step-t"><span class="step-a">Create the run row</span><span class="step-b">spec.create_row(…)</span></span>
+          </div>
+          <div id="s3-st4" class="step" style="left: 284px; top: 576px; width: 428px">
+            <i class="step-n" style="background: #f5b544">5</i>
+            <span class="step-t"><span class="step-a">Refresh the matter</span><span class="step-b">refresh_summaries_for_job</span></span>
+          </div>
+          <div id="s3-st5" class="step" style="left: 284px; top: 648px; width: 428px">
+            <i class="step-n" style="background: #5ea2ff">6</i>
+            <span class="step-t"><span class="step-a">COMMIT</span><span class="step-b">steps 2–5 in one transaction</span></span>
+          </div>
+          <div id="s3-st6" class="step" style="left: 284px; top: 720px; width: 428px">
+            <i class="step-n" style="background: #ff7a6b">7</i>
+            <span class="step-t"><span class="step-a">Enqueue the job id</span><span class="step-b">arq.enqueue_job(spec.queue, id)</span></span>
+          </div>
+          <div id="s3-st7" class="step" style="left: 284px; top: 792px; width: 428px">
+            <i class="step-n" style="background: #f5b544">8</i>
+            <span class="step-t"><span class="step-a">Save the queue id</span><span class="step-b">set_queue_job_id + COMMIT</span></span>
+          </div>
+
+          <div id="s3-queue">
+            <div id="s3-queue-h">arq queue</div>
+            <div id="s3-token" data-layout-allow-overlap data-layout-allow-occlusion>job id</div>
+          </div>
+          <div id="s3-qnote">Only the id travels. The jobs row is the blueprint.</div>
+
+          <div id="s3-t-jobs" class="tbl" style="left: 1462px; top: 236px; width: 384px">
+            <div class="tbl-h">jobs<span class="tbl-op" id="s3-op-jobs">INSERT</span></div>
+            <div class="tbl-r"><span class="s3-key">kind</span>analysis</div>
+            <div class="tbl-r"><span class="s3-key">status</span><span class="pill p-pend">pending</span></div>
+            <div class="tbl-r" style="border-bottom: 0"><span class="s3-key">queue_job_id</span><span id="s3-qid-old" data-layout-allow-overlap data-layout-allow-occlusion>—</span><span id="s3-qid-new" data-layout-allow-overlap data-layout-allow-occlusion>= job id</span></div>
+          </div>
+          <div id="s3-lock"><b>uq_jobs_live_subject</b><span>one live job per subject: the lock</span></div>
+          <div id="s3-ghost">2nd INSERT → blocked</div>
+
+          <div id="s3-t-an" class="tbl" style="left: 1462px; top: 548px; width: 384px">
+            <div class="tbl-h">analyses<span class="tbl-op">INSERT</span></div>
+            <div class="tbl-r" style="border-bottom: 0"><span class="s3-key">new row</span>this run</div>
+          </div>
+          <div id="s3-t-mt" class="tbl" style="left: 1462px; top: 654px; width: 384px">
+            <div class="tbl-h">matters<span class="tbl-op">UPDATE</span></div>
+            <div class="tbl-r"><span class="s3-key">cached</span>title · phases</div>
+            <div class="tbl-r" style="border-bottom: 0"><span class="s3-key">cached</span>last_activity_at</div>
+          </div>
+          <div id="s3-commitbar">COMMIT ✓</div>
+
+          <div id="s3-co1" class="callout" style="top: 300px; border: 3px solid #f5b544">
+            <span class="co-t c-api">A live job already exists?</span>
+            <span class="co-r"><span class="co-k">SKIP</span><span class="co-v">return nothing, start nothing</span></span>
+            <span class="co-r"><span class="co-k">REVIVE_OR_REFUSE</span><span class="co-v">running → refuse with HTTP 409</span><span class="co-v">pending → put it back on the queue</span></span>
+            <span class="co-r"><span class="co-k">RAISE</span><span class="co-v">raise an error to the caller</span></span>
+          </div>
+          <div id="s3-co2" class="callout" style="top: 540px; border: 3px solid #ff7a6b">
+            <span class="co-t c-rd">Redis unreachable?</span>
+            <span class="co-r"><span class="co-k">mark_failed("queue")</span><span class="co-v">+ refresh the matter + COMMIT</span></span>
+            <span class="co-r"><span class="co-k">QueueUnavailable</span><span class="co-v">the API answers HTTP 503</span></span>
+          </div>
+
+          <div id="s3-pk-post" class="packet" data-layout-allow-overlap data-layout-allow-occlusion style="background: #d6deec">POST</div>
+          <div id="s3-pk-ins" class="packet" data-layout-allow-overlap data-layout-allow-occlusion style="background: #5ea2ff">INSERT</div>
+          <div id="s3-pk-row" class="packet" data-layout-allow-overlap data-layout-allow-occlusion style="background: #5ea2ff">INSERT</div>
+          <div id="s3-pk-upd" class="packet" data-layout-allow-overlap data-layout-allow-occlusion style="background: #5ea2ff">UPDATE</div>
+          <div id="s3-pk-id" class="packet" data-layout-allow-overlap data-layout-allow-occlusion style="background: #ff7a6b">job id</div>
+          <div id="s3-pk-qid" class="packet" data-layout-allow-overlap data-layout-allow-occlusion style="background: #5ea2ff">UPDATE</div>
+
+          <svg id="s3-cursor" viewBox="0 0 34 40">
+            <path d="M3 3 L3 33 L11 25 L17 37 L22 35 L16 23 L28 23 Z" fill="#ffffff" stroke="#0b1426" stroke-width="2.5" stroke-linejoin="round" />
+          </svg>
+
+          <div class="cap-box">
+            <div class="cap" data-in="0.8" data-out="5.4"><p>A lawyer clicks <em>Run analysis</em>. The browser sends one request to the API.</p></div>
+            <div class="cap" data-in="5.6" data-out="10.0"><p>First <em>plan()</em> runs the job's own check. It only reads; a bad request is refused (HTTP 409) before anything is written.</p></div>
+            <div class="cap" data-in="10.2" data-out="15.0"><p>Then it inserts a <em>jobs</em> row as <em>pending</em>. A unique index allows one live job per subject, so the insert <em>is</em> the lock.</p></div>
+            <div class="cap" data-in="15.2" data-out="21.4"><p>Already a live job? The spec's policy decides: <em>SKIP</em>, <em>REVIVE_OR_REFUSE</em> (running → 409, pending → re-queue) or <em>RAISE</em>.</p></div>
+            <div class="cap" data-in="21.6" data-out="25.8"><p><em>create_row</em> adds the job's own record: a row in <em>analyses</em>. Research and reply use their own tables.</p></div>
+            <div class="cap" data-in="26.0" data-out="30.2"><p>The matter's cached summary is refreshed in the same transaction, so the matters list reflects the new job.</p></div>
+            <div class="cap" data-in="30.4" data-out="34.2"><p>All of it <em>commits together</em>. Nothing is sent to the queue until the rows are safely saved.</p></div>
+            <div class="cap" data-in="34.4" data-out="38.6"><p><em>enqueue</em> puts only the job id on the Redis queue, under the spec's queue name.</p></div>
+            <div class="cap" data-in="38.8" data-out="43.4"><p>The queue id is saved on the job. If Redis is down, the job is marked failed and the API answers 503.</p></div>
+          </div>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+              // fade each caption in at data-in and out at data-out (scene-local seconds)
+      function hfCaps(tl, root) {
+        document.querySelectorAll(root + " .cap").forEach((c) => {
+          const a = parseFloat(c.dataset.in);
+          const b = parseFloat(c.dataset.out);
+          tl.fromTo(c, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" }, a);
+          tl.to(c, { opacity: 0, y: -8, duration: 0.3, ease: "power1.in" }, b - 0.3);
+        });
+      }
+      // draw an svg wire (pathLength=1) from nothing to full
+      function hfDraw(tl, sel, t, dur) {
+        tl.fromTo(sel, { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: dur || 0.6, ease: "power2.inOut" }, t);
+      }
+      // spring a card into place
+      function hfPop(tl, sel, t, from) {
+        tl.fromTo(
+          sel,
+          Object.assign({ opacity: 0, scale: 0.9, y: 18 }, from || {}),
+          { opacity: 1, scale: 1, y: 0, x: 0, duration: 0.55, ease: "back.out(1.6)" },
+          t,
+        );
+      }
+      // slide a row / step in from the left
+      function hfSlide(tl, sel, t, dx) {
+        tl.fromTo(sel, { opacity: 0, x: dx || -40 }, { opacity: 1, x: 0, duration: 0.45, ease: "power3.out" }, t);
+      }
+      // fade the whole scene in at the start and out before its slot ends
+      function hfScene(tl, wrap, dur) {
+        tl.fromTo(wrap, { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power1.out" }, 0);
+        tl.to(wrap, { opacity: 0, duration: 0.5, ease: "power1.in" }, dur - 0.55);
+      }
+      // carry a labelled packet from one point to another (authored pixel constants)
+      function hfPacket(tl, sel, a, b, t, dur) {
+        const d = dur || 0.8;
+        tl.fromTo(sel, { x: a[0], y: a[1] - 20 }, { x: b[0], y: b[1] - 20, duration: d, ease: "power2.inOut" }, t);
+        tl.fromTo(sel, { opacity: 0 }, { opacity: 1, duration: 0.15, ease: "none" }, t);
+        tl.to(sel, { opacity: 0, duration: 0.2, ease: "none" }, t + d);
+      }
+      // pulse a card border to show it was just written
+      function hfFlash(tl, sel, t, from, to) {
+        tl.fromTo(
+          sel,
+          { borderColor: from || "#3a5f99" },
+          { borderColor: to || "#bfe0ff", duration: 0.25, yoyo: true, repeat: 1, ease: "power1.inOut", immediateRender: false },
+          t,
+        );
+      }
+      // mark a step card active (amber/green border) and release the previous one
+      function hfActivate(tl, sel, t, color, until) {
+        tl.fromTo(sel, { borderColor: "#2a3d63" }, { borderColor: color, duration: 0.3, ease: "power1.out", immediateRender: false }, t);
+        if (until) tl.to(sel, { borderColor: "#2a3d63", duration: 0.3, ease: "power1.in" }, until);
+      }
+
+        // scene 3: browser button -> plan -> insert (the lock) -> policies -> run row -> matter -> commit -> enqueue
+        const tl = gsap.timeline({ paused: true });
+        const AMBER = "#f5b544";
+        hfScene(tl, "#s3-wrap", 44);
+        hfSlide(tl, "#s3-kicker", 0.2, -30);
+        hfSlide(tl, "#s3-title", 0.35, -30);
+        tl.fromTo(
+          ["#s3-ln-br", "#s3-ln-api", "#s3-ln-rd", "#s3-ln-wk", "#s3-ln-db"],
+          { opacity: 0, y: 30 },
+          { opacity: 1, y: 0, duration: 0.5, ease: "power3.out", stagger: 0.1 },
+          0.5,
+        );
+        // the worker lane stays dim: nothing happens there yet
+        tl.to("#s3-ln-wk", { opacity: 0.4, duration: 0.6, ease: "power1.inOut" }, 1.6);
+        tl.set("#s3-post", { opacity: 0 }, 0);
+
+        // cursor glides to the button and clicks; a POST packet leaves for the API
+        hfPop(tl, "#s3-btn", 1.2);
+        tl.fromTo("#s3-cursor", { x: 220, y: 470, opacity: 0 }, { x: 160, y: 330, opacity: 1, duration: 1.0, ease: "power2.out" }, 1.6);
+        tl.fromTo("#s3-btn", { scale: 1 }, { scale: 0.92, duration: 0.12, yoyo: true, repeat: 1, ease: "power1.inOut", immediateRender: false }, 2.7);
+        tl.to("#s3-cursor", { opacity: 0, duration: 0.4, ease: "power1.in" }, 4.2);
+        hfPacket(tl, "#s3-pk-post", [170, 330], [300, 250], 3.0, 0.7);
+        tl.fromTo("#s3-post", { opacity: 0, x: -16 }, { opacity: 1, x: 0, duration: 0.4, ease: "power3.out", immediateRender: false }, 3.6);
+
+        // 1. plan + check (read-only)
+        hfSlide(tl, "#s3-st0", 5.6);
+        hfActivate(tl, "#s3-st0", 5.9, AMBER, 10.2);
+
+        // 2. INSERT jobs: the insert is the lock
+        hfSlide(tl, "#s3-st1", 10.2);
+        hfActivate(tl, "#s3-st1", 10.5, AMBER, 15.2);
+        hfPacket(tl, "#s3-pk-ins", [720, 392], [1340, 300], 10.6, 0.9);
+        hfPop(tl, "#s3-t-jobs", 11.3, { x: 30 });
+        hfPop(tl, "#s3-lock", 12.6);
+
+        // 3. a second insert bounces off the unique index; the policy callout explains the outcomes
+        hfSlide(tl, "#s3-st2", 15.2);
+        hfActivate(tl, "#s3-st2", 15.5, AMBER, 21.6);
+        tl.fromTo("#s3-ghost", { opacity: 0, x: 60 }, { opacity: 1, x: 0, duration: 0.4, ease: "power3.out" }, 15.5);
+        tl.fromTo("#s3-ghost", { x: 0 }, { x: 12, duration: 0.07, yoyo: true, repeat: 5, ease: "power1.inOut", immediateRender: false }, 16.0);
+        hfPop(tl, "#s3-co1", 16.2, { x: -30 });
+        tl.fromTo(
+          "#s3-co1 .co-r",
+          { opacity: 0, x: -16 },
+          { opacity: 1, x: 0, duration: 0.35, ease: "power3.out", stagger: 0.9 },
+          16.8,
+        );
+        tl.to(["#s3-co1", "#s3-ghost"], { opacity: 0, duration: 0.4, ease: "power1.in" }, 21.3);
+
+        // 4. the job's own run row
+        hfSlide(tl, "#s3-st3", 21.6);
+        hfActivate(tl, "#s3-st3", 21.9, AMBER, 26.0);
+        hfPacket(tl, "#s3-pk-row", [720, 536], [1340, 590], 22.0, 0.9);
+        hfPop(tl, "#s3-t-an", 22.7, { x: 30 });
+
+        // 5. the matter's cached summary, same transaction
+        hfSlide(tl, "#s3-st4", 26.0);
+        hfActivate(tl, "#s3-st4", 26.3, AMBER, 30.4);
+        hfPacket(tl, "#s3-pk-upd", [720, 608], [1330, 700], 26.4, 0.9);
+        hfPop(tl, "#s3-t-mt", 27.1, { x: 30 });
+
+        // 6. COMMIT: the three tables flash together and the commit bar sweeps in
+        hfSlide(tl, "#s3-st5", 30.4);
+        hfActivate(tl, "#s3-st5", 30.7, "#5ea2ff", 34.4);
+        tl.fromTo("#s3-commitbar", { scaleX: 0, opacity: 0 }, { scaleX: 1, opacity: 1, duration: 0.6, ease: "power3.inOut" }, 30.9);
+        hfFlash(tl, ["#s3-t-jobs", "#s3-t-an", "#s3-t-mt"], 31.4);
+
+        // 7. only the job id goes to Redis
+        hfSlide(tl, "#s3-st6", 34.4);
+        hfActivate(tl, "#s3-st6", 34.7, "#ff7a6b", 38.8);
+        hfPop(tl, "#s3-queue", 34.6);
+        hfPacket(tl, "#s3-pk-id", [700, 752], [776, 400], 35.1, 0.8);
+        tl.fromTo("#s3-token", { opacity: 0, y: -30 }, { opacity: 1, y: 0, duration: 0.45, ease: "bounce.out" }, 35.8);
+        hfSlide(tl, "#s3-qnote", 36.4, -16);
+        // the idle worker lane perks up: there is work waiting
+        tl.to("#s3-ln-wk", { opacity: 0.75, duration: 0.6, ease: "power1.inOut" }, 36.8);
+
+        // 8. queue id saved; then the queue-down branch
+        hfSlide(tl, "#s3-st7", 38.8);
+        hfActivate(tl, "#s3-st7", 39.1, AMBER);
+        hfPacket(tl, "#s3-pk-qid", [720, 824], [1340, 389], 39.1, 0.9);
+        tl.fromTo("#s3-qid-old", { opacity: 1 }, { opacity: 0, duration: 0.2, ease: "none" }, 39.9);
+        tl.fromTo("#s3-qid-new", { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "none" }, 40.0);
+        tl.to("#s3-ln-wk", { opacity: 1, duration: 0.3, ease: "none" }, 40.3);
+        hfPop(tl, "#s3-co2", 40.4, { x: -30 });
+
+        hfCaps(tl, "#s3-wrap");
+        window.__timelines["s3-start"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

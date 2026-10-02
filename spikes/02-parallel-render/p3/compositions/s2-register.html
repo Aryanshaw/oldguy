@@ -1,0 +1,780 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <template>
+      <style>
+/* shared visual system: navy canvas, API amber, worker green, Postgres blue, Redis coral, browser neutral */
+.sc-wrap {
+  position: absolute;
+  inset: 0;
+}
+.mono {
+  font-family: "JetBrains Mono", monospace;
+}
+.kicker {
+  position: absolute;
+  left: 100px;
+  top: 58px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 22px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #9db0d0;
+  white-space: nowrap;
+}
+.kicker b {
+  color: #5ea2ff;
+  font-weight: 700;
+}
+.title {
+  position: absolute;
+  left: 100px;
+  top: 92px;
+  font-size: 50px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+/* caption bar: one line on screen at a time, max two wrapped lines */
+.cap-box {
+  position: absolute;
+  left: 200px;
+  width: 1520px;
+  bottom: 40px;
+  height: 120px;
+}
+.cap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 34px;
+  line-height: 1.3;
+  font-weight: 400;
+  color: #eaf0fa;
+  background: rgba(7, 13, 28, 0.88);
+  border: 2px solid #2a3d63;
+  border-radius: 16px;
+  padding: 0 56px;
+  opacity: 0;
+}
+.cap p {
+  margin: 0;
+}
+.cap em {
+  font-style: normal;
+  font-weight: 700;
+  color: #ffffff;
+}
+.card {
+  position: absolute;
+  background: #111d35;
+  border: 2px solid #2a3d63;
+  border-radius: 14px;
+}
+.c-api {
+  color: #f5b544;
+}
+.c-wk {
+  color: #3ed598;
+}
+.c-db {
+  color: #5ea2ff;
+}
+.c-rd {
+  color: #ff7a6b;
+}
+.c-br {
+  color: #d6deec;
+}
+.c-mu {
+  color: #9db0d0;
+}
+/* lane header pill: coloured dot + name */
+.lane {
+  position: absolute;
+  top: 176px;
+  height: 712px;
+  border-radius: 18px;
+  background: rgba(17, 29, 53, 0.55);
+  border: 2px solid rgba(42, 61, 99, 0.8);
+}
+.lane-head {
+  position: absolute;
+  left: 20px;
+  top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.dot {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+}
+/* table card: blue header with table name, rows below */
+.tbl {
+  position: absolute;
+  background: #0f1a30;
+  border: 2px solid #3a5f99;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.tbl-h {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: rgba(94, 162, 255, 0.16);
+  border-bottom: 2px solid #3a5f99;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 22px;
+  font-weight: 700;
+  color: #8fc0ff;
+  white-space: nowrap;
+}
+.tbl-op {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0b1426;
+  background: #5ea2ff;
+  border-radius: 6px;
+  padding: 2px 10px;
+}
+.tbl-r {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 16px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 19px;
+  color: #d6deec;
+  white-space: nowrap;
+  border-bottom: 2px solid rgba(58, 95, 153, 0.35);
+}
+.pill {
+  display: inline-block;
+  border-radius: 8px;
+  padding: 2px 10px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 18px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.p-pend {
+  background: rgba(157, 176, 208, 0.2);
+  color: #d6deec;
+}
+.p-run {
+  background: rgba(245, 181, 68, 0.2);
+  color: #f5b544;
+}
+.p-ok {
+  background: rgba(62, 213, 152, 0.2);
+  color: #3ed598;
+}
+.p-fail {
+  background: rgba(255, 122, 107, 0.22);
+  color: #ff7a6b;
+}
+/* step card in the API / worker lane */
+.step {
+  position: absolute;
+  height: 70px;
+  border-radius: 12px;
+  background: #13213d;
+  border: 2px solid #2a3d63;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 18px;
+  white-space: nowrap;
+}
+.step-n {
+  display: block;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 38px;
+  text-align: center;
+  color: #0b1426;
+}
+.step-t {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.step-a {
+  font-size: 23px;
+  font-weight: 700;
+  color: #eaf0fa;
+}
+.step-b {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 18px;
+  color: #9db0d0;
+}
+.commit {
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 700;
+  color: #0b1426;
+  background: #5ea2ff;
+  border-radius: 8px;
+  padding: 4px 14px;
+}
+svg.wires {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  overflow: visible;
+}
+svg.wires path {
+  fill: none;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.packet {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 40px;
+  border-radius: 20px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0b1426;
+  white-space: nowrap;
+  opacity: 0;
+}
+/* fixed lane positions shared by scenes 3-5: Browser | API | Redis | Worker | Postgres */
+.ln-br {
+  left: 56px;
+  width: 200px;
+}
+.ln-api {
+  left: 268px;
+  width: 460px;
+}
+.ln-rd {
+  left: 740px;
+  width: 220px;
+}
+.ln-wk {
+  left: 972px;
+  width: 460px;
+}
+.ln-db {
+  left: 1444px;
+  width: 420px;
+}
+.callout {
+  position: absolute;
+  left: 972px;
+  width: 460px;
+  background: #0f1a30;
+  border-radius: 16px;
+  padding: 22px 26px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+.co-t {
+  display: block;
+  font-size: 26px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.co-r {
+  display: block;
+  margin-top: 14px;
+}
+.co-k {
+  display: block;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 20px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.co-v {
+  display: block;
+  margin-top: 2px;
+  font-size: 20px;
+  color: #c6d3ea;
+  white-space: nowrap;
+}
+
+      </style>
+      <style>
+        #root {
+          position: absolute;
+          inset: 0;
+          font-family: Montserrat, sans-serif;
+          color: #eaf0fa;
+        }
+        .s2-proc {
+          position: absolute;
+          left: 100px;
+          width: 330px;
+          height: 150px;
+          padding: 20px 24px;
+        }
+        .s2-big {
+          display: block;
+          font-family: "JetBrains Mono", monospace;
+          font-size: 30px;
+          font-weight: 700;
+          white-space: nowrap;
+        }
+        .s2-sub {
+          display: block;
+          margin-top: 6px;
+          font-size: 21px;
+          color: #c6d3ea;
+          white-space: nowrap;
+        }
+        .s2-code {
+          display: block;
+          margin-top: 10px;
+          font-family: "JetBrains Mono", monospace;
+          font-size: 18px;
+          color: #9db0d0;
+          white-space: nowrap;
+        }
+        .s2-col {
+          position: absolute;
+          top: 200px;
+          height: 600px;
+          padding: 22px 20px;
+        }
+        #s2-loader {
+          left: 520px;
+          width: 360px;
+        }
+        #s2-registry {
+          left: 1480px;
+          width: 340px;
+          border-color: #5ea2ff;
+        }
+        .s2-line {
+          position: absolute;
+          left: 20px;
+          height: 46px;
+          display: flex;
+          align-items: center;
+          font-family: "JetBrains Mono", monospace;
+          font-size: 19px;
+          color: #d6deec;
+          white-space: nowrap;
+        }
+        .s2-job {
+          position: absolute;
+          left: 960px;
+          width: 460px;
+          height: 46px;
+          display: flex;
+          align-items: center;
+          padding: 0 14px;
+          border-radius: 10px;
+          background: #13213d;
+          border: 2px solid #4a5e85;
+          font-family: "JetBrains Mono", monospace;
+          font-size: 18px;
+          color: #eaf0fa;
+          white-space: nowrap;
+        }
+        .s2-job b {
+          color: #f5b544;
+        }
+        #s2-jobs-h {
+          position: absolute;
+          left: 960px;
+          top: 222px;
+          font-family: "JetBrains Mono", monospace;
+          font-size: 22px;
+          font-weight: 700;
+          color: #d6deec;
+          white-space: nowrap;
+        }
+        #s2-jobs-s {
+          position: absolute;
+          left: 960px;
+          top: 258px;
+          font-size: 20px;
+          color: #9db0d0;
+          white-space: nowrap;
+        }
+        .s2-slot {
+          position: absolute;
+          left: 20px;
+          width: 296px;
+          height: 46px;
+          border-radius: 10px;
+          border: 2px dashed #3a5f99;
+        }
+        .s2-fill {
+          position: absolute;
+          inset: -2px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0 14px;
+          border-radius: 10px;
+          background: rgba(94, 162, 255, 0.18);
+          border: 2px solid #5ea2ff;
+          font-family: "JetBrains Mono", monospace;
+          font-size: 18px;
+          font-weight: 700;
+          color: #eaf0fa;
+          white-space: nowrap;
+        }
+        .s2-fill i {
+          font-style: normal;
+          color: #3ed598;
+        }
+        #s2-twice {
+          position: absolute;
+          left: 20px;
+          top: 528px;
+          font-size: 20px;
+          font-weight: 700;
+          color: #ff7a6b;
+          white-space: nowrap;
+        }
+        #s2-wf {
+          left: 600px;
+          width: 580px;
+          border-color: #3ed598;
+        }
+        #s2-ac {
+          left: 1240px;
+          width: 580px;
+        }
+        .s2-h {
+          display: block;
+          font-family: "JetBrains Mono", monospace;
+          font-size: 30px;
+          font-weight: 700;
+          white-space: nowrap;
+        }
+        .s2-hs {
+          display: block;
+          margin-top: 8px;
+          width: 530px;
+          font-size: 21px;
+          line-height: 1.35;
+          color: #c6d3ea;
+        }
+        .s2-fn {
+          position: absolute;
+          left: 24px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          font-family: "JetBrains Mono", monospace;
+          font-size: 21px;
+          color: #eaf0fa;
+          white-space: nowrap;
+        }
+        .s2-fn i {
+          display: block;
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          background: #3ed598;
+        }
+        #s2-wf-foot {
+          position: absolute;
+          left: 24px;
+          top: 534px;
+          font-family: "JetBrains Mono", monospace;
+          font-size: 19px;
+          color: #9db0d0;
+          white-space: nowrap;
+        }
+        .s2-case {
+          position: absolute;
+          left: 24px;
+          width: 530px;
+          height: 168px;
+          border-radius: 12px;
+          padding: 18px 22px;
+          background: #13213d;
+        }
+        #s2-ok {
+          top: 160px;
+          border: 2px solid #3ed598;
+        }
+        #s2-bad {
+          top: 360px;
+          border: 2px solid #ff7a6b;
+        }
+        .s2-ct {
+          display: block;
+          font-size: 26px;
+          font-weight: 700;
+          white-space: nowrap;
+        }
+        .s2-cd {
+          display: block;
+          margin-top: 8px;
+          font-size: 21px;
+          line-height: 1.35;
+          color: #c6d3ea;
+        }
+      </style>
+
+      <div id="root" data-composition-id="s2-register" data-width="1920" data-height="1080">
+        <div id="s2-wrap" class="sc-wrap">
+          <div id="s2-kicker" class="kicker"><b>02</b> · registration · at startup, no database</div>
+          <div id="s2-title" class="title">Every job announces itself when the app boots</div>
+
+          <svg class="wires" viewBox="0 0 1920 1080">
+            <path id="s2-w-main" pathLength="1" stroke="#f5b544" d="M430 325 C475 325 475 400 520 400" />
+            <path id="s2-w-wk" pathLength="1" stroke="#3ed598" d="M430 545 C475 545 475 560 520 560" />
+            <path id="s2-l0" pathLength="1" stroke="#4a5e85" d="M880 333 L960 333" />
+            <path id="s2-l1" pathLength="1" stroke="#4a5e85" d="M880 391 L960 391" />
+            <path id="s2-l2" pathLength="1" stroke="#4a5e85" d="M880 449 L960 449" />
+            <path id="s2-l3" pathLength="1" stroke="#4a5e85" d="M880 507 L960 507" />
+            <path id="s2-l4" pathLength="1" stroke="#4a5e85" d="M880 565 L960 565" />
+            <path id="s2-l5" pathLength="1" stroke="#4a5e85" d="M880 623 L960 623" />
+            <path id="s2-l6" pathLength="1" stroke="#4a5e85" d="M880 681 L960 681" />
+            <path id="s2-r0" pathLength="1" stroke="#5ea2ff" d="M1420 333 L1500 333" />
+            <path id="s2-r1" pathLength="1" stroke="#5ea2ff" d="M1420 391 L1500 391" />
+            <path id="s2-r2" pathLength="1" stroke="#5ea2ff" d="M1420 449 L1500 449" />
+            <path id="s2-r3" pathLength="1" stroke="#5ea2ff" d="M1420 507 L1500 507" />
+            <path id="s2-r4" pathLength="1" stroke="#5ea2ff" d="M1420 565 L1500 565" />
+            <path id="s2-r5" pathLength="1" stroke="#5ea2ff" d="M1420 623 L1500 623" />
+            <path id="s2-r6" pathLength="1" stroke="#5ea2ff" d="M1420 681 L1500 681" />
+            <path id="s2-w-wf" pathLength="1" stroke="#3ed598" d="M440 500 C520 500 520 500 600 500" />
+            <path id="s2-w-ac" pathLength="1" stroke="#d6deec" d="M270 200 C270 176 300 176 330 176 L1500 176 C1530 176 1530 176 1530 200" />
+          </svg>
+
+          <div id="s2-phase1">
+            <div id="s2-main" class="card s2-proc" style="top: 250px; border-color: #f5b544">
+              <span class="s2-big c-api">main.py</span>
+              <span class="s2-sub">the API process</span>
+              <span class="s2-code">imports loader</span>
+            </div>
+            <div id="s2-worker" class="card s2-proc" style="top: 470px; border-color: #3ed598">
+              <span class="s2-big c-wk">worker.py</span>
+              <span class="s2-sub">the worker process</span>
+              <span class="s2-code">imports loader</span>
+            </div>
+
+            <div id="s2-loader" class="card s2-col">
+              <span class="s2-big">loader.py</span>
+              <span class="s2-sub">imports every job module</span>
+              <div class="s2-line" style="top: 110px">matters/analysis/job.py</div>
+              <div class="s2-line" style="top: 168px">matters/reply/job.py</div>
+              <div class="s2-line" style="top: 226px">matters/research/job.py</div>
+              <div class="s2-line" style="top: 284px">document/job.py</div>
+              <div class="s2-line" style="top: 342px">evals/analysis/job.py</div>
+              <div class="s2-line" style="top: 400px">evals/reply/job.py</div>
+              <div class="s2-line" style="top: 458px">chat/job.py</div>
+            </div>
+
+            <div id="s2-jobs-h">each job.py, last line</div>
+            <div id="s2-jobs-s">runs on import</div>
+            <div class="s2-job" style="top: 310px"><b>ANALYSIS</b>&nbsp;= register(JobSpec(…))</div>
+            <div class="s2-job" style="top: 368px"><b>REPLY</b>&nbsp;= register(JobSpec(…))</div>
+            <div class="s2-job" style="top: 426px"><b>RESEARCH</b>&nbsp;= register(JobSpec(…))</div>
+            <div class="s2-job" style="top: 484px"><b>DOCUMENT_PARSE</b>&nbsp;= register(JobSpec(…))</div>
+            <div class="s2-job" style="top: 542px"><b>ANALYSIS_EVAL</b>&nbsp;= register(JobSpec(…))</div>
+            <div class="s2-job" style="top: 600px"><b>REPLY_EVAL</b>&nbsp;= register(JobSpec(…))</div>
+            <div class="s2-job" style="top: 658px"><b>CHAT_RESEARCH</b>&nbsp;= register(JobSpec(…))</div>
+          </div>
+
+          <div id="s2-registry" class="card s2-col">
+            <span class="s2-big c-db">_REGISTRY</span>
+            <span class="s2-sub">job kind → its JobSpec</span>
+            <div class="s2-slot" style="top: 110px"><div class="s2-fill">ANALYSIS<i>✓</i></div></div>
+            <div class="s2-slot" style="top: 168px"><div class="s2-fill">REPLY<i>✓</i></div></div>
+            <div class="s2-slot" style="top: 226px"><div class="s2-fill">RESEARCH<i>✓</i></div></div>
+            <div class="s2-slot" style="top: 284px"><div class="s2-fill">DOCUMENT_PARSE<i>✓</i></div></div>
+            <div class="s2-slot" style="top: 342px"><div class="s2-fill">ANALYSIS_EVAL<i>✓</i></div></div>
+            <div class="s2-slot" style="top: 400px"><div class="s2-fill">REPLY_EVAL<i>✓</i></div></div>
+            <div class="s2-slot" style="top: 458px"><div class="s2-fill">CHAT_RESEARCH<i>✓</i></div></div>
+            <div id="s2-twice">same kind twice → error</div>
+          </div>
+
+          <div id="s2-wf" class="card s2-col">
+            <span class="s2-h c-wk">worker_functions()</span>
+            <span class="s2-hs">One queue function per spec, named by spec.queue</span>
+            <div class="s2-fn" style="top: 150px"><i></i>run_analysis</div>
+            <div class="s2-fn" style="top: 202px"><i></i>run_reply</div>
+            <div class="s2-fn" style="top: 254px"><i></i>run_research</div>
+            <div class="s2-fn" style="top: 306px"><i></i>parse_document</div>
+            <div class="s2-fn" style="top: 358px"><i></i>run_analysis_eval</div>
+            <div class="s2-fn" style="top: 410px"><i></i>run_reply_eval</div>
+            <div class="s2-fn" style="top: 462px"><i></i>run_chat_research</div>
+            <div id="s2-wf-foot">each → runner.execute(spec, ctx, job_id)</div>
+          </div>
+
+          <div id="s2-ac" class="card s2-col">
+            <span class="s2-h">assert_complete()</span>
+            <span class="s2-hs">Runs when the API and the worker start</span>
+            <div id="s2-ok" class="s2-case">
+              <span class="s2-ct c-wk">✓ every job kind has a spec</span>
+              <span class="s2-cd">Intake is the one exception: it runs inside the request. The app starts.</span>
+            </div>
+            <div id="s2-bad" class="s2-case">
+              <span class="s2-ct c-rd">✗ a job kind has no spec</span>
+              <span class="s2-cd">Startup stops with an error, before any job can be queued.</span>
+            </div>
+          </div>
+
+          <div class="cap-box">
+            <div class="cap" data-in="0.6" data-out="5.0"><p>At startup nothing touches the database. <em>main.py</em> (the API) and <em>worker.py</em> both import <em>loader.py</em>.</p></div>
+            <div class="cap" data-in="5.2" data-out="9.9"><p><em>loader.py</em> imports every job module. Importing a <em>job.py</em> runs its last line: <em>register(JobSpec(…))</em>.</p></div>
+            <div class="cap" data-in="10.1" data-out="14.4"><p><em>register</em> files the spec in a registry, keyed by job kind. Registering the same kind twice is an error.</p></div>
+            <div class="cap" data-in="14.8" data-out="19.6"><p>The worker asks <em>worker_functions()</em> for one queue function per spec. Each hands its job id to the runner.</p></div>
+            <div class="cap" data-in="19.8" data-out="24.4"><p><em>assert_complete()</em> checks that every job kind except intake has a spec. If one is missing, the app won't start.</p></div>
+            <div class="cap" data-in="24.6" data-out="27.4"><p>So a forgotten job fails loudly at boot, never quietly in production.</p></div>
+          </div>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+              // fade each caption in at data-in and out at data-out (scene-local seconds)
+      function hfCaps(tl, root) {
+        document.querySelectorAll(root + " .cap").forEach((c) => {
+          const a = parseFloat(c.dataset.in);
+          const b = parseFloat(c.dataset.out);
+          tl.fromTo(c, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" }, a);
+          tl.to(c, { opacity: 0, y: -8, duration: 0.3, ease: "power1.in" }, b - 0.3);
+        });
+      }
+      // draw an svg wire (pathLength=1) from nothing to full
+      function hfDraw(tl, sel, t, dur) {
+        tl.fromTo(sel, { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: dur || 0.6, ease: "power2.inOut" }, t);
+      }
+      // spring a card into place
+      function hfPop(tl, sel, t, from) {
+        tl.fromTo(
+          sel,
+          Object.assign({ opacity: 0, scale: 0.9, y: 18 }, from || {}),
+          { opacity: 1, scale: 1, y: 0, x: 0, duration: 0.55, ease: "back.out(1.6)" },
+          t,
+        );
+      }
+      // slide a row / step in from the left
+      function hfSlide(tl, sel, t, dx) {
+        tl.fromTo(sel, { opacity: 0, x: dx || -40 }, { opacity: 1, x: 0, duration: 0.45, ease: "power3.out" }, t);
+      }
+      // fade the whole scene in at the start and out before its slot ends
+      function hfScene(tl, wrap, dur) {
+        tl.fromTo(wrap, { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power1.out" }, 0);
+        tl.to(wrap, { opacity: 0, duration: 0.5, ease: "power1.in" }, dur - 0.55);
+      }
+      // carry a labelled packet from one point to another (authored pixel constants)
+      function hfPacket(tl, sel, a, b, t, dur) {
+        const d = dur || 0.8;
+        tl.fromTo(sel, { x: a[0], y: a[1] - 20 }, { x: b[0], y: b[1] - 20, duration: d, ease: "power2.inOut" }, t);
+        tl.fromTo(sel, { opacity: 0 }, { opacity: 1, duration: 0.15, ease: "none" }, t);
+        tl.to(sel, { opacity: 0, duration: 0.2, ease: "none" }, t + d);
+      }
+      // pulse a card border to show it was just written
+      function hfFlash(tl, sel, t, from, to) {
+        tl.fromTo(
+          sel,
+          { borderColor: from || "#3a5f99" },
+          { borderColor: to || "#bfe0ff", duration: 0.25, yoyo: true, repeat: 1, ease: "power1.inOut", immediateRender: false },
+          t,
+        );
+      }
+      // mark a step card active (amber/green border) and release the previous one
+      function hfActivate(tl, sel, t, color, until) {
+        tl.fromTo(sel, { borderColor: "#2a3d63" }, { borderColor: color, duration: 0.3, ease: "power1.out", immediateRender: false }, t);
+        if (until) tl.to(sel, { borderColor: "#2a3d63", duration: 0.3, ease: "power1.in" }, until);
+      }
+
+        // scene 2: loader imports -> register(JobSpec) -> registry -> worker functions + boot check
+        const tl = gsap.timeline({ paused: true });
+        hfScene(tl, "#s2-wrap", 28);
+        hfSlide(tl, "#s2-kicker", 0.2, -30);
+        hfSlide(tl, "#s2-title", 0.35, -30);
+
+        // the two processes start, both import the loader
+        hfPop(tl, "#s2-main", 0.8, { x: -30 });
+        hfPop(tl, "#s2-worker", 1.1, { x: -30 });
+        hfDraw(tl, "#s2-w-main", 2.0, 0.6);
+        hfDraw(tl, "#s2-w-wk", 2.15, 0.6);
+        hfPop(tl, "#s2-loader", 2.5);
+        tl.fromTo(
+          "#s2-loader .s2-line",
+          { opacity: 0, x: -20 },
+          { opacity: 1, x: 0, duration: 0.35, ease: "power3.out", stagger: 0.12 },
+          3.2,
+        );
+        hfSlide(tl, "#s2-jobs-h", 5.2, -20);
+        hfSlide(tl, "#s2-jobs-s", 5.35, -20);
+        hfPop(tl, "#s2-registry", 5.6, { x: 30 });
+
+        // each import runs register(JobSpec), which fills one registry slot
+        const jobs = document.querySelectorAll("#s2-phase1 .s2-job");
+        const fills = document.querySelectorAll("#s2-registry .s2-fill");
+        for (let i = 0; i < 7; i++) {
+          const t = 6.0 + i * 0.55;
+          hfDraw(tl, "#s2-l" + i, t, 0.25);
+          hfSlide(tl, jobs[i], t + 0.15, -24);
+          hfDraw(tl, "#s2-r" + i, t + 0.4, 0.25);
+          tl.fromTo(fills[i], { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, duration: 0.35, ease: "back.out(2)" }, t + 0.6);
+        }
+        hfPop(tl, "#s2-twice", 11.2);
+
+        // phase 2: inputs clear away and the registry slides left to feed its two readers
+        tl.to(["#s2-phase1", "#s2-w-main", "#s2-w-wk", "#s2-twice"], { opacity: 0, duration: 0.5, ease: "power1.in" }, 14.3);
+        tl.to(
+          ["#s2-l0", "#s2-l1", "#s2-l2", "#s2-l3", "#s2-l4", "#s2-l5", "#s2-l6", "#s2-r0", "#s2-r1", "#s2-r2", "#s2-r3", "#s2-r4", "#s2-r5", "#s2-r6"],
+          { opacity: 0, duration: 0.5, ease: "power1.in" },
+          14.3,
+        );
+        tl.to("#s2-registry", { x: -1380, duration: 0.9, ease: "power3.inOut" }, 14.6);
+        hfDraw(tl, "#s2-w-wf", 15.5, 0.4);
+        hfPop(tl, "#s2-wf", 15.7, { x: 30 });
+        tl.fromTo(
+          "#s2-wf .s2-fn",
+          { opacity: 0, x: -20 },
+          { opacity: 1, x: 0, duration: 0.35, ease: "power3.out", stagger: 0.12 },
+          16.3,
+        );
+        hfSlide(tl, "#s2-wf-foot", 17.6, -20);
+
+        hfDraw(tl, "#s2-w-ac", 19.8, 0.8);
+        hfPop(tl, "#s2-ac", 20.3, { x: 30 });
+        hfPop(tl, "#s2-ok", 21.2);
+        hfPop(tl, "#s2-bad", 22.4);
+        // the failing case shakes once to say "boot stops here"
+        tl.fromTo("#s2-bad", { x: 0 }, { x: 10, duration: 0.07, yoyo: true, repeat: 5, ease: "power1.inOut" }, 23.1);
+
+        hfCaps(tl, "#s2-wrap");
+        window.__timelines["s2-register"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>
