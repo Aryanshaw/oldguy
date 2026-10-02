@@ -235,8 +235,10 @@ test('narrate writes build.json with sha256 of the chapter text and every built 
   const dir = chapterDir(t);
   await narrateChapter(dir, { ...fakeRun(), venvPython: PYTHON, whisperAvailable: false });
   const record = JSON.parse(fs.readFileSync(path.join(dir, 'build.json'), 'utf8'));
-  assert.deepEqual(Object.keys(record.sha256).sort(), ['chapter', 'index.html', 'narration.txt', 'narration.wav']);
-  for (const name of ['index.html', 'narration.txt', 'narration.wav']) {
+  assert.equal(record.version, 2);
+  const files = ['beats.json', 'captions.json', 'captions.vtt', 'index.html', 'narration.txt', 'narration.wav'];
+  assert.deepEqual(Object.keys(record.sha256).sort(), ['chapter', ...files].sort());
+  for (const name of files) {
     const actual = crypto.createHash('sha256').update(fs.readFileSync(path.join(dir, name))).digest('hex');
     assert.equal(record.sha256[name], actual, name);
   }

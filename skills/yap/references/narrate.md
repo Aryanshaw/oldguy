@@ -46,8 +46,8 @@ in the spec, then redo the chapter).
 
 ## The build record
 
-`build.json` holds fingerprints of the audited sentences, the scene, `narration.txt`, `narration.wav` and
-`index.html`. `yap render` compares them and refuses a chapter where anything changed after narrate. It is a
+`build.json` holds fingerprints of the audited sentences, the scene, `narration.txt`, `narration.wav`,
+`beats.json`, `captions.vtt`, `captions.json` and `index.html`. `yap render` compares them and refuses a chapter where anything changed after narrate. It is a
 safety net against mistakes (a stray edit, a half-finished redo), not a lock against someone who writes it by hand
 on purpose. You never write or edit `build.json` by hand.
 
