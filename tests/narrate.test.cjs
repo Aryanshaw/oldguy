@@ -35,7 +35,8 @@ function chapterDir(t) {
 
 // A pretend Hyperframes: tts copies the spike WAV to -o, transcribe drops the spike transcript next to the WAV.
 // `fail` names a step that should exit 1 with a stderr message instead.
-function fakeRun({ fail } = {}) {
+// `words` replaces the spike transcript's word list.
+function fakeRun({ fail, words } = {}) {
   const calls = [];
   const run = async (cmd, args, env) => {
     calls.push({ cmd, args, env });
@@ -46,7 +47,8 @@ function fakeRun({ fail } = {}) {
       return { code: 0, stdout: '{"ok":true}\n', stderr: '' };
     }
     const transcriptPath = path.join(path.dirname(args[3]), 'transcript.json');
-    fs.copyFileSync(TRANSCRIPT, transcriptPath);
+    if (words) fs.writeFileSync(transcriptPath, JSON.stringify(words));
+    else fs.copyFileSync(TRANSCRIPT, transcriptPath);
     return { code: 0, stdout: `${JSON.stringify({ ok: true, transcriptPath })}\n`, stderr: '' };
   };
   return { run, calls };
@@ -98,6 +100,20 @@ test('narrate (words path): 3 beats timed from words, timing "words", captions i
   assert.match(fs.readFileSync(path.join(dir, 'captions.vtt'), 'utf8'), /^WEBVTT\n\n00:00:/);
   const captionWords = readJson(dir, 'captions.json').map((w) => w.text).join(' ');
   assert.equal(captionWords, SENTENCES.map((s) => s.text).join(' '));
+});
+
+test('narrate: whisper timings past the end of the audio are cut back to the audio length', async (t) => {
+  // seen in the acceptance run: whisper put the last word's end 0.37 s after the audio ended
+  const dir = chapterDir(t);
+  const words = JSON.parse(fs.readFileSync(TRANSCRIPT, 'utf8'));
+  words[words.length - 1] = { ...words[words.length - 1], end: 12.0 };
+  await narrateChapter(dir, { ...fakeRun({ words }), venvPython: PYTHON, whisperAvailable: true });
+  const audioS = parseWav(fs.readFileSync(path.join(dir, 'narration.wav'))).durationS;
+  const beats = readJson(dir, 'beats.json').beats;
+  assert.equal(beats[beats.length - 1].end, Math.floor(audioS * 1000) / 1000);
+  for (const w of readJson(dir, 'captions.json')) assert.ok(w.end <= audioS + 1e-9, `${w.text} ends at ${w.end}`);
+  const cueEnds = [...fs.readFileSync(path.join(dir, 'captions.vtt'), 'utf8').matchAll(/--> 00:00:(\d+\.\d+)/g)].map((m) => Number(m[1]));
+  assert.ok(Math.max(...cueEnds) <= audioS + 0.001, `last cue ends at ${Math.max(...cueEnds)}`);
 });
 
 test('narrate: duration is the padded length rounded up to 0.1 s, and the page uses it exactly', async (t) => {
