@@ -1,0 +1,5 @@
+{
+  "name": "yap",
+  "description": "Turn a topic into a narrated explainer video, with a CLI for the deterministic steps.",
+  "version": "0.1.0"
+}
