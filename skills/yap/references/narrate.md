@@ -22,6 +22,8 @@ The rules and the splitter traps are in [storyboard.md](storyboard.md).
 
 ## The command
 
+It takes a while: run it with the shell tool's longest time limit, 10 minutes (`timeout` 600000 ms), never less.
+
 ```
 yap narrate .yap/<slug>/chapters/<id>
 ```

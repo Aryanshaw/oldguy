@@ -11,6 +11,10 @@ Right after `yap narrate` prints `narrated` for a chapter, render it, in the for
 yap render .yap/<slug>/chapters --root <repo> --only <id>
 ```
 
+Run it, the confirm run in section 3 and the Hyperframes commands in section 2 with the shell tool's longest time
+limit, 10 minutes (`timeout` 600000 ms), never less: a render can take well over the default 2 minutes. If the host
+detaches it anyway (a task id instead of the output), wait for that task to finish before doing anything else.
+
 `--root` is the user's repository. This is the only way a chapter is rendered; never call the render tool
 yourself. Run it as a normal command that you wait for: never detach it and never end your turn while it runs (the
 session can end with your answer, and a running render dies with it). One render at a time; move on to the next

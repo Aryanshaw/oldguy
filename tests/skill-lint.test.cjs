@@ -177,3 +177,25 @@ test('SKILL.md says Claude never ends its turn while a render is running, and re
   assert.ok(text.includes(NEVER_END_TURN), `SKILL.md must contain "${NEVER_END_TURN}"`);
   assert.ok(/foreground/.test(text), 'SKILL.md must say renders run in the foreground');
 });
+
+// The rule that keeps long commands from being stopped by the shell tool's default limit of about 2 minutes.
+const LONG_LIMIT = "the shell tool's longest time limit: 10 minutes (`timeout` 600000 ms)";
+// The rule that keeps every file Claude writes inside the video's own folder.
+const WRITE_ONLY_HERE = 'Write files only inside `.yap/<slug>/`';
+
+test('SKILL.md gives long commands the 10-minute limit and keeps every written file inside .yap/<slug>/', () => {
+  const text = readText(SKILL);
+  assert.ok(text.includes(LONG_LIMIT), `SKILL.md must contain "${LONG_LIMIT}"`);
+  assert.ok(text.includes(WRITE_ONLY_HERE), `SKILL.md must contain "${WRITE_ONLY_HERE}"`);
+  for (const name of ['narrate.md', 'render.md']) {
+    assert.ok(readText(path.join(REFS_DIR, name)).includes('600000'), `${name} must name the 600000 ms limit`);
+  }
+});
+
+test('no skill file sends Claude to write in /tmp', () => {
+  for (const { file, text } of everySkillFile()) {
+    text.split('\n').forEach((line, i) => {
+      assert.ok(!/\/tmp\b/.test(line), `${path.relative(SKILL_DIR, file)}:${i + 1} mentions /tmp: ${line}`);
+    });
+  }
+});

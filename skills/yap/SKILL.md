@@ -39,7 +39,13 @@ lists every command; each command prints its own usage when called wrongly.
    chapter" below).
 9. **Never end your turn while a render is running.** Run every `yap render` in the foreground, as a normal
    command, and wait for it to finish before doing anything else. The session can end when your answer ends, and a
-   render still running then is killed, so no video and no hand-off arrive.
+   render still running then is killed, so no video and no hand-off arrive. Give narrate, render and the Hyperframes
+   check the shell tool's longest time limit: 10 minutes (`timeout` 600000 ms). Never run them with a shorter
+   limit: the default (about 2 minutes) can stop a render halfway. If the host detaches a command anyway (it hands
+   back a task id instead of the output), wait for that task to finish before doing anything else.
+10. **Write files only inside `.yap/<slug>/` in the project.** Specs go to `.yap/<slug>/specs/<id>.json`, and any
+   helper script you write to build them goes in `.yap/<slug>/` too. Never write to a temp folder, your home folder
+   or anywhere else on the machine.
 
 ## Where things live
 
