@@ -28,10 +28,10 @@ function workspace(t) {
 }
 
 // Writes one chapter folder with matching narration.txt; `narrated` adds the files and build.json narrate would have written.
-function addChapter(chapters, id, { sources = [GOOD_SOURCE], narrated = true, narration = `${CLAIM.text}\n` } = {}) {
+function addChapter(chapters, id, { sources = [GOOD_SOURCE], narrated = true, narration = `${CLAIM.text}\n`, scene = [] } = {}) {
   const dir = path.join(chapters, id);
   fs.mkdirSync(dir);
-  const chapter = { id, title: id, sources, sentences: [CLAIM], scene: [] };
+  const chapter = { id, title: id, sources, sentences: [CLAIM], scene };
   fs.writeFileSync(path.join(dir, 'chapter.json'), JSON.stringify(chapter));
   fs.writeFileSync(path.join(dir, 'narration.txt'), narration);
   if (narrated) {
@@ -534,4 +534,16 @@ test('a dry run reports skips, writes no render.json and touches no video', asyn
   assert.equal(fs.readFileSync(path.join(done, 'render.json'), 'utf8'), before);
   assert.equal(fs.existsSync(path.join(fresh, 'render.json')), false);
   assert.equal(fs.readFileSync(path.join(done, 'chapter.mp4'), 'utf8'), 'video of done');
+});
+
+test('a code-card line that differs from the repository fails the audit gate and is never rendered', async (t) => {
+  const { repo, chapters } = workspace(t);
+  const card = (text) => [{ piece: 'code-card', params: { file: 'app.js', lines: [{ no: 1, text }] }, beat: 0 }];
+  addChapter(chapters, 'reworded', { scene: card('begin()') });
+  addChapter(chapters, 'exact', { scene: card('start()') });
+  const { render, calls } = fakeRender();
+  const results = await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render });
+  assert.deepEqual(calls, ['exact']);
+  assert.deepEqual(results.find((r) => r.id === 'reworded'),
+    { id: 'reworded', status: 'failed', reason: 'audit: scene[0] line 1: text differs from the repository line' });
 });
