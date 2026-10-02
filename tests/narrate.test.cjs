@@ -289,3 +289,54 @@ test('narrate speaks the verified text even if narration.txt changes on disk aft
   const crypto2 = require('node:crypto');
   assert.equal(record.sha256['narration.txt'], crypto2.createHash('sha256').update(`${verified}\n`).digest('hex'));
 });
+
+const SHA = 'a1b2c3d4e5f60718293a4b5c6d7e8f9012345678';
+
+// The fake Hyperframes plus a pretend git: `git` calls get the given answer (or throw it when it is an Error).
+function withGit(answer) {
+  const base = fakeRun();
+  const gitCalls = [];
+  const run = async (cmd, args, env) => {
+    if (cmd !== 'git') return base.run(cmd, args, env);
+    gitCalls.push(args);
+    if (answer instanceof Error) throw answer;
+    return answer;
+  };
+  return { run, gitCalls };
+}
+
+test('narrate records the commit HEAD of --root in build.json and returns it', async (t) => {
+  const dir = chapterDir(t);
+  const { run, gitCalls } = withGit({ code: 0, stdout: `${SHA}\n`, stderr: '' });
+  const result = await narrateChapter(dir, { run, venvPython: PYTHON, whisperAvailable: false, root: 'some/repo' });
+  assert.deepEqual(gitCalls, [['-C', path.resolve('some/repo'), 'rev-parse', 'HEAD']]);
+  assert.equal(readJson(dir, 'build.json').verified_against_commit, SHA);
+  assert.equal(result.commit, SHA);
+});
+
+test('narrate records null for output that is not a 40-hex commit, a git failure, or missing git', async (t) => {
+  for (const answer of [{ code: 0, stdout: 'not a sha\n', stderr: '' }, { code: 0, stdout: SHA.toUpperCase(), stderr: '' },
+    { code: 128, stdout: '', stderr: 'fatal: not a git repository' }, { code: null, stdout: '', stderr: 'spawn git ENOENT' },
+    new Error('spawn git ENOENT')]) {
+    const dir = chapterDir(t);
+    const result = await narrateChapter(dir, { run: withGit(answer).run, venvPython: PYTHON, whisperAvailable: false, root: '/repo' });
+    assert.equal(readJson(dir, 'build.json').verified_against_commit, null, JSON.stringify(String(answer.stdout ?? answer)));
+    assert.equal(result.commit, null);
+  }
+});
+
+test('narrate without a root asks git nothing and records null', async (t) => {
+  const dir = chapterDir(t);
+  const { run, gitCalls } = withGit({ code: 0, stdout: SHA, stderr: '' });
+  await narrateChapter(dir, { run, venvPython: PYTHON, whisperAvailable: false });
+  assert.deepEqual(gitCalls, []);
+  assert.equal(readJson(dir, 'build.json').verified_against_commit, null);
+});
+
+test('the narrate output line names the short commit, or says there is no git repo or no --root', () => {
+  const { narratedLine } = require('../lib/narrate-cli.cjs');
+  const r = { durationS: 31.2, beats: [1, 2, 3, 4], timing: 'words' };
+  assert.equal(narratedLine('intro', { ...r, commit: SHA }, true), 'intro: narrated, 31.2 s, 4 beats, timing words, commit a1b2c3d');
+  assert.equal(narratedLine('intro', { ...r, commit: null }, true), 'intro: narrated, 31.2 s, 4 beats, timing words, not a git repo');
+  assert.equal(narratedLine('intro', { ...r, commit: null }, false), 'intro: narrated, 31.2 s, 4 beats, timing words, no commit recorded (no --root)');
+});

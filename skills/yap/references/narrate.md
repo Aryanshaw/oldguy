@@ -25,7 +25,7 @@ The rules and the splitter traps are in [storyboard.md](storyboard.md).
 It takes a while: run it with the shell tool's longest time limit, 10 minutes (`timeout` 600000 ms), never less.
 
 ```
-yap narrate .yap/<slug>/chapters/<id>
+yap narrate .yap/<slug>/chapters/<id> --root <repo>
 ```
 
 It checks the sentences and the scene again, makes the speech with the local voice, pads a little silence at both
@@ -33,7 +33,7 @@ ends, works out when each sentence starts (word-level if `whisper-cli` is presen
 cuts captions from the audited sentences, and builds the chapter page. On success it prints:
 
 ```
-<id>: narrated, 31.2 s, 4 beats, timing words
+<id>: narrated, 31.2 s, 4 beats, timing words, commit 1a2b3c4
 ```
 
 and the folder gains `narration.wav`, `beats.json`, `captions.vtt`, `captions.json`, `index.html` and
@@ -47,8 +47,9 @@ in the spec, then redo the chapter).
 ## The build record
 
 `build.json` holds fingerprints of the audited sentences, the scene, `narration.txt`, `narration.wav`,
-`beats.json`, `captions.vtt`, `captions.json` and `index.html`. `yap render` compares them and refuses a chapter where anything changed after narrate. It is a
-safety net against mistakes (a stray edit, a half-finished redo), not a lock against someone who writes it by hand
+`beats.json`, `captions.vtt`, `captions.json` and `index.html`, and the commit the repository was on
+(`verified_against_commit`, null when `--root` is not a git repository). `yap render` compares them and refuses a
+chapter where anything changed after narrate. It is a safety net against mistakes (a stray edit, a half-finished redo), not a lock against someone who writes it by hand
 on purpose. You never write or edit `build.json` by hand.
 
 ## Redoing a chapter

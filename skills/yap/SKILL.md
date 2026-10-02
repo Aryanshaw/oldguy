@@ -130,7 +130,8 @@ playable long before the last one is written. For each chapter:
 
 1. `yap scaffold .yap/<slug>/specs/<id>.json --root .yap/<slug>` (it prints the chapter folder).
 2. Run `yap audit` on the chapter's `chapter.json` with `--root <repo>`; it must exit 0. Then run `yap narrate`
-   on the chapter folder (never two narrates at once) and check the printed seconds are 20 to 40.
+   on the chapter folder, also with `--root <repo>` so it records the commit the chapter was verified against
+   (never two narrates at once), and check the printed seconds are 20 to 40.
 3. Run `yap render .yap/<slug>/chapters --root <repo> --only <id>` for that chapter in the foreground and wait
    for it to finish (hard rule 9). Only then move on to the next chapter. One render at a time.
 

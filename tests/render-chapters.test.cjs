@@ -582,3 +582,27 @@ test('build.json: an old record (version 1 or none) is refused even when its fin
     assert.equal(called, false);
   }
 });
+
+test('build.json: the recorded commit is part of the fingerprint', async (t) => {
+  const { repo, chapters, dir } = await narratedChapter(t);
+  const file = path.join(dir, 'build.json');
+  const record = JSON.parse(fs.readFileSync(file, 'utf8'));
+  assert.equal(record.verified_against_commit, null);
+  for (const commit of ['a1b2c3d4e5f60718293a4b5c6d7e8f9012345678', 'not-a-commit']) {
+    fs.writeFileSync(file, JSON.stringify({ ...record, verified_against_commit: commit }));
+    const { result, called } = await renderOnce(repo, chapters);
+    assert.equal(result.reason, CHANGED, commit);
+    assert.equal(called, false);
+  }
+  const { verified_against_commit: _drop, ...without } = record;
+  fs.writeFileSync(file, JSON.stringify(without));
+  assert.equal((await renderOnce(repo, chapters)).result.reason, CHANGED);
+});
+
+test('build.json: a chapter narrated with a commit renders', async (t) => {
+  const { repo, chapters, dir } = await narratedChapter(t);
+  const chapter = JSON.parse(fs.readFileSync(path.join(dir, 'chapter.json'), 'utf8'));
+  const sha = 'a1b2c3d4e5f60718293a4b5c6d7e8f9012345678';
+  fs.writeFileSync(path.join(dir, 'build.json'), JSON.stringify(buildRecord(chapter, (name) => fs.readFileSync(path.join(dir, name)), sha)));
+  assert.deepEqual((await renderOnce(repo, chapters)).result, { id: 'jobs', status: 'ready', attempts: 1 });
+});
