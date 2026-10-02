@@ -1,6 +1,6 @@
 # Yap — Claude yaps, you watch
 
-Status: design, awaiting owner review. Date: 2026-10-02.
+Status: design, approved by the owner on 2026-10-02 and amended on 2026-10-03 with the Phase 0 results (`docs/spikes/SUMMARY.md`). Date: 2026-10-02.
 
 ## 1. What this is
 
@@ -74,8 +74,9 @@ script.md                 verified script (source of truth for humans and Claude
 sources.json              every cited file:line, with the quoted text
 manifest.json             ordered list of chapters (see 4.2); only the server writes it
 chapters/<id>/            id is stable and has no number in it
-  scene.html              the Hyperframes composition for this chapter
-  narration.txt  narration.wav  captions.vtt
+  scene.html              the chapter's **standalone root composition** with its own
+                          `data-duration` (a sub-composition fragment cannot be rendered alone)
+  narration.txt  narration.wav  captions.vtt  captions.json (word timings)
   chapter.mp4  poster.jpg
   sources.json            sources used by this chapter
 state/events.jsonl        browser → Claude, one JSON object per line
@@ -143,7 +144,7 @@ a restart loses nothing.
 | `GET /api/state` | browser | manifest + thread |
 | `GET /api/stream` (SSE) | browser | live updates |
 | `POST /api/message` | browser | append a chat message or button event to `events.jsonl` |
-| `GET /chapters/:id/video` | browser | chapter MP4, with range requests |
+| `GET /chapters/:id/video` | browser | chapter MP4; **HTTP range requests are required** (instant seeking) |
 | `POST /api/export` | browser | export to a folder the user picks |
 | `POST /api/reply` | Claude | add an answer (text + sources) to the thread |
 | `POST /api/chapters` | Claude | add, reorder, or update the status of a chapter |
@@ -170,15 +171,25 @@ context (which chapter, which second), so Claude knows what the viewer was looki
 
 ### 4.5 The bridge: Claude ↔ browser
 
-1. After the video is generated, the skill starts the server and runs
-   `yap listen` under Claude Code's **Monitor** tool. It tails `events.jsonl` and
-   posts a heartbeat every 5 seconds. Each new line wakes Claude. Idle cost is zero.
-2. Claude reads the event, decides **text or chapter**, and acts (4.6).
-3. **Fallback.** If the server sees no heartbeat for 15 seconds, it starts
-   `claude -p --resume <session-id>` to answer the queued event, so the viewer is not
-   stuck. This depends on a spike (section 9). If the fallback is unavailable, the chat
-   shows "Claude isn't connected: run `/yap resume` in Claude Code". Queued messages
-   are never lost; they stay in `events.jsonl`.
+1. After the video is generated, the skill starts the server and runs `yap listen` under Claude Code's
+   **Monitor** tool. `yap listen` tails `events.jsonl` with `tail -n 0 -F` (plain `tail -F` replays the last 10
+   lines when it starts) and posts a heartbeat every 5 seconds. Each new line wakes Claude within about a second,
+   even from idle (spike 7).
+2. **A Monitor lives at most 30 minutes.** The skill re-arms it every time the expiry notice arrives. Events written
+   in the short gap are not lost: every event has an `id` (4.4), `yap listen` resumes from the last id Claude
+   acknowledged, and Claude replays any unacknowledged lines. While the player is open this costs one small turn
+   every 30 minutes plus one turn per question. Whether to use Monitor's `ws` source (the server pushes events over a
+   WebSocket) instead of a file tail is decided in Phase 4; it has the same 30-minute cap.
+3. Claude reads the event, decides **text or chapter**, and acts (4.6).
+4. **Fallback (automatic).** If the server sees no heartbeat for 15 seconds, it answers the queued event by running
+   `claude -p --resume <session-id> --fork-session --max-budget-usd <generous cap> "<message>" --output-format json </dev/null`
+   from any folder. It always uses a **fork**, never a plain resume (a plain resume appends to the original
+   transcript and would collide with a live session), and it closes stdin (`</dev/null`) or the call stalls 3 seconds
+   and prints a warning. The user's own Claude tokens pay for it; **no cost is shown anywhere in Yap** (owner's
+   decision), so the cap exists only as a safety limit and is configurable. If the headless call fails, the chat shows
+   "Claude isn't connected: run `/yap resume` in Claude Code". Queued messages are never lost.
+5. **Session id.** A `SessionStart` hook (`hooks/hooks.json`) writes `{session_id, transcript_path, cwd}` to
+   `.yap/session.json` on every `startup` and `resume`, so the server always knows the live session id.
 
 ### 4.6 Answering a question: text or chapter
 
@@ -208,8 +219,10 @@ context (which chapter, which second), so Claude knows what the viewer was looki
 - **Chat tab**: messages, answers, the two buttons, and a "Claude isn't connected" state.
 - **Sources tab**: the file:line references for the current chapter and for any answer.
 - **Export** button: asks the server to write the final files (4.9).
-- Playback of several MP4s as one video: the player preloads the next chapter and
-  switches without a visible gap. (Checked in a spike if the gap is noticeable.)
+- Playback of several MP4s as one video: two `<video>` elements; the player preloads the next chapter into the idle one
+  and switches on `ended`. Measured gap: 20 to 35 ms (about one frame), seeks 23 to 90 ms (spike 6). Each chapter's
+  narration WAV starts and ends with a few milliseconds of silence so the audio does not click at a join; an
+  audio-continuity check is part of the player tests.
 - The player source lives in `player/`; the built bundle in `player/dist/` is committed
   and a CI check fails if they differ. Users never run a build.
 
@@ -238,20 +251,41 @@ user picks: `<slug>.mp4`, `script.md`, `sources.json`. If some chapters are stil
   not copy any existing character. A speaking, animated host is a v2 idea.
 - **Brand line:** "Claude yaps. You watch."
 
+### 4.11 Setup: the installer (v1)
+
+The generic `skills` installer (`npx skills add`) only copies skill files: it cannot run setup or install
+dependencies, and it has no hooks. Yap therefore ships its own small installer, run as `npx yap-setup` (final name
+to be decided), with an interactive checklist like the one `skills` shows:
+
+1. It checks what is already present: Node 22+, a **working** ffmpeg, Hyperframes, a usable Python, free disk and RAM.
+2. It shows the prerequisites as a list the user ticks, each with its size, and installs **only what is ticked**:
+   - Voice: a Python venv Yap creates under its own folder with `kokoro-onnx` and `soundfile` (about 130 MB) plus
+     the Kokoro model (353 MB). Pre-ticked.
+   - Word-by-word captions (pre-ticked): `whisper.cpp` through Homebrew on macOS, plus the 487 MB `small.en` model.
+     The screen says plainly that Homebrew will install `whisper.cpp` and its dependencies. Nothing else may trigger
+     that install silently (in Phase 0 `hyperframes transcribe` did it unprompted).
+   - Fix a broken ffmpeg when one is found (for example a Homebrew build that cannot load `libx265`).
+3. It registers the plugin with `claude plugin install` (the command exists; its use with Yap is tested in Phase 1) and
+   runs the doctor to confirm.
+
+The plugin route is the supported one because only a plugin can carry the `SessionStart` hook (spike 5). The
+`npx skills add` route still works but has no hooks, so the doctor runs on first use of `/yap` and the session id comes
+from the newest transcript in the project folder. The doctor is also reachable as `/yap doctor`.
+
 ## 5. Generating a video (the skill's workflow)
 
 The skill is one `SKILL.md` that orchestrates the steps below; each step's detail is in
 `references/` so the main file stays short.
 
-1. **Doctor** (at install, and again after any render failure): checks Node,
-   `hyperframes doctor --json` (gate on `.ok`), `hyperframes browser ensure`, that
-   `ffmpeg -version` actually runs (a broken Homebrew ffmpeg that cannot load a
-   library is the failure we met), and the Kokoro voice model. It prints the exact fix
-   for anything missing. It does **not** install the Hyperframes domain skills: like
-   `brag`, `SKILL.md` lists the ones it needs (`hyperframes-core`, `-animation`,
-   `-creative`, `-keyframes`, `-cli`) in its "Read:" lines, and on first use Claude
-   installs any that are missing with the Hyperframes `skills` subcommand. (Confirmed
-   from the owner's first `brag` run, where Claude ran that subcommand on its own.)
+1. **Doctor** (from the installer, from `/yap doctor`, on first use, and again after any render failure; a fast
+   `SessionStart` hook only prints a one-line hint until the full doctor has passed, using a marker file in
+   `${CLAUDE_PLUGIN_DATA}`): checks Node, `hyperframes doctor --json` (gate on `.ok`), `hyperframes browser ensure`, that
+   `ffmpeg -version` actually runs, the Yap Python venv and the Kokoro model, `whisper-cli` (for word-level captions),
+   and **at least 1 GB of free disk** (Hyperframes' own cache reached 1.0 GB in Phase 0). It prints the exact fix for
+   anything missing and never installs system packages itself; the installer does that, with consent. It does **not**
+   install the Hyperframes domain skills: like `brag`, `SKILL.md` lists the ones it needs (`hyperframes-core`,
+   `-animation`, `-creative`, `-keyframes`, `-cli`) in its "Read:" lines, and on first use Claude installs any that are
+   missing with the Hyperframes `skills` subcommand (confirmed from the owner's first `brag` run).
 2. **Scope**: the viewer names a feature. Claude narrows it to one flow, asks at most
    one question if it is ambiguous, and sets the length (default 2–3 minutes) and the
    audience (beginner).
@@ -265,26 +299,32 @@ The skill is one `SKILL.md` that orchestrates the steps below; each step's detai
    invent layout from scratch. (In the prototype video, scenes 1–4 took 12.8 minutes
    while the helpers were being invented, and scenes 5–7 took 3.4 minutes once they
    existed.)
-6. **Narration**: Kokoro via `hyperframes tts`, one file per chapter. Captions are
-   always on.
+6. **Narration and timing**: Kokoro via `hyperframes tts` (with `HYPERFRAMES_PYTHON` set to Yap's venv), one WAV per
+   chapter, written **one sentence per beat**. Beat and caption timing come from `hyperframes transcribe` (word-level,
+   accurate to about 0.12 s, spike 3), which is part of v1 setup. If whisper is not installed, the fallback is the
+   WAV's exact duration shared across sentences by character count (error about 0.3 s) and sentence-level captions.
+   Captions are always on. Generated WAVs are cached by a hash of their text, so an edited chapter does not redo
+   untouched ones.
 7. **Gates per chapter**: `hyperframes check`; **dense snapshots around moving parts**
    (the prototype's overlapping packets were only found after a full render); and the
    **claim audit**: every captioned claim's file and line must exist and contain the
    quoted text.
-8. **Render, draft first**: each chapter renders at `--quality draft` (in parallel,
-   bounded by `--workers`), is registered with the server, and the viewer can start
-   watching. A `delivery`-quality render then runs in the background and replaces the
-   draft; `quality` flips to `full`.
+8. **Render, draft first**: each chapter renders at `--quality draft`, **up to 3 chapters at once**, each with an explicit
+   `--workers 2` (never `--workers auto`: on a low-memory machine Hyperframes pins itself to 1 worker). The cap is
+   `max(1, min(3, floor(free_RAM_GB - 2)))` and the user can raise it. Measured on an 8 GB laptop, three chapters at once
+   took about 0.4 of the time of rendering them one after another (spike 2). Each chapter is registered with the server
+   as soon as it is ready so the viewer can start watching. A `delivery`-quality render then runs in the background
+   and replaces the draft; `quality` flips to `full`.
 9. **Open the player**: start the server, open the default browser, set up Monitor.
 
 ## 6. Failure handling
 
 - **Render fails** (Chrome, ffmpeg, memory): the chapter is `failed` with a one-line
   reason and the fix command; other chapters are unaffected; there is a retry button.
-  Low memory lowers the worker count automatically.
+  A failed render is retried with one chapter at a time before the chapter is marked `failed`.
 - **Claim audit fails**: the chapter is not published. Claude fixes the narration or
   removes the claim. Nothing unverified is shipped silently.
-- **Claude session gone**: messages stay queued; fallback or "not connected" (4.5).
+- **Claude session gone**: messages stay queued; the automatic headless fallback answers, or the chat shows "not connected" (4.5).
 - **Server crash**: all state is files; restart and continue.
 - **Code changed later**: each chapter records the commit it was verified against.
   The warning UI is v2.
@@ -296,6 +336,7 @@ The skill is one `SKILL.md` that orchestrates the steps below; each step's detai
 - Chat text is the user's own input. Text Claude reads from the repository while
   verifying is treated as data, never as instructions.
 - Export writes only into the folder the user chose.
+- The installer changes nothing on the user's machine (no Homebrew, no pip, no downloads) except the items the user ticked.
 - `.yap/` is added to `.gitignore` guidance in the README.
 
 ## 8. Testing
@@ -308,26 +349,30 @@ The skill is one `SKILL.md` that orchestrates the steps below; each step's detai
 - A full "generate a video from a small fixture repo" run needs a real render, so it
   runs locally or nightly, not on every pull request.
 
-## 9. Spikes before we rely on these (unverified)
+## 9. Spikes (answered in Phase 0)
 
-1. Can the session id be read from inside a session, and does `claude -p --resume <id>`
-   on a closed session behave cleanly? Also: how to avoid starting a second Claude
-   while the live one is just slow.
-2. Do chapters really render in parallel with `--workers` without exhausting memory?
-3. Can scene timing follow Kokoro's narration timing (word or sentence timestamps)?
-4. Is Kokoro through `hyperframes tts` free and fully local, with no key? (The `brag`
-   plugin uses it for narration, which suggests yes.)
-5. Does a plugin install hook exist for running the doctor at install time? If not, the
-   doctor runs on first use.
-6. Is the gap between chapters noticeable in the player when playing several MP4s in a
-   row? If so, join chapters ahead of time.
-7. Does the Monitor tool keep working across a long idle period without cost?
+All seven were run on 2026-10-02; results are in `docs/spikes/` and summarised in `docs/spikes/SUMMARY.md`.
+
+| # | Question | Verdict | Where it landed in this spec |
+|---|---|---|---|
+| 1 | Resume a closed session headlessly | PARTIAL | 4.5 point 4 (fork, `</dev/null`, any folder) |
+| 2 | Parallel chapter renders | PASS | 5.8 |
+| 3 | Narration timing | PARTIAL | 5.6 (whisper in v1 setup, sentence-share fallback) |
+| 4 | Kokoro free, local, keyless | PASS | 4.11, 5.1, 11 |
+| 5 | Install-time hook | PARTIAL | 4.5 point 5, 4.11, 5.1 (`SessionStart` hook; no install hook) |
+| 6 | Gap between chapter videos | PASS | 4.7 |
+| 7 | Monitor over a long idle | PARTIAL | 4.5 points 1 and 2 (30-minute cap, re-arm) |
+
+Not run as written (needed the owner present): laptop sleep with a Monitor armed, and a listening check of audio across
+chapter joins. Both are tested in Phase 1 or 4.
 
 ## 10. Repository layout
 
 ```
 yap/
   .claude-plugin/ plugin.json
+  hooks/hooks.json  session-start.sh   SessionStart: doctor hint + writes .yap/session.json
+  installer/        the `npx yap-setup` checklist installer (4.11)
   skills/yap/SKILL.md
   skills/yap/references/  scope.md verify.md storyboard.md scene-kit.md
                             narrate.md render.md ask-loop.md doctor.md
@@ -341,11 +386,14 @@ yap/
 
 ## 11. Dependencies and assumptions
 
-- Claude Code (Monitor tool, skills, plugins), Node 22+, ffmpeg, Hyperframes (CLI via
-  `npx`; its domain skills install on first use as in section 5, step 1).
-- The user's Claude tokens pay for everything. A prototype video took about 44 minutes
-  and 290k tokens; the scene kit, draft-first rendering, and parallel chapters are what
-  bring that down. Real numbers must be measured and published in the README.
+- Claude Code (Monitor tool, skills, plugins, hooks), Node 22+, a working ffmpeg, Hyperframes (CLI via `npx`; its domain
+  skills install on first use as in section 5, step 1).
+- For narration: Python 3 with `kokoro-onnx` and `soundfile` in a venv Yap creates (about 130 MB) and a one-time 353 MB
+  voice model. For word-level captions: `whisper.cpp` (Homebrew on macOS) and a one-time 487 MB model. Free disk of
+  about 1 GB or more. All free and local; the voice works with no network after the download.
+- The user's own Claude tokens pay for everything, including the background fallback. **Yap shows no cost anywhere**
+  (owner's decision). A prototype video took about 44 minutes; the scene kit, draft-first rendering and parallel
+  chapters are what bring that down, and real timings are measured in Phase 1.
 - Name: **Yap** (owner's choice: a Gen Z word for talking a lot, which is exactly what Claude does in the video). Domain: `justyap.dev` or `justyap.io` (`justyap.com` and every `yap.*` are taken; checked 2026-10-02, not yet bought).
 
 ## 12. Out of scope, listed so nobody builds it by accident

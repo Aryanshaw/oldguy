@@ -34,7 +34,7 @@ No verdict is "inconclusive".
 model download), rendering works and is faster in parallel (spike 2 PASS). Spikes 1 and 7 only affect the
 chat bridge (Phase 4) and do not block the generator.
 
-## Proposed spec amendments (each needs the owner's approval; none is applied)
+## Spec amendments (approved by the owner on 2026-10-03 and applied; the list below is the original proposal)
 
 1. **4.1** `scene.html` is a **standalone root composition** with its own `data-duration` (a sub-composition
    fragment cannot be rendered alone).
@@ -62,11 +62,15 @@ chat bridge (Phase 4) and do not block the generator.
    487 MB whisper model; warn that `hyperframes transcribe` calls `brew install whisper.cpp` on its own on macOS.
 10. **9 and 13:** mark the seven spikes as answered, with a link to each result.
 
-## Decisions the owner should make
+## Owner decisions (2026-10-03) and what was applied
 
-- Are the optional whisper features (word-level captions) wanted in v1, given the Homebrew install they trigger?
-- Is a paid fallback (spike 1) acceptable as an opt-in, or should v1 drop it and show "reconnect Claude" only?
-- Distribution: plugin route only (hooks work), or also `npx skills add` (no hooks, so a first-use doctor)?
+1. **Word-level captions in v1: yes.** Part of setup, with the Homebrew install shown and ticked by the user (spec 4.11, 5.6).
+2. **Headless fallback: yes, automatic, and no cost is shown anywhere in Yap** (spec 4.5 point 4). It uses a fork and a
+   generous safety cap.
+3. **Distribution: plugin first.** Because the generic `npx skills add` only copies files, Yap ships its own `npx yap-setup`
+   checklist installer for prerequisites (spec 4.11).
+4. **The 10 proposed spec amendments: approved and applied** to the spec in the commit that follows this summary
+   (sections 4.1, 4.3, 4.5, 4.7, 4.11 (new), 5.1, 5.6, 5.8, 6, 7, 9, 10, 11).
 
 ## Things done during Phase 0 that the owner should know
 
