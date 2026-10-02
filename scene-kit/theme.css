@@ -1,0 +1,165 @@
+/* Scene kit v0 theme: retro yellow / orange / black on a 1920x1080 stage.
+   No external fonts or urls: a system font stack only.
+   Contrast (WCAG relative-luminance ratios, AA needs 4.5 for text, 3 for large text):
+     black text (#14110A) on yellow (#F6C945)  = 11.99
+     black text (#14110A) on orange (#FF8A1F) =  7.99
+     off-white text (#FFF6DC) on black (#14110A) = 17.47
+     off-white text (#FFF6DC) on panel (#2A2417) = 14.28
+     yellow (#F6C945) on panel (#2A2417) = 9.80 */
+:root {
+  --yk-yellow: #F6C945;
+  --yk-orange: #FF8A1F;
+  --yk-black: #14110A;
+  --yk-panel: #2A2417;
+  --yk-text: #FFF6DC;
+  --yk-font: "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+  --yk-font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --yk-size-title: 120px;
+  --yk-size-sub: 52px;
+  --yk-size-body: 44px;
+  --yk-size-detail: 34px;
+  --yk-size-code: 30px;
+  --yk-size-small: 26px;
+  --yk-gap: 32px;
+  --yk-pad: 48px;
+  --yk-radius: 0px;
+  --yk-border: 6px;
+  --yk-max-text: 1500px;
+  --yk-card-w: 1500px;
+  --yk-card-h: 800px;
+  --yk-bubble-w: 640px;
+  --yk-arrow: 28px;
+}
+
+.yk-piece {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--yk-gap);
+  font-family: var(--yk-font);
+  color: var(--yk-text);
+}
+
+/* long text wraps inside a maximum width instead of running off the stage */
+.yk-wrap {
+  max-width: var(--yk-max-text);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.yk-heading {
+  font-size: var(--yk-size-title);
+  line-height: 1.05;
+  font-weight: 900;
+  text-align: center;
+  color: var(--yk-yellow);
+}
+.yk-sub {
+  font-size: var(--yk-size-sub);
+  text-align: center;
+  color: var(--yk-text);
+}
+
+.yk-steps {
+  align-items: flex-start;
+  padding: 0 var(--yk-pad);
+}
+.yk-step {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--yk-gap);
+}
+.yk-step-num {
+  flex: none;
+  min-width: var(--yk-size-sub);
+  padding: 0 var(--yk-gap);
+  font-size: var(--yk-size-body);
+  font-weight: 900;
+  text-align: center;
+  background: var(--yk-orange);
+  color: var(--yk-black);
+}
+.yk-step-label {
+  font-size: var(--yk-size-body);
+  font-weight: 800;
+  color: var(--yk-yellow);
+}
+.yk-step-detail {
+  font-size: var(--yk-size-detail);
+  color: var(--yk-text);
+}
+
+.yk-card {
+  width: var(--yk-card-w);
+  max-height: var(--yk-card-h);
+  overflow: hidden;
+  background: var(--yk-panel);
+  border: var(--yk-border) solid var(--yk-yellow);
+  border-radius: var(--yk-radius);
+}
+.yk-file {
+  padding: var(--yk-gap) var(--yk-pad);
+  font-family: var(--yk-font-mono);
+  font-size: var(--yk-size-small);
+  font-weight: 700;
+  background: var(--yk-yellow);
+  color: var(--yk-black);
+}
+.yk-lines {
+  padding: var(--yk-gap) 0;
+}
+.yk-line {
+  display: flex;
+  gap: var(--yk-gap);
+  padding: 0 var(--yk-pad);
+  font-family: var(--yk-font-mono);
+  font-size: var(--yk-size-code);
+  line-height: 1.5;
+  color: var(--yk-text);
+}
+.yk-no {
+  flex: none;
+  min-width: var(--yk-size-sub);
+  text-align: right;
+  color: var(--yk-yellow);
+}
+/* keep every leading space and tab exactly as written */
+.yk-code {
+  white-space: pre;
+  overflow: hidden;
+}
+.yk-hl {
+  background: var(--yk-orange);
+  color: var(--yk-black);
+}
+.yk-hl .yk-no {
+  color: var(--yk-black);
+}
+
+.yk-callout {
+  pointer-events: none;
+}
+.yk-bubble {
+  position: relative;
+  width: var(--yk-bubble-w);
+  padding: var(--yk-gap);
+  font-size: var(--yk-size-body);
+  font-weight: 800;
+  background: var(--yk-orange);
+  color: var(--yk-black);
+  border: var(--yk-border) solid var(--yk-black);
+}
+.yk-bubble::after {
+  content: "";
+  position: absolute;
+  width: 0;
+  height: 0;
+  border: var(--yk-arrow) solid transparent;
+}
+.yk-point-down::after { top: 100%; left: 50%; border-top-color: var(--yk-orange); }
+.yk-point-up::after { bottom: 100%; left: 50%; border-bottom-color: var(--yk-orange); }
+.yk-point-left::after { right: 100%; top: 50%; border-right-color: var(--yk-orange); }
+.yk-point-right::after { left: 100%; top: 50%; border-left-color: var(--yk-orange); }
