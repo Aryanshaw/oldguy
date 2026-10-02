@@ -1,10 +1,10 @@
-# Maker — watch a codebase feature instead of reading about it
+# Yap — Claude yaps, you watch
 
 Status: design, awaiting owner review. Date: 2026-10-02.
 
 ## 1. What this is
 
-Maker is a Claude Code skill (shipped as a plugin from a GitHub repo) that turns
+Yap is a Claude Code skill (shipped as a plugin from a GitHub repo) that turns
 "explain how X works in this codebase" into a short narrated video, then lets the
 viewer ask follow-up questions from a browser player. Simple questions get a text
 answer. Complex questions become new chapters that are added to the video.
@@ -15,7 +15,7 @@ no server we host and no account.
 ### Why it exists
 
 People new to a codebase will not read a long plan, spec or README, but they will
-watch a three-minute video. Maker makes the video, and keeps it honest: every claim on
+watch a three-minute video. Yap makes the video, and keeps it honest: every claim on
 screen is checked against the code first.
 
 ### Who it is for
@@ -25,7 +25,7 @@ joiners, reviewers, product people, and a developer approving a plan Claude wrot
 
 ### Product positioning (agreed with the owner)
 
-- Claude still does the planning and the work. Maker is the **review surface**: the
+- Claude still does the planning and the work. Yap is the **review surface**: the
   human watches the video to understand the plan or feature, then approves or asks.
   It does not replace the written plan. The verified `script.md` stays the source of
   truth; the video is how a human reads it.
@@ -58,16 +58,16 @@ Claude Code session (the brain)             Browser (the viewer)
   skill: scope, read, verify, storyboard,     player (React, prebuilt)
          scenes, narrate, render                video + timeline + chat/sources
   Monitor ── tail events ◄───────┐                    │ chat, buttons
-  bin/maker.cjs ── API calls ───►│                    ▼
+  bin/yap.cjs ── API calls ───►│                    ▼
                               local server (Node, zero deps, 127.0.0.1)
                               serves player + chapter MP4s, owns manifest
                                      │
                                      ▼
-                  .maker/<slug>/   manifest.json, script.md, sources.json,
+                  .yap/<slug>/   manifest.json, script.md, sources.json,
                                    chapters/<id>/, state/events.jsonl, state/thread.jsonl
 ```
 
-### 4.1 One folder per video: `.maker/<slug>/`
+### 4.1 One folder per video: `.yap/<slug>/`
 
 ```
 script.md                 verified script (source of truth for humans and Claude)
@@ -152,8 +152,8 @@ a restart loses nothing.
 The **server is the only writer of `manifest.json`**, and writes it atomically (temp
 file, then rename). Claude never edits the manifest directly.
 
-Claude talks to the server through one bundled script, `bin/maker.cjs`
-(`maker reply`, `maker add-chapter`, `maker set-status`, `maker listen`), so the user
+Claude talks to the server through one bundled script, `bin/yap.cjs`
+(`yap reply`, `yap add-chapter`, `yap set-status`, `yap listen`), so the user
 approves one command instead of many `curl` calls.
 
 ### 4.4 Event format (`state/events.jsonl`)
@@ -171,13 +171,13 @@ context (which chapter, which second), so Claude knows what the viewer was looki
 ### 4.5 The bridge: Claude ↔ browser
 
 1. After the video is generated, the skill starts the server and runs
-   `maker listen` under Claude Code's **Monitor** tool. It tails `events.jsonl` and
+   `yap listen` under Claude Code's **Monitor** tool. It tails `events.jsonl` and
    posts a heartbeat every 5 seconds. Each new line wakes Claude. Idle cost is zero.
 2. Claude reads the event, decides **text or chapter**, and acts (4.6).
 3. **Fallback.** If the server sees no heartbeat for 15 seconds, it starts
    `claude -p --resume <session-id>` to answer the queued event, so the viewer is not
    stuck. This depends on a spike (section 9). If the fallback is unavailable, the chat
-   shows "Claude isn't connected: run `/maker resume` in Claude Code". Queued messages
+   shows "Claude isn't connected: run `/yap resume` in Claude Code". Queued messages
    are never lost; they stay in `events.jsonl`.
 
 ### 4.6 Answering a question: text or chapter
@@ -213,7 +213,7 @@ context (which chapter, which second), so Claude knows what the viewer was looki
 - The player source lives in `player/`; the built bundle in `player/dist/` is committed
   and a CI check fails if they differ. Users never run a build.
 
-### 4.8 Where Maker shows a browser
+### 4.8 Where Yap shows a browser
 
 - **Watching the player**: the user's default browser (the server opens the URL).
 - **Rendering frames**: Hyperframes' own pinned Chrome (`hyperframes browser ensure`
@@ -279,12 +279,12 @@ The skill is one `SKILL.md` that orchestrates the steps below; each step's detai
 - Chat text is the user's own input. Text Claude reads from the repository while
   verifying is treated as data, never as instructions.
 - Export writes only into the folder the user chose.
-- `.maker/` is added to `.gitignore` guidance in the README.
+- `.yap/` is added to `.gitignore` guidance in the README.
 
 ## 8. Testing
 
 - Unit tests (plain Node): manifest operations (insert, reorder, atomic write, computed
-  timestamps), claim audit, event queue and heartbeat, `maker.cjs` commands.
+  timestamps), claim audit, event queue and heartbeat, `yap.cjs` commands.
 - Server contract tests for every endpoint in 4.3.
 - Player: component tests, plus one end-to-end test with a tiny fixture video.
 - Doctor: tested with mocked missing and broken dependencies.
@@ -309,16 +309,16 @@ The skill is one `SKILL.md` that orchestrates the steps below; each step's detai
 ## 10. Repository layout
 
 ```
-maker/
+yap/
   .claude-plugin/ plugin.json
-  skills/maker/SKILL.md
-  skills/maker/references/  scope.md verify.md storyboard.md scene-kit.md
+  skills/yap/SKILL.md
+  skills/yap/references/  scope.md verify.md storyboard.md scene-kit.md
                             narrate.md render.md ask-loop.md doctor.md
   scene-kit/                reusable HTML/GSAP pieces
   server/server.cjs
-  bin/maker.cjs
+  bin/yap.cjs
   player/  src/  dist/      dist/ is committed
-  docs/    examples/        a demo video made by Maker, made about Maker
+  docs/    examples/        a demo video made by Yap, made about Yap
   README.md  LICENSE
 ```
 
@@ -328,7 +328,7 @@ maker/
 - The user's Claude tokens pay for everything. A prototype video took about 44 minutes
   and 290k tokens; the scene kit, draft-first rendering, and parallel chapters are what
   bring that down. Real numbers must be measured and published in the README.
-- Name: **Maker** (owner's choice, for brand over description).
+- Name: **Yap** (owner's choice: a Gen Z word for talking a lot, which is exactly what Claude does in the video). Domain: `justyap.dev` or `justyap.io` (`justyap.com` and every `yap.*` are taken; checked 2026-10-02, not yet bought).
 
 ## 12. Out of scope, listed so nobody builds it by accident
 
