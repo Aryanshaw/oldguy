@@ -6,25 +6,20 @@ const { runPadWav } = require('../lib/wav-cli.cjs');
 const { runBeats } = require('../lib/beats-cli.cjs');
 const { runCaptions } = require('../lib/captions-cli.cjs');
 const { runDoctorCli } = require('../lib/doctor-cli.cjs');
+const { runScaffold } = require('../lib/scaffold-cli.cjs');
+const { runNarrate } = require('../lib/narrate-cli.cjs');
+const { runRender } = require('../lib/render-cli.cjs');
 
-// Stand-in for commands built in later tasks; swap a row's run to implement it.
-function notImplemented(name) {
-  return () => {
-    process.stderr.write(`yap ${name}: not implemented yet\n`);
-    return 3;
-  };
-}
-
-// One row per command; later tasks only replace a row's run function.
+// One row per command.
 const COMMANDS = {
   doctor: { summary: 'check that the tools yap needs are installed', run: runDoctorCli },
   audit: { summary: 'check that every claim in a chapter points at real code', run: runAudit },
   beats: { summary: 'split narration into timed beats', run: runBeats },
   captions: { summary: 'build captions from a transcript', run: runCaptions },
   'pad-wav': { summary: 'add silence to the start and end of a narration wav', run: runPadWav },
-  scaffold: { summary: 'create a new video project folder', run: notImplemented('scaffold') },
-  render: { summary: 'render the video project to mp4', run: notImplemented('render') },
-  narrate: { summary: 'turn the script into narration audio', run: notImplemented('narrate') },
+  scaffold: { summary: 'create a chapter folder from a spec (yap scaffold --help)', run: runScaffold },
+  render: { summary: 'audit every chapter, then render the ones that pass to mp4', run: runRender },
+  narrate: { summary: 'make a chapter\'s narration audio, beats, captions and page', run: runNarrate },
 };
 
 // Prints each command name with its one-line summary.
