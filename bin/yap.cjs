@@ -5,6 +5,7 @@ const { runAudit } = require('../lib/audit-cli.cjs');
 const { runPadWav } = require('../lib/wav-cli.cjs');
 const { runBeats } = require('../lib/beats-cli.cjs');
 const { runCaptions } = require('../lib/captions-cli.cjs');
+const { runDoctorCli } = require('../lib/doctor-cli.cjs');
 
 // Stand-in for commands built in later tasks; swap a row's run to implement it.
 function notImplemented(name) {
@@ -16,7 +17,7 @@ function notImplemented(name) {
 
 // One row per command; later tasks only replace a row's run function.
 const COMMANDS = {
-  doctor: { summary: 'check that the tools yap needs are installed', run: notImplemented('doctor') },
+  doctor: { summary: 'check that the tools yap needs are installed', run: runDoctorCli },
   audit: { summary: 'check that every claim in a chapter points at real code', run: runAudit },
   beats: { summary: 'split narration into timed beats', run: runBeats },
   captions: { summary: 'build captions from a transcript', run: runCaptions },
