@@ -32,7 +32,7 @@ test('unknown command exits 2 with a one-line usage message on stderr', () => {
 });
 
 test('each unimplemented command says so on stderr and exits 3', () => {
-  for (const name of NAMES.filter((n) => n !== 'audit' && n !== 'pad-wav')) {
+  for (const name of NAMES.filter((n) => !['audit', 'pad-wav', 'beats', 'captions'].includes(n))) {
     const r = yap(name);
     assert.equal(r.status, 3, name);
     assert.match(r.stderr, /not implemented yet/, name);

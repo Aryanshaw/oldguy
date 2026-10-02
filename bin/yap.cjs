@@ -3,6 +3,8 @@
 
 const { runAudit } = require('../lib/audit-cli.cjs');
 const { runPadWav } = require('../lib/wav-cli.cjs');
+const { runBeats } = require('../lib/beats-cli.cjs');
+const { runCaptions } = require('../lib/captions-cli.cjs');
 
 // Stand-in for commands built in later tasks; swap a row's run to implement it.
 function notImplemented(name) {
@@ -16,8 +18,8 @@ function notImplemented(name) {
 const COMMANDS = {
   doctor: { summary: 'check that the tools yap needs are installed', run: notImplemented('doctor') },
   audit: { summary: 'check that every claim in a chapter points at real code', run: runAudit },
-  beats: { summary: 'split narration into timed beats', run: notImplemented('beats') },
-  captions: { summary: 'build captions from a transcript', run: notImplemented('captions') },
+  beats: { summary: 'split narration into timed beats', run: runBeats },
+  captions: { summary: 'build captions from a transcript', run: runCaptions },
   'pad-wav': { summary: 'add silence to the start and end of a narration wav', run: runPadWav },
   scaffold: { summary: 'create a new video project folder', run: notImplemented('scaffold') },
   render: { summary: 'render the video project to mp4', run: notImplemented('render') },
