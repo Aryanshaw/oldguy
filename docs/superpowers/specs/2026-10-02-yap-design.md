@@ -247,7 +247,11 @@ The skill is one `SKILL.md` that orchestrates the steps below; each step's detai
    `hyperframes doctor --json` (gate on `.ok`), `hyperframes browser ensure`, that
    `ffmpeg -version` actually runs (a broken Homebrew ffmpeg that cannot load a
    library is the failure we met), and the Kokoro voice model. It prints the exact fix
-   for anything missing.
+   for anything missing. It does **not** install the Hyperframes domain skills: like
+   `brag`, `SKILL.md` lists the ones it needs (`hyperframes-core`, `-animation`,
+   `-creative`, `-keyframes`, `-cli`) in its "Read:" lines, and on first use Claude
+   installs any that are missing with the Hyperframes `skills` subcommand. (Confirmed
+   from the owner's first `brag` run, where Claude ran that subcommand on its own.)
 2. **Scope**: the viewer names a feature. Claude narrows it to one flow, asks at most
    one question if it is ambiguous, and sets the length (default 2–3 minutes) and the
    audience (beginner).
@@ -337,7 +341,8 @@ yap/
 
 ## 11. Dependencies and assumptions
 
-- Claude Code (Monitor tool, skills, plugins), Node, ffmpeg, Hyperframes (via `npx`).
+- Claude Code (Monitor tool, skills, plugins), Node 22+, ffmpeg, Hyperframes (CLI via
+  `npx`; its domain skills install on first use as in section 5, step 1).
 - The user's Claude tokens pay for everything. A prototype video took about 44 minutes
   and 290k tokens; the scene kit, draft-first rendering, and parallel chapters are what
   bring that down. Real numbers must be measured and published in the README.
