@@ -8,6 +8,7 @@ const { narrateChapter } = require('../lib/narrate.cjs');
 const { scaffoldChapter } = require('../lib/chapter.cjs');
 const { parseWav } = require('../lib/wav.cjs');
 const { HYPERFRAMES_VERSION } = require('../lib/hyperframes.cjs');
+const crypto = require('node:crypto');
 
 const FIXTURES = path.join(__dirname, 'fixtures');
 const RAW_WAV = path.join(FIXTURES, 'narration.wav');
@@ -23,7 +24,7 @@ const SCENE = [
   { piece: 'steps', params: { items: [{ label: 'plan' }, { label: 'run' }] }, beat: 2 },
 ];
 const SCAFFOLDED = ['chapter.json', 'narration.txt'];
-const NARRATED = ['beats.json', 'captions.json', 'captions.vtt', 'chapter.json', 'index.html', 'narration.txt', 'narration.wav'];
+const NARRATED = ['beats.json', 'build.json', 'captions.json', 'captions.vtt', 'chapter.json', 'index.html', 'narration.txt', 'narration.wav'];
 
 // Scaffolds the spike-3 narration as a chapter in a temp folder removed after the test.
 function chapterDir(t) {
@@ -198,4 +199,39 @@ test('narrate: index.html plays the padded narration.wav that sits beside it', a
   const raw = parseWav(fs.readFileSync(RAW_WAV)).durationS;
   const played = parseWav(fs.readFileSync(path.join(dir, src))).durationS;
   assert.ok(Math.abs(played - raw - 0.16) < 1e-9);
+});
+
+test('narrate writes build.json with sha256 of the chapter text and every built file', async (t) => {
+  const dir = chapterDir(t);
+  await narrateChapter(dir, { ...fakeRun(), venvPython: PYTHON, whisperAvailable: false });
+  const record = JSON.parse(fs.readFileSync(path.join(dir, 'build.json'), 'utf8'));
+  assert.deepEqual(Object.keys(record.sha256).sort(), ['chapter', 'index.html', 'narration.txt', 'narration.wav']);
+  for (const name of ['index.html', 'narration.txt', 'narration.wav']) {
+    const actual = crypto.createHash('sha256').update(fs.readFileSync(path.join(dir, name))).digest('hex');
+    assert.equal(record.sha256[name], actual, name);
+  }
+  assert.match(record.sha256.chapter, /^[0-9a-f]{64}$/);
+});
+
+test('narrate hands Hyperframes absolute paths even when given a relative chapter folder', async (t) => {
+  const dir = chapterDir(t);
+  const { run, calls } = fakeRun();
+  await narrateChapter(path.relative(process.cwd(), dir), { run, venvPython: PYTHON, whisperAvailable: true });
+  for (const call of calls) {
+    const paths = call.args.filter((a) => a.includes('narration'));
+    assert.ok(paths.length > 0 && paths.every((p) => path.isAbsolute(p)), call.args.join(' '));
+  }
+});
+
+test('narrate refuses a chapter.json entry that is not exactly one sentence, before any tts', async (t) => {
+  const dir = chapterDir(t);
+  const file = path.join(dir, 'chapter.json');
+  const chapter = JSON.parse(fs.readFileSync(file, 'utf8'));
+  // move a sentence boundary while keeping the joined text identical, so only the per-entry check can catch it
+  chapter.sentences[0].text = 'A job starts when you press a button. The planner checks the request,';
+  chapter.sentences[1].text = 'then saves a pending row in the database.';
+  fs.writeFileSync(file, JSON.stringify(chapter));
+  const { run, calls } = fakeRun();
+  await assert.rejects(narrateChapter(dir, { run, venvPython: PYTHON, whisperAvailable: true }), /sentences\[0\]/);
+  assert.equal(calls.length, 0);
 });

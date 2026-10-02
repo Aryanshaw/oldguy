@@ -4,6 +4,7 @@ const { spawnSync } = require('node:child_process');
 const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
+const { buildRecord } = require('../lib/build-record.cjs');
 
 const CLI = path.join(__dirname, '..', 'bin', 'yap.cjs');
 const NAMES = ['doctor', 'audit', 'beats', 'captions', 'pad-wav', 'scaffold', 'render', 'narrate'];
@@ -111,6 +112,11 @@ function renderWorkspace(t, { withBad = true } = {}) {
     fs.writeFileSync(path.join(chapters, id, 'chapter.json'), JSON.stringify({ ...SPEC, id, sources }));
     fs.writeFileSync(path.join(chapters, id, 'narration.txt'), `${SPEC.sentences.map((s) => s.text).join(' ')}\n`);
     fs.writeFileSync(path.join(chapters, id, 'index.html'), '<!doctype html>');
+    fs.writeFileSync(path.join(chapters, id, 'narration.wav'), 'RIFF');
+    // the build record narrate would have written, so the build check passes
+    const chapter = JSON.parse(fs.readFileSync(path.join(chapters, id, 'chapter.json'), 'utf8'));
+    const record = buildRecord(chapter, (name) => fs.readFileSync(path.join(chapters, id, name)));
+    fs.writeFileSync(path.join(chapters, id, 'build.json'), JSON.stringify(record));
   };
   write('good', 'start()');
   if (withBad) write('bad', 'stop()');

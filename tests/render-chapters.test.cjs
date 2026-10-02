@@ -6,6 +6,11 @@ const os = require('node:os');
 const path = require('node:path');
 const { renderChapters, renderArgs } = require('../lib/render-chapters.cjs');
 const { HYPERFRAMES_VERSION } = require('../lib/hyperframes.cjs');
+const { buildRecord } = require('../lib/build-record.cjs');
+const { scaffoldChapter } = require('../lib/chapter.cjs');
+const { narrateChapter } = require('../lib/narrate.cjs');
+
+const CHANGED = 'chapter changed after narrate: re-run narrate';
 
 const GOOD_SOURCE = { id: 's1', file: 'app.js', lines: [1, 1], quote: 'start()' };
 const CLAIM = { text: 'It calls start.', kind: 'claim', source_ids: ['s1'] };
@@ -22,13 +27,19 @@ function workspace(t) {
   return { repo, chapters };
 }
 
-// Writes one chapter folder with matching narration.txt; `narrated` adds the index.html that narrate would have written.
+// Writes one chapter folder with matching narration.txt; `narrated` adds the files and build.json narrate would have written.
 function addChapter(chapters, id, { sources = [GOOD_SOURCE], narrated = true, narration = `${CLAIM.text}\n` } = {}) {
   const dir = path.join(chapters, id);
   fs.mkdirSync(dir);
-  fs.writeFileSync(path.join(dir, 'chapter.json'), JSON.stringify({ id, title: id, sources, sentences: [CLAIM], scene: [] }));
+  const chapter = { id, title: id, sources, sentences: [CLAIM], scene: [] };
+  fs.writeFileSync(path.join(dir, 'chapter.json'), JSON.stringify(chapter));
   fs.writeFileSync(path.join(dir, 'narration.txt'), narration);
-  if (narrated) fs.writeFileSync(path.join(dir, 'index.html'), '<!doctype html>');
+  if (narrated) {
+    fs.writeFileSync(path.join(dir, 'index.html'), '<!doctype html>');
+    fs.writeFileSync(path.join(dir, 'narration.wav'), 'RIFF');
+    const record = buildRecord(chapter, (name) => fs.readFileSync(path.join(dir, name)));
+    fs.writeFileSync(path.join(dir, 'build.json'), JSON.stringify(record));
+  }
   return dir;
 }
 
@@ -151,4 +162,153 @@ test('the narration check runs before the claim audit', async (t) => {
   addChapter(chapters, 'both', { sources: [{ ...GOOD_SOURCE, quote: 'stop()' }], narration: 'Something else.\n' });
   const results = await renderChapters(chapters, { root: repo, cap: 1, render: async () => {} });
   assert.match(results[0].reason, /^narration\.txt no longer matches/);
+});
+
+test('a chapter folder named like an option reaches the renderer as an absolute path', async (t) => {
+  const { repo, chapters } = workspace(t);
+  addChapter(chapters, '--evil');
+  const seen = [];
+  // a relative chapters folder is the case where path.join would have produced a bare "--evil"
+  const results = await renderChapters(path.relative(process.cwd(), chapters), { root: repo, cap: 1, render: async (c) => seen.push(c) });
+  assert.equal(results[0].status, 'ready');
+  assert.equal(seen[0].dir, path.join(chapters, '--evil'));
+  assert.ok(path.isAbsolute(seen[0].dir));
+  const args = renderArgs(seen[0].dir);
+  assert.ok(args[3].startsWith('/') && args.at(-1).startsWith('/'), args.join(' '));
+});
+
+// Three framing sentences (no sources needed) matching the spike-3 narration, with one title piece.
+const FRAMING = [
+  'A job starts when you press a button.',
+  'The planner checks the request, then saves a pending row in the database.',
+  'A worker later picks that row up and runs it.',
+].map((text) => ({ text, kind: 'framing', source_ids: [] }));
+
+// Scaffolds and narrates a real chapter (tts faked with the spike WAV), so build.json comes from narrate itself.
+async function narratedChapter(t) {
+  const { repo, chapters } = workspace(t);
+  const dir = scaffoldChapter({
+    root: path.dirname(chapters), id: 'jobs', title: 'Jobs', sources: [], sentences: FRAMING,
+    scene: [{ piece: 'title', params: { heading: 'Jobs' }, beat: 0 }],
+  });
+  const run = async (cmd, args) => {
+    fs.copyFileSync(path.join(__dirname, 'fixtures', 'narration.wav'), args[args.indexOf('-o') + 1]);
+    return { code: 0, stdout: '{}', stderr: '' };
+  };
+  await narrateChapter(dir, { run, venvPython: '/py', whisperAvailable: false });
+  return { repo, chapters, dir };
+}
+
+// Renders the chapters folder with a recording fake and returns the one result plus whether render was called.
+async function renderOnce(repo, chapters) {
+  const { render, calls } = fakeRender();
+  const [result] = await renderChapters(chapters, { root: repo, cap: 1, render });
+  return { result, called: calls.length > 0 };
+}
+
+// Reads and rewrites chapter.json through a change function.
+function editChapter(dir, change) {
+  const file = path.join(dir, 'chapter.json');
+  const chapter = JSON.parse(fs.readFileSync(file, 'utf8'));
+  change(chapter);
+  fs.writeFileSync(file, JSON.stringify(chapter, null, 2));
+}
+
+test('build.json: an untouched narrated chapter renders', async (t) => {
+  const { repo, chapters, dir } = await narratedChapter(t);
+  assert.ok(fs.existsSync(path.join(dir, 'build.json')));
+  const { result, called } = await renderOnce(repo, chapters);
+  assert.deepEqual(result, { id: 'jobs', status: 'ready', attempts: 1 });
+  assert.equal(called, true);
+});
+
+test('build.json: rewriting chapter.json with other key order and spacing is not a change', async (t) => {
+  const { repo, chapters, dir } = await narratedChapter(t);
+  const chapter = JSON.parse(fs.readFileSync(path.join(dir, 'chapter.json'), 'utf8'));
+  const reorder = (o) => Object.fromEntries(Object.entries(o).reverse());
+  const shuffled = { ...reorder(chapter), sentences: chapter.sentences.map(reorder), scene: chapter.scene.map(reorder) };
+  fs.writeFileSync(path.join(dir, 'chapter.json'), JSON.stringify(shuffled));
+  assert.equal((await renderOnce(repo, chapters)).result.status, 'ready');
+});
+
+test('build.json: the finding scenario, text fixed in chapter.json AND narration.txt after narrate, is refused', async (t) => {
+  const { repo, chapters, dir } = await narratedChapter(t);
+  editChapter(dir, (c) => { c.sentences[0].text = 'A job begins when you press a button.'; });
+  const file = path.join(dir, 'narration.txt');
+  fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replace('starts', 'begins'));
+  const { result, called } = await renderOnce(repo, chapters);
+  assert.deepEqual(result, { id: 'jobs', status: 'failed', reason: CHANGED });
+  assert.equal(called, false);
+});
+
+test('build.json: an edited sentence kind or sources in chapter.json is refused', async (t) => {
+  const { repo, chapters, dir } = await narratedChapter(t);
+  editChapter(dir, (c) => { c.sentences[2].source_ids = []; c.sentences[2].kind = 'framing'; c.sentences[1].source_ids = []; c.sentences[1].note = 'x'; });
+  const { result, called } = await renderOnce(repo, chapters);
+  assert.equal(result.reason, CHANGED);
+  assert.equal(called, false);
+});
+
+test('build.json: an edited scene is refused', async (t) => {
+  const { repo, chapters, dir } = await narratedChapter(t);
+  editChapter(dir, (c) => { c.scene[0].params.heading = 'Something else'; });
+  const { result, called } = await renderOnce(repo, chapters);
+  assert.equal(result.reason, CHANGED);
+  assert.equal(called, false);
+});
+
+test('build.json: narration.txt bytes changed (whitespace the text check allows) is refused', async (t) => {
+  const { repo, chapters, dir } = await narratedChapter(t);
+  fs.appendFileSync(path.join(dir, 'narration.txt'), '  \n');
+  const { result, called } = await renderOnce(repo, chapters);
+  assert.equal(result.reason, CHANGED);
+  assert.equal(called, false);
+});
+
+test('build.json: a replaced narration.wav is refused', async (t) => {
+  const { repo, chapters, dir } = await narratedChapter(t);
+  const wav = fs.readFileSync(path.join(dir, 'narration.wav'));
+  wav[wav.length - 1] ^= 1;
+  fs.writeFileSync(path.join(dir, 'narration.wav'), wav);
+  const { result, called } = await renderOnce(repo, chapters);
+  assert.equal(result.reason, CHANGED);
+  assert.equal(called, false);
+});
+
+test('build.json: a hand-edited index.html is refused', async (t) => {
+  const { repo, chapters, dir } = await narratedChapter(t);
+  const file = path.join(dir, 'index.html');
+  fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replace('Jobs</h1>', 'Unchecked words</h1>'));
+  const { result, called } = await renderOnce(repo, chapters);
+  assert.equal(result.reason, CHANGED);
+  assert.equal(called, false);
+});
+
+test('build.json: missing, garbage or the wrong shape is refused', async (t) => {
+  const { repo, chapters, dir } = await narratedChapter(t);
+  const file = path.join(dir, 'build.json');
+  const good = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const bad = [
+    null,
+    '{ not json',
+    JSON.stringify([]),
+    JSON.stringify({ sha256: {} }),
+    JSON.stringify({ sha256: { ...good.sha256, 'index.html': 'abc' } }),
+    JSON.stringify({ sha256: { ...good.sha256, extra: good.sha256['index.html'] } }),
+  ];
+  for (const content of bad) {
+    if (content === null) fs.rmSync(file);
+    else fs.writeFileSync(file, content);
+    const { result, called } = await renderOnce(repo, chapters);
+    assert.equal(result.reason, CHANGED, String(content));
+    assert.equal(called, false);
+  }
+});
+
+test('the build check runs after the claim audit', async (t) => {
+  const { repo, chapters } = workspace(t);
+  const dir = addChapter(chapters, 'both', { sources: [{ ...GOOD_SOURCE, quote: 'stop()' }] });
+  fs.rmSync(path.join(dir, 'build.json'));
+  const results = await renderChapters(chapters, { root: repo, cap: 1, render: async () => {} });
+  assert.match(results[0].reason, /^audit: /);
 });

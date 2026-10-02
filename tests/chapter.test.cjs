@@ -111,8 +111,24 @@ test('scaffold rejects beats that are out of range or not increasing', (t) => {
 
 test('scaffold rejects a sentence text that is really two sentences', (t) => {
   const root = tempRoot(t);
-  const sentences = [{ text: 'One thing. Another thing.', kind: 'framing', source_ids: [] }];
-  assert.throws(() => scaffoldChapter(spec(root, { sentences, scene: [] })), /2 sentences.*1/);
+  const sentences = [{ text: 'We call foo. Bar runs it.', kind: 'framing', source_ids: [] }];
+  assert.throws(() => scaffoldChapter(spec(root, { sentences, scene: [] })), /sentences\[0\] is not exactly one sentence/);
+  assert.deepEqual(fs.readdirSync(root), []);
+});
+
+test('scaffold rejects entries whose split differs from the spoken split, naming the entry (finding I2)', (t) => {
+  const root = tempRoot(t);
+  const framing = (text) => ({ text, kind: 'framing', source_ids: [] });
+  // the joined narration splits as "Intro." + "The planner Deletes rows.", not as the two entries say
+  const finding = [framing('Intro. The planner'), { text: 'Deletes rows.', kind: 'claim', source_ids: ['s1'] }];
+  assert.throws(() => scaffoldChapter(spec(root, { sentences: finding, scene: [] })), /sentences\[0\]/);
+  // each entry is one sentence on its own, but joined the first runs into the second
+  const runOn = [framing('Hello world'), framing('Next one.')];
+  assert.throws(() => scaffoldChapter(spec(root, { sentences: runOn, scene: [] })), /sentences\[0\] does not stay one sentence/);
+  // the offender is named even when it is not the first entry
+  const second = [framing('Fine.'), framing('Bad. Two of them.')];
+  assert.throws(() => scaffoldChapter(spec(root, { sentences: second, scene: [] })), /sentences\[1\] is not exactly one sentence/);
+  assert.deepEqual(fs.readdirSync(root), []);
 });
 
 test('narrationSentences: returns the split sentences when the count matches, else says both counts', () => {
