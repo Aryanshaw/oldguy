@@ -135,9 +135,12 @@ test('render --dry-run prints the render command for passing chapters and fails 
   assert.match(r.stdout, /up to 2 at a time/);
 });
 
-test('render --dry-run exits 0 when every chapter is ready, with the cap taken from free memory', (t) => {
+test('render --dry-run exits 0 when every chapter is ready, with the cap taken from free memory, and deletes nothing', (t) => {
   const { repo, chapters } = renderWorkspace(t, { withBad: false });
+  const mp4 = path.join(chapters, 'good', 'chapter.mp4');
+  fs.writeFileSync(mp4, 'old video');
   const r = yap('render', chapters, '--root', repo, '--dry-run');
+  assert.equal(fs.readFileSync(mp4, 'utf8'), 'old video');
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /up to [123] at a time/);
   assert.match(r.stdout, /^good: ready$/m);

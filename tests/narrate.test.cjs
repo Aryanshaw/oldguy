@@ -66,7 +66,10 @@ test('narrate (whisper available): tts then transcribe through npx hyperframes, 
   assert.equal(HYPERFRAMES_VERSION, '0.8.112');
   assert.deepEqual(calls.map((c) => [c.cmd, c.args[0], c.args[1], c.args[2]]), [['npx', '--yes', pinned, 'tts'], ['npx', '--yes', pinned, 'transcribe']]);
   const tts = calls[0].args;
-  assert.equal(tts[3], path.join(dir, 'narration.txt'));
+  // tts reads a private copy of the verified text, never the live narration.txt
+  assert.equal(path.basename(tts[3]), 'narration.txt');
+  assert.ok(path.isAbsolute(tts[3]));
+  assert.notEqual(tts[3], path.join(dir, 'narration.txt'));
   assert.equal(path.basename(tts[tts.indexOf('-o') + 1]), 'narration.raw.wav');
   assert.ok(tts.includes('--json'));
   assert.equal(calls[0].env.HYPERFRAMES_PYTHON, PYTHON);
@@ -234,4 +237,26 @@ test('narrate refuses a chapter.json entry that is not exactly one sentence, bef
   const { run, calls } = fakeRun();
   await assert.rejects(narrateChapter(dir, { run, venvPython: PYTHON, whisperAvailable: true }), /sentences\[0\]/);
   assert.equal(calls.length, 0);
+});
+
+test('narrate speaks the verified text even if narration.txt changes on disk after the check', async (t) => {
+  const dir = chapterDir(t);
+  const live = path.join(dir, 'narration.txt');
+  const verified = SENTENCES.map((s) => s.text).join(' ');
+  const { run: base } = fakeRun();
+  let spoken;
+  const run = async (cmd, args, env) => {
+    if (args[2] === 'tts') {
+      // the race: someone rewrites narration.txt after narrate verified it but before tts reads its input
+      fs.writeFileSync(live, 'Unaudited words slipped in.\n');
+      spoken = fs.readFileSync(args[3], 'utf8');
+    }
+    return base(cmd, args, env);
+  };
+  await narrateChapter(dir, { run, venvPython: PYTHON, whisperAvailable: false });
+  assert.equal(spoken.trim(), verified);
+  // the build record holds the verified bytes, so render will refuse the folder whose narration.txt was swapped
+  const record = JSON.parse(fs.readFileSync(path.join(dir, 'build.json'), 'utf8'));
+  const crypto2 = require('node:crypto');
+  assert.equal(record.sha256['narration.txt'], crypto2.createHash('sha256').update(`${verified}\n`).digest('hex'));
 });

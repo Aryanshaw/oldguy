@@ -312,3 +312,39 @@ test('the build check runs after the claim audit', async (t) => {
   const results = await renderChapters(chapters, { root: repo, cap: 1, render: async () => {} });
   assert.match(results[0].reason, /^audit: /);
 });
+
+test('stale video: an existing chapter.mp4 is removed before rendering, so a failed render leaves none', async (t) => {
+  const { repo, chapters } = workspace(t);
+  const dir = addChapter(chapters, 'a');
+  const mp4 = path.join(dir, 'chapter.mp4');
+  fs.writeFileSync(mp4, 'old video');
+  const seenOld = [];
+  const render = async () => {
+    seenOld.push(fs.existsSync(mp4));
+    throw new Error('chrome crashed');
+  };
+  const [result] = await renderChapters(chapters, { root: repo, cap: 1, render });
+  assert.equal(result.status, 'failed');
+  assert.deepEqual(seenOld, [false, false]);
+  assert.equal(fs.existsSync(mp4), false);
+});
+
+test('stale video: a chapter that fails its checks keeps its chapter.mp4 untouched', async (t) => {
+  const { repo, chapters } = workspace(t);
+  const dir = addChapter(chapters, 'bad', { sources: [{ ...GOOD_SOURCE, quote: 'stop()' }] });
+  fs.writeFileSync(path.join(dir, 'chapter.mp4'), 'old video');
+  const { render, calls } = fakeRender();
+  const [result] = await renderChapters(chapters, { root: repo, cap: 1, render });
+  assert.equal(result.status, 'failed');
+  assert.deepEqual(calls, []);
+  assert.equal(fs.readFileSync(path.join(dir, 'chapter.mp4'), 'utf8'), 'old video');
+});
+
+test('stale video: a dry run deletes nothing', async (t) => {
+  const { repo, chapters } = workspace(t);
+  const dir = addChapter(chapters, 'a');
+  fs.writeFileSync(path.join(dir, 'chapter.mp4'), 'old video');
+  const [result] = await renderChapters(chapters, { root: repo, cap: 1, render: async () => {}, dryRun: true });
+  assert.equal(result.status, 'ready');
+  assert.equal(fs.readFileSync(path.join(dir, 'chapter.mp4'), 'utf8'), 'old video');
+});
