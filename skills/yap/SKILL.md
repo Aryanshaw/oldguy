@@ -48,7 +48,7 @@ lists every command; each command prints its own usage when called wrongly.
   chapters/<id>/             made by scaffold: chapter.json, narration.txt
                              made by narrate: narration.wav, beats.json, captions.vtt, captions.json,
                              index.html, build.json
-                             made by render: chapter.mp4
+                             made by render: chapter.mp4, render.json (which build it was made from)
 ```
 
 Chapter ids are short slugs with no numbers in them (`what-the-form-sends`, not `chapter-2`).
@@ -106,38 +106,52 @@ sentence refers to another chapter.
 **Read:** [references/scene-kit.md](references/scene-kit.md)
 
 Pick a scene-kit piece for each idea (`title`, `steps`, `code-card`, `callout`), fill in its params, tie it to the
-sentence it appears with (`beat`), write `specs/<id>.json`, and run `yap scaffold` per chapter. Never invent layout.
+sentence it appears with (`beat`), and write `specs/<id>.json` for each chapter. Never invent layout.
 
-**Gate:** `yap scaffold <spec> --root .yap/<slug>` printed a chapter folder for every chapter.
-
----
-
-## Step 5: Narrate
-
-**Read:** [references/narrate.md](references/narrate.md)
-
-Run `yap audit` on each `chapter.json` first, then `yap narrate` on each chapter folder. This makes the voice, the
-beat timings, the captions and the chapter page.
-
-**Gate:** `yap audit` exited 0 and `yap narrate` printed `narrated` for every chapter.
+**Gate:** a spec file for every chapter in the storyboard.
 
 ---
 
-## Step 6: Gates and render
+## Step 5: Make each chapter, in story order
 
-**Read:** [references/render.md](references/render.md) (it has every Hyperframes command you need; there is no
-other skill to read and nothing to search for)
+**Read:** [references/narrate.md](references/narrate.md) and [references/render.md](references/render.md)
 
-Dry-run the render, run `hyperframes check` and snapshots on every chapter page, fix what they report, then run
-`yap render`. It re-checks the narration text, the claims and the build record and skips any chapter that fails.
+Work one chapter at a time, in story order (the order of the storyboard in `script.md`), so the first chapter is
+playable long before the last one is written. For each chapter:
 
-**Gate:** `yap render` printed `ready` for every chapter and each `chapter.mp4` exists.
+1. `yap scaffold .yap/<slug>/specs/<id>.json --root .yap/<slug>` (it prints the chapter folder).
+2. Run `yap audit` on the chapter's `chapter.json` with `--root <repo>`; it must exit 0. Then run `yap narrate`
+   on the chapter folder (never two narrates at once) and check the printed seconds are 20 to 40.
+3. Start `yap render .yap/<slug>/chapters --root <repo> --only <id>` for that chapter. It may run in the background
+   while you move on to the next chapter. Run at most as many renders at once as the doctor's "Free RAM" line
+   says ("N at a time"); when that many are running, wait for one to finish before starting another.
+
+When a background render finishes, read its output. `<id>: ready` means `chapter.mp4` is done. A `failed` line
+means redo that chapter (below) and start its render again.
+
+**Gate:** every chapter was scaffolded, audited, narrated and had its render started, in story order.
+
+---
+
+## Step 6: Confirm every chapter
+
+When no render is still running, run one last render over every chapter, ids in story order:
+
+```
+yap render .yap/<slug>/chapters --root <repo> --only <all ids in story order>
+```
+
+(`--only` takes the ids separated by commas.) Chapters already rendered from their current build print
+`ready (already rendered)` and are not rendered again; anything else is checked and rendered now.
+
+**Gate:** that run exited 0 with `ready` for every chapter, and each `chapter.mp4` exists.
 
 ---
 
 ## Step 7: Hand-off
 
-Print the path of every rendered chapter, one per line:
+Print the path of every rendered chapter, one per line, in story order (the storyboard's order, not folder
+order):
 
 ```
 .yap/<slug>/chapters/<id>/chapter.mp4
@@ -160,8 +174,8 @@ runs too long). The CLI's own failure messages say the same thing:
 ## When something fails
 
 - A claim fails the audit, or a chapter is blocked at render: redo the chapter as above.
-- A render fails: run `yap doctor`, show any fix text, and retry `yap render`. Every chapter that passes the checks
-  renders again on each run, not just the failed one.
+- A render fails: run `yap doctor`, show any fix text, and retry `yap render ... --only <id>` for that chapter.
+  Chapters already rendered from their current build are skipped, so nothing finished is redone.
 - The feature is not in the code: hard rule 3. Do not pad the video with guesses.
 
 ## Voice

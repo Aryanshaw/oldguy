@@ -149,3 +149,11 @@ test('render.md states the pinned check and snapshot commands inline, using only
     }
   }
 });
+
+test('SKILL.md runs chapters one at a time in story order and renders each with --only', () => {
+  const text = readText(SKILL);
+  assert.ok(/story order/i.test(text), 'SKILL.md must say chapters are made in story order');
+  assert.ok(/for each chapter/i.test(text), 'SKILL.md must describe the per-chapter pipeline ("for each chapter")');
+  assert.ok(/`yap render [^`]*--only <id>`/.test(text), 'SKILL.md must render each chapter with `yap render ... --only <id>`');
+  assert.ok(/--only <all ids in story order>/.test(text), 'SKILL.md must end with one --only run over every id in story order');
+});

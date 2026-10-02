@@ -133,7 +133,7 @@ test('render --dry-run prints the render command for passing chapters and fails 
   assert.ok(r.stdout.indexOf('0.8.112 check ') < r.stdout.indexOf('0.8.112 render '), 'the layout check comes before the render');
   assert.doesNotMatch(r.stdout, /would run: .*bad/);
   assert.match(r.stdout, /^bad: failed \(audit: s1: quote not on lines 1-1\)$/m);
-  assert.match(r.stdout, /^good: ready$/m);
+  assert.match(r.stdout, /^good: would render$/m);
   assert.match(r.stdout, /up to 2 at a time/);
 });
 
@@ -145,7 +145,7 @@ test('render --dry-run exits 0 when every chapter is ready, with the cap taken f
   assert.equal(fs.readFileSync(mp4, 'utf8'), 'old video');
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /up to [123] at a time/);
-  assert.match(r.stdout, /^good: ready$/m);
+  assert.match(r.stdout, /^good: would render$/m);
 });
 
 test('render usage errors exit 2: no --root, a bad --cap, a missing folder', (t) => {
@@ -160,4 +160,41 @@ test('render with no chapters in the folder exits 1 rather than claiming success
   const r = yap('render', empty, '--root', empty, '--dry-run');
   assert.equal(r.status, 1);
   assert.match(r.stderr, /no chapters/);
+});
+
+// Marks a chapter as already rendered from its current build.json, the way a finished render leaves it.
+function markRendered(dir) {
+  const sha = require('node:crypto').createHash('sha256').update(fs.readFileSync(path.join(dir, 'build.json'))).digest('hex');
+  fs.writeFileSync(path.join(dir, 'chapter.mp4'), 'old video');
+  fs.writeFileSync(path.join(dir, 'render.json'), JSON.stringify({ build_sha256: sha }));
+}
+
+test('render --only works in the order given and reports an unknown id as no such chapter', (t) => {
+  const { repo, chapters } = renderWorkspace(t, { withBad: false });
+  const r = yap('render', chapters, '--root', repo, '--only', 'nope,good', '--dry-run');
+  assert.equal(r.status, 1);
+  const lines = r.stdout.split('\n').filter((l) => /^(nope|good):/.test(l));
+  assert.deepEqual(lines, ['nope: failed (no such chapter)', 'good: would render']);
+});
+
+test('render --dry-run says would skip for an already-rendered chapter and touches nothing; --force renders it', (t) => {
+  const { repo, chapters } = renderWorkspace(t, { withBad: false });
+  const dir = path.join(chapters, 'good');
+  markRendered(dir);
+  const record = fs.readFileSync(path.join(dir, 'render.json'), 'utf8');
+  const r = yap('render', chapters, '--root', repo, '--dry-run');
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /^good: would skip \(already rendered\)$/m);
+  assert.doesNotMatch(r.stdout, /would run:/);
+  assert.equal(fs.readFileSync(path.join(dir, 'render.json'), 'utf8'), record);
+  assert.equal(fs.readFileSync(path.join(dir, 'chapter.mp4'), 'utf8'), 'old video');
+  const forced = yap('render', chapters, '--root', repo, '--force', '--dry-run');
+  assert.match(forced.stdout, /^good: would render$/m);
+});
+
+test('render --only needs at least one id', (t) => {
+  const { repo, chapters } = renderWorkspace(t);
+  const r = yap('render', chapters, '--root', repo, '--only', ',', '--dry-run');
+  assert.equal(r.status, 2);
+  assert.match(r.stderr, /--only/);
 });

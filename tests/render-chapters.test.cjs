@@ -407,3 +407,131 @@ test('layout check runs last: narration text, claim audit and build record all s
   assert.match(results.find((r) => r.id === 'edited').reason, /^narration\.txt no longer matches/);
   assert.match(results.find((r) => r.id === 'unaudited').reason, /^audit: /);
 });
+
+// A pretend renderer that writes a chapter.mp4 like the real one, and records each chapter it rendered.
+function videoRender() {
+  const calls = [];
+  return { calls, render: async ({ id, dir }) => { calls.push(id); fs.writeFileSync(path.join(dir, 'chapter.mp4'), `video of ${id}`); } };
+}
+
+// The sha256 of a chapter's build.json bytes, as render.json records it.
+function buildSha(dir) {
+  return require('node:crypto').createHash('sha256').update(fs.readFileSync(path.join(dir, 'build.json'))).digest('hex');
+}
+
+// Rewrites the narrated files and build.json as a fresh narrate would, so the build gate still passes but build.json differs.
+function renarrate(dir) {
+  fs.writeFileSync(path.join(dir, 'narration.wav'), 'RIFF new take');
+  const chapter = JSON.parse(fs.readFileSync(path.join(dir, 'chapter.json'), 'utf8'));
+  fs.writeFileSync(path.join(dir, 'build.json'), JSON.stringify(buildRecord(chapter, (name) => fs.readFileSync(path.join(dir, name)))));
+}
+
+test('--only renders exactly the named chapters, in the order given', async (t) => {
+  const { repo, chapters } = workspace(t);
+  for (const id of ['alpha', 'beta', 'gamma']) addChapter(chapters, id);
+  const { render, calls } = videoRender();
+  const results = await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render, only: ['gamma', 'alpha'] });
+  assert.deepEqual(results.map((r) => [r.id, r.status]), [['gamma', 'ready'], ['alpha', 'ready']]);
+  assert.deepEqual(calls, ['gamma', 'alpha']);
+  assert.equal(fs.existsSync(path.join(chapters, 'beta', 'chapter.mp4')), false);
+});
+
+test('--only with an unknown id reports it as no such chapter and still renders the others', async (t) => {
+  const { repo, chapters } = workspace(t);
+  addChapter(chapters, 'alpha');
+  const { render, calls } = videoRender();
+  const results = await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render, only: ['nope', 'alpha'] });
+  assert.deepEqual(results, [{ id: 'nope', status: 'failed', reason: 'no such chapter' }, { id: 'alpha', status: 'ready', attempts: 1 }]);
+  assert.deepEqual(calls, ['alpha']);
+});
+
+test('render.json: written after a successful render with the sha256 of build.json', async (t) => {
+  const { repo, chapters } = workspace(t);
+  const dir = addChapter(chapters, 'a');
+  const seenRecord = [];
+  const render = async ({ dir: d }) => { seenRecord.push(fs.existsSync(path.join(d, 'render.json'))); fs.writeFileSync(path.join(d, 'chapter.mp4'), 'v'); };
+  await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render });
+  assert.deepEqual(seenRecord, [false]);
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir, 'render.json'), 'utf8')), { build_sha256: buildSha(dir) });
+});
+
+test('render.json: a render that fails leaves no record, and an old record is removed before the attempt', async (t) => {
+  const { repo, chapters } = workspace(t);
+  const dir = addChapter(chapters, 'a');
+  fs.writeFileSync(path.join(dir, 'render.json'), JSON.stringify({ build_sha256: 'stale' }));
+  const [result] = await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render: async () => { throw new Error('chrome crashed'); } });
+  assert.equal(result.status, 'failed');
+  assert.equal(fs.existsSync(path.join(dir, 'render.json')), false);
+});
+
+test('a chapter already rendered from the same build.json is skipped: no check, no render, video kept', async (t) => {
+  const { repo, chapters } = workspace(t);
+  const dir = addChapter(chapters, 'a');
+  await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render: videoRender().render });
+  const { check, dirs } = fakeCheck();
+  const { render, calls } = videoRender();
+  const [result] = await renderChapters(chapters, { root: repo, check, cap: 1, render });
+  assert.deepEqual(result, { id: 'a', status: 'ready', skipped: true });
+  assert.deepEqual([calls, dirs], [[], []]);
+  assert.equal(fs.readFileSync(path.join(dir, 'chapter.mp4'), 'utf8'), 'video of a');
+});
+
+test('a skipped chapter still has to pass the audit: a repo change blocks it', async (t) => {
+  const { repo, chapters } = workspace(t);
+  addChapter(chapters, 'a');
+  await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render: videoRender().render });
+  fs.writeFileSync(path.join(repo, 'app.js'), 'stop()\n');
+  const [result] = await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render: videoRender().render });
+  assert.equal(result.status, 'failed');
+  assert.match(result.reason, /^audit: /);
+});
+
+test('a changed build.json (re-narrated chapter) renders again, removing the old video first', async (t) => {
+  const { repo, chapters } = workspace(t);
+  const dir = addChapter(chapters, 'a');
+  await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render: videoRender().render });
+  renarrate(dir);
+  const sawOld = [];
+  const render = async () => { sawOld.push(fs.existsSync(path.join(dir, 'chapter.mp4'))); fs.writeFileSync(path.join(dir, 'chapter.mp4'), 'new'); };
+  const [result] = await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render });
+  assert.deepEqual(result, { id: 'a', status: 'ready', attempts: 1 });
+  assert.deepEqual(sawOld, [false]);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(dir, 'render.json'), 'utf8')).build_sha256, buildSha(dir));
+});
+
+test('a missing video or a garbage render.json means render runs', async (t) => {
+  const { repo, chapters } = workspace(t);
+  const dir = addChapter(chapters, 'a');
+  await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render: videoRender().render });
+  fs.rmSync(path.join(dir, 'chapter.mp4'));
+  let r = videoRender();
+  await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render: r.render });
+  assert.deepEqual(r.calls, ['a']);
+  fs.writeFileSync(path.join(dir, 'render.json'), '{ nope');
+  r = videoRender();
+  await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render: r.render });
+  assert.deepEqual(r.calls, ['a']);
+});
+
+test('force renders an already-rendered chapter again', async (t) => {
+  const { repo, chapters } = workspace(t);
+  addChapter(chapters, 'a');
+  await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render: videoRender().render });
+  const { render, calls } = videoRender();
+  const [result] = await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render, force: true });
+  assert.deepEqual(result, { id: 'a', status: 'ready', attempts: 1 });
+  assert.deepEqual(calls, ['a']);
+});
+
+test('a dry run reports skips, writes no render.json and touches no video', async (t) => {
+  const { repo, chapters } = workspace(t);
+  const done = addChapter(chapters, 'done');
+  const fresh = addChapter(chapters, 'fresh');
+  await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render: videoRender().render, only: ['done'] });
+  const before = fs.readFileSync(path.join(done, 'render.json'), 'utf8');
+  const results = await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render: async () => {}, dryRun: true });
+  assert.deepEqual(results, [{ id: 'done', status: 'ready', skipped: true }, { id: 'fresh', status: 'ready', attempts: 1 }]);
+  assert.equal(fs.readFileSync(path.join(done, 'render.json'), 'utf8'), before);
+  assert.equal(fs.existsSync(path.join(fresh, 'render.json')), false);
+  assert.equal(fs.readFileSync(path.join(done, 'chapter.mp4'), 'utf8'), 'video of done');
+});
