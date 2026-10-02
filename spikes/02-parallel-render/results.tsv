@@ -1,0 +1,8 @@
+tag	mode	workers	wall	peak	base	failures
+single-w2-231230	single	2	wall_s=39	peak_mb=2176	base_mb=1161	failures=0
+seq-w2-231309	seq	2	wall_s=82	peak_mb=2109	base_mb=1237	failures=0
+par-w2-231431	par	2	wall_s=33	peak_mb=2404	base_mb=1364	failures=0
+seq-wauto-231505	seq	auto	wall_s=127	peak_mb=2236	base_mb=1390	failures=0
+par-wauto-231712	par	auto	wall_s=47	peak_mb=2286	base_mb=1432	failures=0
+single-w1-231759	single	1	wall_s=34	peak_mb=2105	base_mb=1207	failures=0
+single-w4-231833	single	4	wall_s=16	peak_mb=2388	base_mb=1798	failures=0

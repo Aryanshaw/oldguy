@@ -26,10 +26,12 @@ A zero-dependency fallback is accurate enough for chapter beats.
   - **Sentence ends:** whisper 2.30 / 6.92 / 9.42 s.
   - **First run took 253 s** (it downloaded the 487 MB `ggml-small.en.bin` model); **a repeat takes 2 s.**
 - **Side effect to know about:** the first `transcribe` found no `whisper-cli`, and Hyperframes
-  **ran `brew install whisper.cpp` on its own**, without asking. That pulled in `llama.cpp`, `sdl3`,
-  `sdl2-compat`, `openssl@3` and others into the owner's Homebrew. `hyperframes doctor` still reported
-  "whisper-cpp: Not found" afterwards (it checks a different name). This modified the owner's machine
-  during Phase 0 and was not planned; Yap must never trigger it silently.
+  **ran `brew install whisper.cpp` on its own**, without asking. Cellar timestamps show what changed on the
+  owner's Homebrew at 22:38 to 22:39 local time: **newly installed** `whisper.cpp` 1.9.4, `llama.cpp` 0.5.0,
+  `ggml` 0.25.3 and `libomp` 23.1.2; **upgraded** (a newer version added beside the old one) `openssl@3`
+  (now 3.6.5), `sdl3` (3.4.16), `sdl2-compat` (2.32.72) and `ca-certificates` (2026-09-25). `hyperframes doctor`
+  still reported "whisper-cpp: Not found" afterwards (it checks a different name). This modified the owner's
+  machine during Phase 0 and was not planned; Yap must never trigger it silently.
 - **Fallback (no dependency):** sentence ends at 2.22 / 6.60 / 9.30 s (character-proportional). Errors against
   whisper: 0.08 s, 0.32 s, 0.12 s. Worst case 0.32 s on three sentences.
 - Not done: spot-checking three words by ear (no audio output in this session). The whisper timings

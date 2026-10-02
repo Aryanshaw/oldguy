@@ -1,3 +1,5 @@
+> **Internal working note. Not for publication.** Remove or rewrite this file before the repository is ever made public (it records private working context).
+
 # Yap — handoff (continue the discussion in `~/Documents/pracice/yap`)
 
 Written 2026-10-02. Read this first, then the spec. Nothing here is code: the repo holds
@@ -60,10 +62,7 @@ Lessons that shaped the spec: reusable scene kit; dense snapshots around moving 
 overlap was only caught after a full render); draft-first rendering; per-chapter parallel
 renders; a doctor check for ffmpeg/Chrome/TTS.
 
-Prototype project (temporary scratchpad, may be gone — copy `src/` into the repo as scene-kit
-seed if still there): `/private/tmp/claude-501/-Users-aryanshaw-Documents-pracice-worktrees-vindex-app/6493f579-010d-4b28-9f8a-8e37e98d4602/scratchpad/job-flow-video/`
-(scene sources in `src/`, QC frames in `../qc/`, static ffmpeg in `../tools/`). The flow
-notes it was written from: `…/scratchpad/job-flow-notes.md`.
+Prototype project: a temporary session folder (may be gone). Copy its `src/` into the repo as the scene-kit seed if it still exists.
 
 ## 3. How the design evolved (decisions + why; the spec has the result)
 
@@ -135,17 +134,7 @@ talking a lot). Collisions are in unrelated spaces (`yapi` API tool 27k★, `yap
 - A caveman-style terse mode and a TL;DR-first style were active in the previous session;
   match whatever the new repo's instructions say.
 
-## 7. Loose ends from the same session (not Yap; FYI only)
-
-- vindex repo (`~/Documents/pracice/worktrees/vindex-app`, branch `feat/oio-appeal`): Part C
-  job-planner refactor is committed; ledger `.superpowers/sdd/2026-10-01-refactor-C-job-planner/progress.md`;
-  open owner decisions there: parked finding I2, remaining ponytail cuts, a row-for-row
-  e2e vs `main`. A dev stack (API :8000, arq worker, Next :3000) started from that repo
-  against the prod DB was still running when this was written — ask before leaving it up.
-- Owner was asked to add two lines to `.claude/settings.local.json` (allow `Bash(uv --directory api run *)`,
-  `Bash(pnpm *)` and an autoMode note); they said they updated it.
-
-## 8. Suggested skills for the next session
+## 7. Suggested skills for the next session
 
 - `superpowers:brainstorming` — resume at the **spec review gate**; then hand off to
   `superpowers:writing-plans` (the only allowed next skill after approval).

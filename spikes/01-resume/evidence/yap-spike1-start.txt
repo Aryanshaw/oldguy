@@ -1,0 +1,4 @@
+keys: ['api_error_status', 'duration_api_ms', 'duration_ms', 'fast_mode_disabled_reason', 'fast_mode_state', 'first_content_frame_ms', 'is_error', 'modelUsage', 'num_turns', 'permission_denials', 'queued_turn_count', 'result', 'result_index', 'session_id', 'stop_reason', 'subagent_stats', 'subtype', 'terminal_reason', 'time_to_request_ms', 'total_cost_usd', 'ttft_ms', 'ttft_stream_ms', 'type', 'usage', 'uuid']
+session_id: 3752bf32-02d4-4ef9-9377-a68fbc7d9775
+cost_usd: 0.115645
+result: OK

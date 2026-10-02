@@ -14,8 +14,10 @@ Apple M3, 8 GB, memory-starved (see `ENV.md`). Python 3.14 is the system Python;
 Python 3.12 (see below).
 
 ## Result
-**PARTIAL.** Free, keyless and offline-capable: **PASS**. "Nothing extra to install": **FAIL**. It needs
-a Python package set and a 353 MB one-time model download.
+**PASS** under the plan's rule (steps 2 and 3 both succeed with no keys; PARTIAL was reserved for "needs a key or the
+network for each run"). It is not zero-install: it needs a Python package set and a 353 MB one-time model
+download, which the Consequence section turns into doctor checks. The network was blocked with `sandbox-exec`, which
+replaced the plan's "turn Wi-Fi off" (not possible remotely).
 
 ## Evidence
 - **First attempt, no Python packages:** `{"ok":false,"error":"The kokoro-onnx package is not installed.
