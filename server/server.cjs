@@ -10,7 +10,7 @@ const { slugChapterId } = require('../lib/chapter.cjs');
 const { scanChapter } = require('../lib/chapter-scan.cjs');
 const { serveFile, safeChapterFile } = require('../lib/range.cjs');
 const { createHub } = require('../lib/sse.cjs');
-const { API_ROUTES } = require('./api.cjs');
+const { API_ROUTES, clearHeartbeatTimer } = require('./api.cjs');
 const { startWatcher } = require('../lib/watcher.cjs');
 const { makeChapterSync } = require('./chapter-sync.cjs');
 const { liveServer } = require('../lib/live-server.cjs');
@@ -275,6 +275,7 @@ async function startServer({ slugDir, key = crypto.randomBytes(16).toString('hex
   // drops open connections so the port is freed and removes state/server.json.
   const close = async () => {
     state.closing = true;
+    clearHeartbeatTimer(state);
     if (state.stopExport) await state.stopExport();
     state.watcher.stop();
     sync.stop();

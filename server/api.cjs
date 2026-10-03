@@ -102,11 +102,34 @@ async function handleReply({ req, res, state, sendJson, readJsonBody }) {
   sendJson(res, 200, { reply });
 }
 
-// POST /api/heartbeat: notes that a live Claude session is listening; tabs hear about it if that changes the answer.
+// Stops the "Claude went quiet" timer, if one is armed (close() uses this too).
+function clearHeartbeatTimer(state) {
+  if (!state.heartbeatTimer) return;
+  (state.deps.clearTimeout || clearTimeout)(state.heartbeatTimer);
+  state.heartbeatTimer = null;
+}
+
+// Arms the one timer that tells the open tabs 15 s after the last heartbeat that Claude is no longer connected.
+// Every heartbeat replaces it, so it only fires when no newer heartbeat has arrived. It is unref()ed so it never keeps the process alive.
+function armHeartbeatTimer(state) {
+  clearHeartbeatTimer(state);
+  const timer = (state.deps.setTimeout || setTimeout)(() => {
+    state.heartbeatTimer = null;
+    state.lastHeartbeat = null;
+    tell(state, 'state', () => buildState(state));
+  }, HEARTBEAT_MS);
+  if (timer && typeof timer.unref === 'function') timer.unref();
+  state.heartbeatTimer = timer;
+}
+
+// POST /api/heartbeat: notes that a live Claude session is listening; tabs hear about it if that changes the answer,
+// and again (from the timer) when the heartbeats stop.
 async function handleHeartbeat({ req, res, state, sendJson, readJsonBody }) {
   await readJsonBody(req);
+  if (state.closing) return sendJson(res, 503, { error: 'the server is closing' });
   const before = isConnected(state);
   state.lastHeartbeat = clock(state);
+  armHeartbeatTimer(state);
   if (!before) tell(state, 'state', () => buildState(state));
   sendJson(res, 200, { ok: true });
 }
@@ -195,4 +218,4 @@ const API_ROUTES = [
   { method: 'POST', pattern: '/api/export', handler: handleExport },
 ];
 
-module.exports = { API_ROUTES };
+module.exports = { API_ROUTES, clearHeartbeatTimer };

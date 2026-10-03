@@ -266,3 +266,72 @@ test('a client that stops reading is dropped once its backlog passes 1 MB; other
   await good.wait((e) => e.some((x) => x.data.text === 'still here'));
   good.req.destroy();
 });
+
+// ---- the stream says when Claude goes quiet (final review I2) ----
+
+// A hand-driven timer pair: set() remembers the callback and delay, fire() runs the latest armed one.
+function fakeTimers() {
+  const armed = new Map();
+  let next = 1;
+  const t = {
+    armed, sets: [], cleared: [], unrefs: 0,
+    setTimeout(fn, ms) { const id = next++; armed.set(id, fn); t.sets.push({ id, ms }); return { id, unref() { t.unrefs++; } }; },
+    clearTimeout(h) { t.cleared.push(h.id); armed.delete(h.id); },
+    fire() { const [id, fn] = [...armed].pop(); armed.delete(id); fn(); },
+  };
+  return t;
+}
+
+test('after a heartbeat, the 15 s timer firing sends a state event with claude_connected false', async (t) => {
+  let clock = 1000;
+  const timers = fakeTimers();
+  const { srv } = await start(t, { now: () => clock, setTimeout: timers.setTimeout, clearTimeout: timers.clearTimeout });
+  const s = await openStream(srv);
+  await s.wait((e) => e.length >= 1);
+  await post(srv, '/api/heartbeat', {});
+  await s.wait((e) => e.some((x) => x.event === 'state' && x.data.claude_connected === true));
+  assert.equal(timers.armed.size, 1);
+  assert.equal(timers.sets[0].ms, 15000);
+  assert.equal(timers.unrefs, 1, 'the timer is unref()ed');
+  clock += 15000;
+  timers.fire();
+  await s.wait((e) => e.some((x) => x.event === 'state' && x.data.claude_connected === false && e.indexOf(x) > 0));
+  s.req.destroy();
+});
+
+test('a second heartbeat before the timer fires re-arms it: one false event, at the later time', async (t) => {
+  let clock = 1000;
+  const timers = fakeTimers();
+  const { srv } = await start(t, { now: () => clock, setTimeout: timers.setTimeout, clearTimeout: timers.clearTimeout });
+  const s = await openStream(srv);
+  await s.wait((e) => e.length >= 1);
+  await post(srv, '/api/heartbeat', {});
+  clock += 10000;
+  await post(srv, '/api/heartbeat', {});
+  assert.equal(timers.armed.size, 1, 'only one timer is armed');
+  assert.equal(timers.cleared.length, 1, 'the first timer was cleared');
+  clock += 15000;
+  timers.fire();
+  await s.wait((e) => e.some((x) => x.data.claude_connected === false && e.indexOf(x) > 0));
+  const falses = s.events.filter((x, i) => i > 0 && x.data.claude_connected === false);
+  assert.equal(falses.length, 1);
+  assert.equal(falses[0].data.now, 26000);
+  s.req.destroy();
+});
+
+test('close() with an armed heartbeat timer clears it', async (t) => {
+  const timers = fakeTimers();
+  const { srv } = await start(t, { setTimeout: timers.setTimeout, clearTimeout: timers.clearTimeout });
+  await post(srv, '/api/heartbeat', {});
+  assert.equal(timers.armed.size, 1);
+  await srv.close();
+  assert.equal(timers.armed.size, 0);
+});
+
+test('with the real timer, a heartbeat leaves nothing that keeps the process alive after close()', async (t) => {
+  const { srv } = await start(t);
+  await post(srv, '/api/heartbeat', {});
+  assert.ok(srv.state.heartbeatTimer.hasRef() === false, 'unref()ed');
+  await srv.close();
+  assert.equal(srv.state.heartbeatTimer, null);
+});
