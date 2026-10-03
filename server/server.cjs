@@ -11,6 +11,8 @@ const { scanChapter } = require('../lib/chapter-scan.cjs');
 const { serveFile, safeChapterFile } = require('../lib/range.cjs');
 const { createHub } = require('../lib/sse.cjs');
 const { API_ROUTES } = require('./api.cjs');
+const { startWatcher } = require('../lib/watcher.cjs');
+const { makeChapterSync } = require('./chapter-sync.cjs');
 
 // Headers put on every response, whatever the route.
 const SECURITY_HEADERS = {
@@ -202,7 +204,7 @@ function makeManifestQueue(slugDir, deps) {
 
 // Starts the server on 127.0.0.1 and resolves with { url, key, port, close() }.
 // deps (all optional, for tests): routes replaces the route table; now is a clock in ms; pingMs is the stream ping
-// interval; fs is used to save the manifest; beforeSave is awaited between change and save (tests); logError receives unexpected save failures.
+// interval; fs is used to save the manifest; scan, intervalMs, setInterval and clearInterval steer the folder watcher; exec and ffmpeg take poster frames; beforeSave is awaited between change and save (tests); logError receives unexpected save failures.
 async function startServer({ slugDir, key = crypto.randomBytes(16).toString('hex'), port = 0, deps = {} }) {
   ensureManifest(slugDir);
   const routes = deps.routes || ROUTES;
@@ -231,8 +233,17 @@ async function startServer({ slugDir, key = crypto.randomBytes(16).toString('hex
     server.close();
     throw err;
   }
-  // Stops the server, drops open connections so the port is freed, and removes state/server.json.
+  // Follow the chapter folders: the manifest is seeded by the first look, before the URL is handed out.
+  const sync = makeChapterSync(state);
+  state.posterIdle = sync.posterIdle;
+  state.watcher = startWatcher({
+    slugDir, onChange: sync.onChange, intervalMs: deps.intervalMs, scan: deps.scan, logError: state.logError,
+    setInterval: deps.setInterval, clearInterval: deps.clearInterval,
+  });
+  await state.watcher.pollNow();
+  // Stops the watcher first, then the server, drops open connections so the port is freed, and removes state/server.json.
   const close = () => new Promise((resolve) => {
+    state.watcher.stop();
     fs.rmSync(infoFile, { force: true });
     hub.close();
     server.close(() => resolve());

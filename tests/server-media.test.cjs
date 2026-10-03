@@ -44,10 +44,12 @@ function buildSlug(t, rows = [['intro', 'ready']]) {
   saveManifest(path.join(slugDir, 'manifest.json'), m);
   return slugDir;
 }
+// A stand-in for ffmpeg: the watcher takes poster frames at start-up, and no test may run the real program.
+const fakeFfmpeg = async (file, args) => { fs.writeFileSync(args[args.length - 1], 'JPEGDATA'); };
 // Same, then starts a server on it (deps are the server's injection points).
 async function setup(t, rows = [['intro', 'ready']], deps = {}) {
   const slugDir = buildSlug(t, rows);
-  const srv = await startServer({ slugDir, deps });
+  const srv = await startServer({ slugDir, deps: { exec: fakeFfmpeg, ...deps } });
   t.after(() => srv.close());
   return { srv, slugDir };
 }
@@ -136,7 +138,11 @@ test('HEAD on video: same headers, no body; HEAD on poster is not allowed', asyn
 });
 
 test('poster and captions: right type and bytes, and they do not need ready', async (t) => {
-  const { srv } = await setup(t, [['draft', 'pending']]);
+  // The draft chapter has no video yet (the manifest follows the folders, so a pending row needs an unrendered folder).
+  const slugDir = buildSlug(t, [['draft', 'pending']]);
+  fs.rmSync(path.join(slugDir, 'chapters', 'draft', 'chapter.mp4'));
+  const srv = await startServer({ slugDir, deps: { exec: fakeFfmpeg } });
+  t.after(() => srv.close());
   const p = await get(srv, '/chapters/draft/poster');
   assert.equal(p.status, 200);
   assert.equal(p.headers['content-type'], 'image/jpeg');
@@ -317,7 +323,7 @@ async function hangUpStorm(t, count) {
   fs.writeFileSync(script, `
     const fs = require('node:fs');
     const { startServer } = require(${JSON.stringify(path.join(__dirname, '..', 'server', 'server.cjs'))});
-    startServer({ slugDir: ${JSON.stringify(slugDir)} }).then((srv) => {
+    startServer({ slugDir: ${JSON.stringify(slugDir)}, deps: { exec: async (f, a) => { fs.writeFileSync(a[a.length - 1], 'JPEGDATA'); } } }).then((srv) => {
       process.send({ ready: true, port: srv.port, key: srv.key });
       process.on('message', () => { global.gc(); setTimeout(() => { global.gc(); process.send({ fds: fs.readdirSync('/dev/fd').length }); }, 100); });
     });`);
