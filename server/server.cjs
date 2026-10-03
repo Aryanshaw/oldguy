@@ -9,6 +9,8 @@ const { newManifest, saveManifest, loadManifest } = require('../lib/manifest.cjs
 const { slugChapterId } = require('../lib/chapter.cjs');
 const { scanChapter } = require('../lib/chapter-scan.cjs');
 const { serveFile, safeChapterFile } = require('../lib/range.cjs');
+const { createHub } = require('../lib/sse.cjs');
+const { API_ROUTES } = require('./api.cjs');
 
 // Headers put on every response, whatever the route.
 const SECURITY_HEADERS = {
@@ -92,6 +94,7 @@ const ROUTES = [
   { method: 'HEAD', pattern: '/chapters/:id/video', handler: mediaHandler('video') },
   { method: 'GET', pattern: '/chapters/:id/poster', handler: mediaHandler('poster') },
   { method: 'GET', pattern: '/chapters/:id/captions', handler: mediaHandler('captions') },
+  ...API_ROUTES,
 ];
 
 // Tries to match a path against a pattern; returns the params object or null.
@@ -178,8 +181,25 @@ function writeServerInfo(slugDir, info) {
   return file;
 }
 
+// Makes the one queue every manifest change goes through: each job loads the file, changes it with a pure function from
+// lib/manifest.cjs, and saves it atomically, one job at a time. A job that fails does not stop the jobs behind it.
+function makeManifestQueue(slugDir, deps) {
+  const file = path.join(slugDir, 'manifest.json');
+  let tail = Promise.resolve();
+  return (change) => {
+    const job = tail.then(() => {
+      const next = change(loadManifest(file));
+      saveManifest(file, next, deps.fs ? { fs: deps.fs } : undefined);
+      return next;
+    });
+    tail = job.catch(() => {});
+    return job;
+  };
+}
+
 // Starts the server on 127.0.0.1 and resolves with { url, key, port, close() }.
-// deps.routes replaces the route table (tests); by default ROUTES is used.
+// deps (all optional, for tests): routes replaces the route table; now is a clock in ms; pingMs is the stream ping
+// interval; fs is used to save the manifest; logError receives unexpected save failures.
 async function startServer({ slugDir, key = crypto.randomBytes(16).toString('hex'), port = 0, deps = {} }) {
   ensureManifest(slugDir);
   const routes = deps.routes || ROUTES;
@@ -193,7 +213,12 @@ async function startServer({ slugDir, key = crypto.randomBytes(16).toString('hex
   });
   const bound = server.address();
   const actualPort = bound.port;
-  const state = { slugDir, key, port: actualPort, deps };
+  const hub = createHub({ pingMs: deps.pingMs });
+  const state = {
+    slugDir, key, port: actualPort, deps, hub, lastHeartbeat: null,
+    updateManifest: makeManifestQueue(slugDir, deps),
+    logError: deps.logError || ((err) => process.stderr.write(`yap server: ${err && err.stack ? err.stack : err}\n`)),
+  };
   server.on('request', makeListener(state, routes, createGuard({ key, port: actualPort })));
   const url = `http://127.0.0.1:${actualPort}/?key=${key}`;
   let infoFile;
@@ -206,10 +231,11 @@ async function startServer({ slugDir, key = crypto.randomBytes(16).toString('hex
   // Stops the server, drops open connections so the port is freed, and removes state/server.json.
   const close = () => new Promise((resolve) => {
     fs.rmSync(infoFile, { force: true });
+    hub.close();
     server.close(() => resolve());
     server.closeAllConnections();
   });
-  return { url, key, port: actualPort, address: bound.address, family: bound.family, server, close };
+  return { url, key, port: actualPort, address: bound.address, family: bound.family, server, state, close };
 }
 
 module.exports = { startServer, ROUTES, sendJson, escapeHtml };
