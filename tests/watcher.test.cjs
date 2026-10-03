@@ -114,7 +114,7 @@ test('the timer is unref-ed, uses the interval, ticks poll, and stop() clears it
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { startServer } = require('../server/server.cjs');
+const { startServer } = require('../server/server.mts');
 const { newManifest, insertChapter, saveManifest, loadManifest } = require('../lib/manifest.mts');
 const { sha256 } = require('../lib/build-record.mts');
 
@@ -719,7 +719,7 @@ test('R6: at start a ready, stale or rendering row with no folder becomes failed
 test('R6: the first diff broadcasts one chapter event per such row with the reason "chapter folder is missing"', async (t) => {
   const slugDir = tempSlug(t);
   seedManifest(slugDir, [['r', 'ready'], ['p', 'pending']]);
-  const { makeChapterSync } = require('../server/chapter-sync.cjs');
+  const { makeChapterSync } = require('../server/chapter-sync.mts');
   const sent = [];
   const file = path.join(slugDir, 'manifest.json');
   const state = {

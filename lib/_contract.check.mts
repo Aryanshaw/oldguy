@@ -4,6 +4,8 @@ import type { ChapterStatus, Manifest, ManifestRow, insertChapter } from './mani
 import type { ScanStatus, ScannedChapter } from './chapter-scan.mts';
 import type { ThreadEntry, ViewerEvent, Reply } from './events.mts';
 import type { StreamEvent } from './sse.mts';
+import type { ChaptersBody, StateResponse } from '../server/api.mts';
+import type { RunningServer } from '../server/types.mts';
 
 // True only when A and B are exactly the same type.
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false;
@@ -26,5 +28,9 @@ type _Checks = [
   Expect<Equal<Extract<StreamEvent, { event: 'reply' }>['data'], Reply & { role: 'claude' }>>,
   Expect<Equal<ThreadEntry['role'], 'viewer' | 'claude'>>,
   Expect<Equal<ViewerEvent['id'], string>>,
+  // the API's request and response shapes
+  Expect<Equal<ChaptersBody['op'], 'add' | 'reorder' | 'set'>>,
+  Expect<Equal<StateResponse['manifest'], Manifest>>,
+  Expect<Equal<ReturnType<RunningServer['close']>, Promise<void>>>,
 ];
 export type { _Checks };

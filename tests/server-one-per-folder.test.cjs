@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
-const { startServer } = require('../server/server.cjs');
+const { startServer } = require('../server/server.mts');
 
 const YAP = path.join(__dirname, '..', 'bin', 'yap.cjs');
 const MESSAGE = 'a server for this folder is already running';

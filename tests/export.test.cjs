@@ -6,7 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const http = require('node:http');
 const { exportVideo } = require('../lib/export.mts');
-const { startServer } = require('../server/server.cjs');
+const { startServer } = require('../server/server.mts');
 const { newManifest, insertChapter, saveManifest } = require('../lib/manifest.mts');
 const { sha256 } = require('../lib/build-record.mts');
 

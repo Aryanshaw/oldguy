@@ -1,12 +1,12 @@
-'use strict';
 // POST /api/export: writes the finished video, script and sources into a folder the viewer chose.
-const path = require('node:path');
-const { loadManifest } = require('../lib/manifest.mts');
-const { exportVideo, checkDest } = require('../lib/export.mts');
-const { ffmpegPath } = require('../lib/poster.mts');
+import path from 'node:path';
+import { loadManifest } from '../lib/manifest.mts';
+import { exportVideo, checkDest } from '../lib/export.mts';
+import { ffmpegPath } from '../lib/poster.mts';
+import type { RouteContext } from './types.mts';
 
 // Answers {file, files, skipped} on success. The body is checked first (dest, mode); only one export runs at a time.
-async function handleExport({ req, res, state, sendJson, readJsonBody }) {
+async function handleExport({ req, res, state, sendJson, readJsonBody }: RouteContext): Promise<void> {
   if (state.closing) return sendJson(res, 503, { error: 'the server is closing' });
   const body = await readJsonBody(req);
   const extra = Object.keys(body).find((k) => k !== 'dest' && k !== 'mode');
@@ -32,7 +32,9 @@ async function handleExport({ req, res, state, sendJson, readJsonBody }) {
     sendJson(res, 200, result);
   } catch (err) {
     // A failed ffmpeg run is a server-side failure but its short reason is safe to show (base names only).
-    if (err && err.status === 500) return sendJson(res, 500, { error: String(err.message).replace(/\s+/g, ' ') });
+    // exportVideo throws errors that carry a status (and plain Errors); anything else passes on
+    const failure = err as { status?: unknown; message?: unknown } | null | undefined;
+    if (failure && failure.status === 500) return sendJson(res, 500, { error: String(failure.message).replace(/\s+/g, ' ') });
     throw err;
   } finally {
     state.exporting = false;
@@ -40,4 +42,4 @@ async function handleExport({ req, res, state, sendJson, readJsonBody }) {
   }
 }
 
-module.exports = { handleExport };
+export { handleExport };

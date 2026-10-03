@@ -1,19 +1,30 @@
-'use strict';
 // The local server: guard, router, the placeholder page, and start/stop. Later tasks add rows to ROUTES.
-const crypto = require('node:crypto');
-const fs = require('node:fs');
-const http = require('node:http');
-const path = require('node:path');
-const { createGuard, readJsonBody } = require('../lib/http-guard.mts');
-const { newManifest, saveManifest, loadManifest } = require('../lib/manifest.mts');
-const { slugChapterId } = require('../lib/chapter.mts');
-const { scanChapter } = require('../lib/chapter-scan.mts');
-const { serveFile, safeChapterFile } = require('../lib/range.mts');
-const { createHub } = require('../lib/sse.mts');
-const { API_ROUTES, clearHeartbeatTimer } = require('./api.cjs');
-const { startWatcher } = require('../lib/watcher.mts');
-const { makeChapterSync } = require('./chapter-sync.cjs');
-const { liveServer } = require('../lib/live-server.mts');
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import http from 'node:http';
+import path from 'node:path';
+import { createGuard, readJsonBody } from '../lib/http-guard.mts';
+import { newManifest, saveManifest, loadManifest } from '../lib/manifest.mts';
+import { slugChapterId } from '../lib/chapter.mts';
+import { scanChapter } from '../lib/chapter-scan.mts';
+import { serveFile, safeChapterFile } from '../lib/range.mts';
+import { createHub } from '../lib/sse.mts';
+import { API_ROUTES, clearHeartbeatTimer } from './api.mts';
+import { startWatcher } from '../lib/watcher.mts';
+import { makeChapterSync } from './chapter-sync.mts';
+import { liveServer } from '../lib/live-server.mts';
+import type { AddressInfo } from 'node:net';
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { Guard } from '../lib/http-guard.mts';
+import type { Manifest, ManifestRow } from '../lib/manifest.mts';
+import type { ManifestQueue, Route, RouteContext, RunningServer, ServerDeps, ServerState, StartOptions } from './types.mts';
+
+// What the lookup of a request finds: a handler with its path parameters, or the status to answer (404 no such path, 405 wrong method).
+type Hit = { row: Route; params: Record<string, string>; status?: undefined } | { status: 404 } | { status: 405 };
+// The kinds of chapter media the server serves.
+type MediaKind = 'video' | 'poster' | 'captions';
+// What state/server.json holds.
+type ServerInfoFile = { url: string; key: string; port: number; pid: number; started_at: string };
 
 // Headers put on every response, whatever the route.
 const SECURITY_HEADERS = {
@@ -23,19 +34,22 @@ const SECURITY_HEADERS = {
   'Cache-Control': 'no-store',
 };
 
+// The five characters that must not appear raw inside HTML, and what they become.
+const HTML_ENTITIES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+
 // Escapes text so it is safe to put inside HTML.
-function escapeHtml(text) {
-  return String(text).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+function escapeHtml(text: unknown): string {
+  return String(text).replace(/[&<>"']/g, (c) => HTML_ENTITIES[c]);
 }
 
 // Sends a JSON answer.
-function sendJson(res, status, obj) {
+function sendJson(res: ServerResponse, status: number, obj: unknown): void {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
   res.end(JSON.stringify(obj));
 }
 
 // Builds the placeholder page from the manifest only: every text escaped, a video for each ready chapter, no scripts.
-function renderPage(manifest) {
+function renderPage(manifest: Manifest): string {
   const items = manifest.chapters.map((c) => {
     const video = c.status === 'ready' ? `<video controls preload="metadata" src="/chapters/${encodeURIComponent(c.id)}/video"></video>` : '';
     return `<li><h2>${escapeHtml(c.title)}</h2><p>${escapeHtml(c.status)}</p>${video}</li>`;
@@ -45,10 +59,11 @@ function renderPage(manifest) {
 }
 
 // GET /: with the key in the query, remember it in a cookie and redirect so it leaves the address bar; otherwise the page.
-function handleHome({ req, res, url, state }) {
+function handleHome({ res, url, state }: RouteContext): void {
   if (url.searchParams.has('key')) {
     res.writeHead(302, { 'Set-Cookie': `yap_key_${state.port}=${state.key}; HttpOnly; SameSite=Strict; Path=/`, Location: '/' });
-    return res.end();
+    res.end();
+    return;
   }
   const manifest = loadManifest(path.join(state.slugDir, 'manifest.json'));
   res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
@@ -56,19 +71,19 @@ function handleHome({ req, res, url, state }) {
 }
 
 // GET /api/ping: tells a caller (the --detach check) this really is a yap server and which process runs it.
-function handlePing({ res }) {
+function handlePing({ res }: RouteContext): void {
   sendJson(res, 200, { ok: true, pid: process.pid });
 }
 
 // Fixed file name and content type for each kind of chapter media.
-const MEDIA = {
+const MEDIA: Record<MediaKind, { file: string; contentType: string }> = {
   video: { file: 'chapter.mp4', contentType: 'video/mp4' },
   poster: { file: 'poster.jpg', contentType: 'image/jpeg' },
   captions: { file: 'captions.vtt', contentType: 'text/vtt; charset=utf-8' },
 };
 
 // True when id is a plain valid chapter id (slug rule) listed in the manifest; the row is returned, else null.
-function findChapterRow(state, id) {
+function findChapterRow(state: ServerState, id: string): ManifestRow | null {
   try { if (slugChapterId(id) !== id) return null; } catch { return null; }
   const manifest = loadManifest(path.join(state.slugDir, 'manifest.json'));
   return manifest.chapters.find((c) => c.id === id) || null;
@@ -76,12 +91,13 @@ function findChapterRow(state, id) {
 
 // Makes a handler that sends one kind of chapter media. The path is built only from the slug folder, the checked id and
 // a fixed file name. The video also has to be ready right now (checked again on disk), not just in the manifest.
-function mediaHandler(kind) {
+function mediaHandler(kind: MediaKind): Route['handler'] {
   const { file, contentType } = MEDIA[kind];
-  return async ({ req, res, params, state }) => {
+  return async ({ req, res, params, state }: RouteContext): Promise<void> => {
     const row = findChapterRow(state, params.id);
-    const dir = row && path.join(state.slugDir, 'chapters', row.id);
-    const ok = row && (kind !== 'video' || (row.status === 'ready' && scanChapter(dir).status === 'ready'))
+    if (!row) return sendJson(res, 404, { error: 'not found' });
+    const dir = path.join(state.slugDir, 'chapters', row.id);
+    const ok = (kind !== 'video' || (row.status === 'ready' && scanChapter(dir).status === 'ready'))
       && (kind !== 'poster' || row.poster !== null);
     const real = ok && safeChapterFile(dir, file);
     if (!real) return sendJson(res, 404, { error: 'not found' });
@@ -93,7 +109,7 @@ function mediaHandler(kind) {
 
 // The route table. A row is { method, pattern, handler }. pattern is a path; a segment like ":id" matches any one
 // segment and arrives in params.id. handler gets { req, res, url, params, state, sendJson, readJsonBody }, may be async.
-const ROUTES = [
+const ROUTES: Route[] = [
   { method: 'GET', pattern: '/', handler: handleHome },
   { method: 'GET', pattern: '/api/ping', handler: handlePing },
   { method: 'GET', pattern: '/chapters/:id/video', handler: mediaHandler('video') },
@@ -104,11 +120,11 @@ const ROUTES = [
 ];
 
 // Tries to match a path against a pattern; returns the params object or null.
-function matchPattern(pattern, pathname) {
+function matchPattern(pattern: string, pathname: string): Record<string, string> | null {
   const want = pattern.split('/');
   const got = pathname.split('/');
   if (want.length !== got.length) return null;
-  const params = {};
+  const params: Record<string, string> = {};
   for (let i = 0; i < want.length; i++) {
     if (want[i].startsWith(':') && got[i] !== '') {
       try { params[want[i].slice(1)] = decodeURIComponent(got[i]); } catch { return null; }
@@ -118,7 +134,7 @@ function matchPattern(pattern, pathname) {
 }
 
 // Finds what to run for a request: the handler and params, or { status: 404 | 405 }.
-function route(routes, method, pathname) {
+function route(routes: Route[], method: string | undefined, pathname: string): Hit {
   let pathMatched = false;
   for (const row of routes) {
     const params = matchPattern(row.pattern, pathname);
@@ -130,28 +146,31 @@ function route(routes, method, pathname) {
 }
 
 // Answers a handler's failure: a known status error keeps its short message, anything else becomes a plain 500 (real error to stderr).
-function answerError(res, err) {
-  if (res.headersSent) return res.end();
-  if (err && Number.isInteger(err.status) && ((err.status >= 400 && err.status < 500) || err.status === 503)) return sendJson(res, err.status, { error: String(err.message).replace(/\s+/g, ' ') });
-  process.stderr.write(`yap server: ${err && err.stack ? err.stack : err}\n`);
+function answerError(res: ServerResponse, err: unknown): void {
+  if (res.headersSent) { res.end(); return; }
+  // a thrown Error may carry a status (the ones the handlers throw on purpose) and always has a message and a stack
+  const e = err as { status?: unknown; message?: unknown; stack?: unknown } | null | undefined;
+  const status = e ? e.status : undefined;
+  if (e && typeof status === 'number' && Number.isInteger(status) && ((status >= 400 && status < 500) || status === 503)) return sendJson(res, status, { error: String(e.message).replace(/\s+/g, ' ') });
+  process.stderr.write(`yap server: ${e && e.stack ? e.stack : err}\n`);
   sendJson(res, 500, { error: 'internal error' });
 }
 
 // Builds the request listener: security headers, guard, then the router. Everything sits inside one try so a
 // throw (or a rejected handler) can never become an unhandled rejection that stops the process.
-function makeListener(state, routes, guard) {
-  return async (req, res) => {
+function makeListener(state: ServerState, routes: Route[], guard: Guard): (req: IncomingMessage, res: ServerResponse) => Promise<void> {
+  return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     try {
       for (const [name, value] of Object.entries(SECURITY_HEADERS)) res.setHeader(name, value);
       const verdict = guard.check(req);
       if (!verdict.ok) return sendJson(res, verdict.status, { error: verdict.reason });
-      let url;
-      try { url = new URL(req.url, 'http://placeholder'); } catch { return sendJson(res, 400, { error: 'bad request' }); }
+      let url: URL;
+      try { url = new URL(String(req.url), 'http://placeholder'); } catch { return sendJson(res, 400, { error: 'bad request' }); }
       const hit = route(routes, req.method, url.pathname);
       if (hit.status === 404) return sendJson(res, 404, { error: 'not found' });
       if (hit.status === 405) return sendJson(res, 405, { error: 'method not allowed' });
       // The handler's readJsonBody knows its response, so a 413/408 can be answered before the socket is dropped.
-      const readBody = (r, opts) => readJsonBody(r, { ...opts, res });
+      const readBody = (r: IncomingMessage, opts?: { maxBytes?: number; timeoutMs?: number }) => readJsonBody(r, { ...opts, res });
       await hit.row.handler({ req, res, url, params: hit.params, state, sendJson, readJsonBody: readBody });
     } catch (err) {
       try { answerError(res, err); } catch { res.destroy(); }
@@ -160,7 +179,7 @@ function makeListener(state, routes, guard) {
 }
 
 // Loads the manifest, or creates and saves a fresh one when the file is absent. A file that is there but bad stops the start.
-function ensureManifest(slugDir) {
+function ensureManifest(slugDir: string): Manifest {
   const file = path.join(slugDir, 'manifest.json');
   if (fs.existsSync(file)) return loadManifest(file);
   const m = newManifest({ title: path.basename(slugDir), slug: path.basename(slugDir), audience: 'beginner' });
@@ -171,7 +190,7 @@ function ensureManifest(slugDir) {
 // Writes state/server.json readable by the owner only. It is written as a new file (flag wx, mode 0600) next to the
 // target and renamed over it, so a link or an old looser file is replaced, never followed or edited.
 // Refuses when state/ is itself a link.
-function writeServerInfo(slugDir, info) {
+function writeServerInfo(slugDir: string, info: ServerInfoFile): string {
   const dir = path.join(slugDir, 'state');
   if (fs.existsSync(dir) && fs.lstatSync(dir).isSymbolicLink()) throw new Error('the state folder is a symbolic link; refusing to start');
   fs.mkdirSync(dir, { recursive: true });
@@ -188,9 +207,9 @@ function writeServerInfo(slugDir, info) {
 }
 
 // Removes state/server.json only when it still holds this server's pid and key, so it never deletes another server's file.
-function removeOwnInfo(file, key) {
+function removeOwnInfo(file: string, key: string): void {
   try {
-    const info = JSON.parse(fs.readFileSync(file, 'utf8'));
+    const info = JSON.parse(fs.readFileSync(file, 'utf8')) as { pid?: unknown; key?: unknown };
     if (info.pid === process.pid && info.key === key) fs.rmSync(file, { force: true });
   } catch { /* missing or unreadable: nothing of ours to remove */ }
 }
@@ -198,8 +217,8 @@ function removeOwnInfo(file, key) {
 // The one place that keeps the row-shape promises, whoever changed a row: a chapter that is not ready never keeps a
 // poster, and its video and captions paths are set exactly when it is ready (null otherwise). A ready row without a
 // poster is what makes the watcher take a new frame.
-function normaliseRows(m) {
-  const fix = (c) => {
+function normaliseRows(m: Manifest): Manifest {
+  const fix = (c: ManifestRow): ManifestRow => {
     const ready = c.status === 'ready';
     const video = ready ? `chapters/${c.id}/chapter.mp4` : null;
     const captions = ready ? `chapters/${c.id}/captions.vtt` : null;
@@ -214,10 +233,10 @@ function normaliseRows(m) {
 // lib/manifest.cjs (the change may be async), and saves it atomically, one job at a time. A job that fails does not stop the jobs behind it.
 // Once isClosing() says so, a new job is refused with a 503 (jobs already queued still run, and close() waits for them).
 // The returned function also has .idle(), a promise that resolves when every job queued so far has finished.
-function makeManifestQueue(slugDir, deps, isClosing) {
+function makeManifestQueue(slugDir: string, deps: ServerDeps, isClosing: () => boolean): ManifestQueue {
   const file = path.join(slugDir, 'manifest.json');
-  let tail = Promise.resolve();
-  const update = (change) => {
+  let tail: Promise<unknown> = Promise.resolve();
+  const update = (change: (loaded: Manifest) => Manifest | Promise<Manifest>): Promise<Manifest> => {
     if (isClosing()) return Promise.reject(Object.assign(new Error('the server is closing'), { status: 503 }));
     const job = tail.then(async () => {
       const loaded = loadManifest(file);
@@ -231,8 +250,7 @@ function makeManifestQueue(slugDir, deps, isClosing) {
     tail = job.catch(() => {});
     return job;
   };
-  update.idle = () => tail;
-  return update;
+  return Object.assign(update, { idle: () => tail });
 }
 
 // How long close() waits for poster work that will not stop (a real ffmpeg is killed at once and ends sooner).
@@ -241,8 +259,8 @@ const POSTER_WAIT_MS = 25000;
 const QUEUE_WAIT_MS = 25000;
 
 // Waits for a promise, but gives up after `ms` milliseconds (the promise itself is left alone).
-function waitAtMost(promise, ms) {
-  let timer;
+function waitAtMost(promise: Promise<unknown>, ms: number): Promise<unknown> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
   const limit = new Promise((resolve) => { timer = setTimeout(resolve, ms); });
   return Promise.race([promise, limit]).finally(() => clearTimeout(timer));
 }
@@ -250,27 +268,32 @@ function waitAtMost(promise, ms) {
 // Starts the server on 127.0.0.1 and resolves with { url, key, port, close() }.
 // deps (all optional, for tests): routes replaces the route table; now is a clock in ms; pingMs is the stream ping
 // interval; fs is used to save the manifest; scan, intervalMs, setInterval and clearInterval steer the folder watcher; exec and ffmpeg take poster frames; posterWaitMs bounds how long close() waits for them and queueWaitMs how long it waits for queued manifest saves; setTimeout and clearTimeout drive the 15 s "Claude went quiet" timer; beforeSave is awaited between change and save (tests); logError receives unexpected save failures.
-async function startServer({ slugDir, key = crypto.randomBytes(16).toString('hex'), port = 0, deps = {} }) {
+async function startServer({ slugDir, key = crypto.randomBytes(16).toString('hex'), port = 0, deps = {} }: StartOptions): Promise<RunningServer> {
   // One server per folder: refuse when state/server.json names a live yap server (a stale file is replaced below).
   const existing = await liveServer(slugDir);
-  if (existing) throw Object.assign(new Error('a server for this folder is already running'), { alreadyRunning: true, url: existing.url });
+  if (existing) throw Object.assign(new Error('a server for this folder is already running'), { alreadyRunning: true, url: 'url' in existing ? existing.url : undefined });
   ensureManifest(slugDir);
   const routes = deps.routes || ROUTES;
   const server = http.createServer();
   // Slow headers or a slow request must not tie the server up (a video download is a response, so it is not affected).
   server.headersTimeout = 10000;
   server.requestTimeout = 30000;
-  await new Promise((resolve, reject) => {
+  await new Promise<void>((resolve, reject) => {
     server.once('error', reject);
     server.listen(port, '127.0.0.1', resolve);
   });
-  const bound = server.address();
+  // the server listens on a TCP port, so its address is a host/port record, not a pipe name
+  const bound = server.address() as AddressInfo;
   const actualPort = bound.port;
   const hub = createHub({ pingMs: deps.pingMs });
-  const state = {
+  const state: ServerState = {
     slugDir, key, port: actualPort, deps, hub, lastHeartbeat: null,
     updateManifest: makeManifestQueue(slugDir, deps, () => state.closing === true),
-    logError: deps.logError || ((err) => process.stderr.write(`yap server: ${err && err.stack ? err.stack : err}\n`)),
+    logError: deps.logError || ((err: unknown) => {
+      // a thrown Error has a stack; anything else is printed as it is
+      const e = err as { stack?: unknown } | null | undefined;
+      process.stderr.write(`yap server: ${e && e.stack ? e.stack : err}\n`);
+    }),
   };
   server.on('request', makeListener(state, routes, createGuard({ key, port: actualPort })));
   const url = `http://127.0.0.1:${actualPort}/?key=${key}`;
@@ -284,24 +307,25 @@ async function startServer({ slugDir, key = crypto.randomBytes(16).toString('hex
   // Follow the chapter folders: the manifest is seeded by the first look, before the URL is handed out.
   const sync = makeChapterSync(state);
   state.posterIdle = sync.posterIdle;
-  state.watcher = startWatcher({
+  const watcher = startWatcher({
     slugDir, onChange: sync.onChange, intervalMs: deps.intervalMs, scan: deps.scan, logError: state.logError,
     setInterval: deps.setInterval, clearInterval: deps.clearInterval,
   });
-  await state.watcher.pollNow();
+  state.watcher = watcher;
+  await watcher.pollNow();
   // Stops the watcher and the poster work (a running ffmpeg is told to stop, and both are waited for), then the server:
   // drops open connections so the port is freed and removes state/server.json.
   const close = async () => {
     state.closing = true;
     clearHeartbeatTimer(state);
     if (state.stopExport) await state.stopExport();
-    state.watcher.stop();
+    watcher.stop();
     sync.stop();
-    await state.watcher.idle();
+    await watcher.idle();
     await waitAtMost(sync.posterIdle(), deps.posterWaitMs ?? POSTER_WAIT_MS);
     // Saves already queued finish first (new ones are refused), so nothing writes the manifest after close() resolves.
     await waitAtMost(state.updateManifest.idle(), deps.queueWaitMs ?? QUEUE_WAIT_MS);
-    await new Promise((resolve) => {
+    await new Promise<void>((resolve) => {
       removeOwnInfo(infoFile, key);
       hub.close();
       server.close(() => resolve());
@@ -311,4 +335,5 @@ async function startServer({ slugDir, key = crypto.randomBytes(16).toString('hex
   return { url, key, port: actualPort, address: bound.address, family: bound.family, server, state, close };
 }
 
-module.exports = { startServer, ROUTES, sendJson, escapeHtml };
+export { startServer, ROUTES, sendJson, escapeHtml };
+export type { StartOptions, RunningServer, ServerState, ServerDeps, Route, RouteContext } from './types.mts';

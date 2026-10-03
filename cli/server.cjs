@@ -25,7 +25,7 @@ function resolveSlugDir(dirFlag, cwd = process.cwd()) {
 
 // Runs the server until SIGINT or SIGTERM, then closes it cleanly.
 async function serveForeground(slugDir) {
-  const { startServer } = require('../server/server.cjs');
+  const { startServer } = require('../server/server.mts');
   let srv;
   try {
     srv = await startServer({ slugDir });

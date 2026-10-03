@@ -82,7 +82,7 @@ test('a stale server.json is replaced by --detach', async (t) => {
 
 const { spawn } = require('node:child_process');
 const net = require('node:net');
-const { startServer } = require('../server/server.cjs');
+const { startServer } = require('../server/server.mts');
 
 // Runs the yap CLI without blocking this process (so an in-process server can answer it); resolves {status, stdout, stderr}.
 function runYap(args) {

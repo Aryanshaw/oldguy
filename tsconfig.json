@@ -11,5 +11,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["lib/**/*.mts", "scene-kit/**/*.mts"]
+  "include": ["lib/**/*.mts", "scene-kit/**/*.mts", "server/**/*.mts"]
 }

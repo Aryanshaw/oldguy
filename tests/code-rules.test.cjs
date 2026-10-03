@@ -19,3 +19,11 @@ test('no file under scene-kit/ or in the lib/ leaf list ends in .cjs', () => {
   assert.deepEqual(sceneKit, []);
   assert.deepEqual(lib, []);
 });
+
+test('the domain modules and the whole server folder are TypeScript, not .cjs', () => {
+  const domain = ['chapter', 'chapter-scan', 'manifest', 'events', 'range', 'watcher', 'live-server', 'export', 'doctor', 'narrate', 'render-chapters'];
+  const leftover = domain.filter((n) => fs.existsSync(path.join(ROOT, 'lib', `${n}.cjs`)));
+  const server = fs.readdirSync(path.join(ROOT, 'server')).filter((f) => f.endsWith('.cjs'));
+  assert.deepEqual(leftover, []);
+  assert.deepEqual(server, []);
+});
