@@ -2,7 +2,7 @@
 
 # Yap — handoff (continue the discussion in `~/Documents/pracice/yap`)
 
-Updated 2026-10-03. Read this first, then the spec and `docs/phase-1/SUMMARY.md`.
+Updated 2026-10-03 (after Phase 2). Read this first, then the spec, `docs/phase-1/SUMMARY.md` and `docs/phase-2/SUMMARY.md`.
 
 ## 0. Where we are
 
@@ -18,12 +18,19 @@ Updated 2026-10-03. Read this first, then the spec and `docs/phase-1/SUMMARY.md`
   pad-wav, scaffold, render, narrate), `lib/`, `scene-kit/`, hooks, `skills/yap`, 304 tests
   (`npm test`), real runs (positive: first playable chapter in ~145 s; negative request creates
   nothing). Roll-up: `docs/phase-1/SUMMARY.md` (folder contract in 1.3, Phase 2 hand-over in 7).
-- **Phase 2 (manifest + local server): plan written, not started.**
-  `docs/superpowers/plans/2026-10-03-phase-2-manifest-server.md` (Tasks 0-12, 7 Review Focus
-  risks). Waiting on the owner for: (1) approval of spec amendments A1-A9
-  (`docs/phase-1/SUMMARY.md` section 6; Task 0 is blocked until then), (2) execution method
-  (recommended: subagent-driven, one whole-branch review at the end). Branch `phase-2-server`
-  is created from `phase-1-generator` at execution time.
+- **Phase 2 (manifest + local server) done**, on branch `phase-2-server` (31 commits above
+  `phase-1-generator` @ `46f59cd`; not merged, not pushed). Owner approved A1-A9 (now spec
+  section 14). Built: `lib/manifest.cjs`, chapter scan, events/thread files, the local server
+  (`server/`, key + Host + Origin checks, range requests, state/chat/chapters/heartbeat routes,
+  live stream, watcher + posters, export), `yap serve | reply | add-chapter | set-status | order`,
+  skill updates. 596 tests (`npm test`); acceptance against a real server and real ffmpeg 61/61
+  plus a hand check in Chrome. **Read `docs/phase-2/SUMMARY.md`, section 11 first**, then
+  `docs/phase-2/ACCEPTANCE.md`. Waiting on the owner for: (1) merge/push decision, (2) the
+  decisions listed in SUMMARY sections 7 and 11.3 (to overrule any), (3) spec amendments
+  proposed in SUMMARY section 9, (4) the open `yap order` wording/`yap reorder` choice
+  (11.3 item 5), (5) the unreviewed acceptance script (11.4), (6) three uncommitted files in
+  the working tree that are not part of Phase 2 (`package.json` change adding a `shadcn`
+  dev dependency, `.mcp.json`, `package-lock.json`).
 - Later: Phase 3 player (React+Vite prebuilt), Phase 4 chat bridge (Monitor), Polish (README,
   demo video, `npx yap-setup` installer with consent checklist).
 - Name: **Yap** ("Claude yaps. You watch."). Domain `justyap.dev` or `justyap.io` (owner buys;
