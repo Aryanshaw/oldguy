@@ -15,7 +15,7 @@ const MAX_REFERENCE_LINES = 120;
 // Words the owner never wants in the skill text (whole words, any case).
 const BANNED_WORDS = /\b(cost|costs|price|pricing|usd|dollar|dollars|billing|token|tokens)\b/i;
 // Commands that do not exist yet and must not be promised.
-const MISSING_COMMANDS = /\byap (listen|export|serve)\b/i;
+const MISSING_COMMANDS = /\byap (listen|export)\b/i;
 
 // Reads one file as text; a missing file fails the test with its path.
 function readText(file) {
@@ -165,7 +165,9 @@ test('no skill file runs a render in the background, with &, or through run_in_b
   for (const { file, text } of everySkillFile()) {
     text.split('\n').forEach((line, i) => {
       const where = `${path.relative(SKILL_DIR, file)}:${i + 1}`;
-      assert.ok(!/background/i.test(line), `${where} mentions running something in the background: ${line}`);
+      // The one allowed exception: the sentence about the server that `yap serve --detach` leaves running.
+      assert.ok(!/background/i.test(line) || line.includes('`yap serve --detach'), `${where} mentions running something in the background: ${line}`);
+      assert.ok(!/background/i.test(line) || !/render|narrate/i.test(line), `${where} lets a render or narrate run in the background: ${line}`);
       assert.ok(!/run_in_background/.test(line), `${where} mentions run_in_background: ${line}`);
       assert.ok(!/yap render[^`\n]*&/.test(line), `${where} puts a yap render behind &: ${line}`);
     });
@@ -197,5 +199,66 @@ test('no skill file sends Claude to write in /tmp', () => {
     text.split('\n').forEach((line, i) => {
       assert.ok(!/\/tmp\b/.test(line), `${path.relative(SKILL_DIR, file)}:${i + 1} mentions /tmp: ${line}`);
     });
+  }
+});
+
+// Every line of every code span (inline or fenced) that mentions `yap <name>`, as { file, line }.
+function commandLines(name) {
+  const out = [];
+  for (const { file, text } of allFiles()) {
+    for (const span of text.matchAll(/```[\s\S]*?```|`[^`\n]+`/g)) {
+      for (const line of span[0].split('\n')) if (new RegExp(`(?<![/\\w.-])yap\\s+${name}\\b`).test(line)) out.push({ file, line });
+    }
+  }
+  return out;
+}
+
+test('SKILL.md writes the story order (yap order) before the first yap scaffold', () => {
+  const text = readText(SKILL);
+  const order = text.search(/yap order \S+ --dir/);
+  const scaffold = text.search(/yap scaffold \.yap\//);
+  assert.ok(order >= 0, 'SKILL.md must run `yap order <ids> --dir .yap/<slug>`');
+  assert.ok(scaffold >= 0, 'SKILL.md must run yap scaffold');
+  assert.ok(order < scaffold, 'yap order must come before the first yap scaffold');
+});
+
+test('SKILL.md starts the server with yap serve --detach after the last chapter render step', () => {
+  const text = readText(SKILL);
+  const serve = text.search(/yap serve --detach/);
+  const lastRender = [...text.matchAll(/yap render \.yap\/<slug>\/chapters/g)].pop();
+  assert.ok(serve >= 0, 'SKILL.md must run `yap serve --detach`');
+  assert.ok(lastRender, 'SKILL.md must run yap render');
+  assert.ok(serve > lastRender.index, 'yap serve --detach must come after the last yap render step');
+});
+
+test('every yap serve in the skill files carries --detach', () => {
+  const lines = commandLines('serve');
+  assert.ok(lines.length > 0, 'no skill file shows yap serve');
+  for (const { file, line } of lines) assert.ok(line.includes('--detach'), `${path.basename(file)} shows yap serve without --detach: ${line}`);
+});
+
+test('every yap order and yap serve example carries --dir', () => {
+  for (const name of ['order', 'serve']) {
+    const lines = commandLines(name);
+    assert.ok(lines.length > 0, `no skill file shows yap ${name}`);
+    for (const { file, line } of lines) assert.ok(/--dir \.yap\/<slug>/.test(line), `${path.basename(file)} shows yap ${name} without --dir .yap/<slug>: ${line}`);
+  }
+});
+
+test('the background exception is only the server: no skill file lets a render run in the background', () => {
+  const allowed = [];
+  for (const { file, text } of allFiles()) {
+    for (const line of text.split('\n')) if (/background/i.test(line)) allowed.push({ file, line });
+  }
+  for (const { file, line } of allowed) assert.ok(line.includes('`yap serve --detach'), `${path.basename(file)}: ${line}`);
+  assert.ok(allowed.length >= 1, 'the skill should say the detached server is the one process left running');
+});
+
+test('the hand-off gives the printed URL and the mp4 paths, and promises no chat or player', () => {
+  const text = readText(SKILL);
+  const handoff = text.slice(text.indexOf('## Step 7'));
+  assert.ok(/URL/.test(handoff) && /chapter\.mp4/.test(handoff), 'hand-off must give the URL and the mp4 paths');
+  for (const { file, text: body } of allFiles()) {
+    assert.ok(!/\b(chat with|player)\b/i.test(body), `${path.basename(file)} promises a chat or player that does not exist`);
   }
 });

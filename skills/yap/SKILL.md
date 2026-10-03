@@ -51,7 +51,7 @@ lists every command; each command prints its own usage when called wrongly.
 
 ```
 .yap/<slug>/                 one folder per video, slug from the request (for example add-todo)
-  script.md                  the verified script: chapters, sentences, sources
+  script.md, order.json      the verified script (chapters, sentences, sources), and the story order
   sources.json               every quoted file, line range and quote
   specs/<id>.json            the spec you hand to yap scaffold, one per chapter
   chapters/<id>/             made by scaffold: chapter.json, narration.txt
@@ -105,8 +105,12 @@ range and the exact quote on those lines.
 Split the script into chapters of 20 to 40 seconds (about 50 to 100 words). Each chapter has an id, a title, a list
 of sentences (each marked `claim` or `framing`) and the scene pieces it shows.
 
-**Gate:** Every chapter in `script.md` is within the word range, every sentence is exactly one sentence, and no
-sentence refers to another chapter.
+Once the storyboard is settled, and before the first `yap scaffold`, run
+`yap order <id1>,<id2>,<id3> --dir .yap/<slug>` with the chapter ids (lower-case words joined by hyphens, never
+starting with a digit) in story order. If a chapter is later added, removed or moved, run it again with the full list.
+
+**Gate:** Every chapter in `script.md` is within the word range, every sentence is exactly one sentence, no
+sentence refers to another chapter, and the story order was written (`order written: <n> chapters`).
 
 ---
 
@@ -142,33 +146,33 @@ chapter (below) and render it again before moving on.
 
 ---
 
-## Step 6: Confirm every chapter
+## Step 6: Confirm every chapter, then start the server
 
-After the last chapter's render has finished, run one last render over every chapter, ids in story order, also in
-the foreground:
+After the last chapter's render has finished, run one last render over every chapter, in the foreground, and wait for
+it to finish: `yap render .yap/<slug>/chapters --root <repo> --only <all ids in story order>` (comma-separated ids; chapters
+already rendered print `ready (already rendered)`).
+
+Then, and only then (never before, never between chapters), start the server in the foreground. It returns within
+a few seconds and prints one line, the URL:
 
 ```
-yap render .yap/<slug>/chapters --root <repo> --only <all ids in story order>
+yap serve --detach --dir .yap/<slug>
 ```
 
-(`--only` takes the ids separated by commas.) Chapters already rendered from their current build print
-`ready (already rendered)` and are not rendered again; anything else is checked and rendered now. Wait for it to
-finish before you write the hand-off.
+`yap serve --detach --dir .yap/<slug>` leaves one server in the background, the only process allowed to.
+If it prints a problem instead of a URL, report that line and still hand off: the videos exist anyway.
 
-**Gate:** that run exited 0 with `ready` for every chapter, and each `chapter.mp4` exists.
+**Gate:** that run exited 0 with `ready` for every chapter, each `chapter.mp4` exists, and the server command printed
+a URL or a problem line.
 
 ---
 
 ## Step 7: Hand-off
 
-Print the path of every rendered chapter, one per line, in story order (the storyboard's order, not folder
-order):
-
-```
-.yap/<slug>/chapters/<id>/chapter.mp4
-```
-
-Then say in one line that the browser player arrives in a later version. Mention no other commands.
+Say the chapters can be watched at the printed URL (a simple page that lists the chapters). Show it exactly as
+printed: it holds a private key for this session, so put it nowhere else (no file, no commit). Then print the path
+of every rendered chapter, one per line, in story order (the storyboard's order, not folder order), as
+`.yap/<slug>/chapters/<id>/chapter.mp4`. Mention no other commands.
 
 ---
 

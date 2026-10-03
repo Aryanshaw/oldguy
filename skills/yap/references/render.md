@@ -74,10 +74,19 @@ for each chapter and runs no check or render. `--cap <n>` limits renders at once
 3. Run `yap render .yap/<slug>/chapters --root <repo> --only <id>` again for that chapter. Finished chapters are
    never redone unless their build changed.
 
-## 5. Hand-off
+## 5. Server and hand-off
 
-When every chapter is `ready`, print each `.yap/<slug>/chapters/<id>/chapter.mp4` path on its own line, in story
-order (the storyboard's order in `script.md`, not folder order), and say that the browser player arrives in a
-later version. Do not mention any other command.
+After the confirm run, and never before, start the server in the foreground (it returns in a few seconds):
+
+```
+yap serve --detach --dir .yap/<slug>
+```
+
+It prints one line: the URL. The URL holds a private key for this session; show it as printed and write it nowhere
+else (no file, no commit). If it prints a problem instead, report that line and still hand off the mp4 paths.
+
+Then tell the user the chapters can be watched at that URL (a simple page that lists the chapters), and print each
+`.yap/<slug>/chapters/<id>/chapter.mp4` path on its own line, in story order (the storyboard's order in
+`script.md`, not folder order). Do not mention any other command.
 
 **Gate:** the final `yap render ... --only <all ids>` exited 0 with `ready` for every chapter, and each `chapter.mp4` exists.
