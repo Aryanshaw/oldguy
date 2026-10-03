@@ -273,3 +273,42 @@ default, an animated mascot, and anything that makes Claude answer (Phase 4).
 - **A16, section 4.10.** The logo is the speech bubble with a play triangle plus the
   tilted "yap" block. The alarm-clock mascot stays a corner badge and needs a redraw
   before release; the current drawing reads as a bear. Not blocking Phase 3.
+
+## 10. Revision after reading Phase 2 as built (2026-10-03, needs owner approval)
+
+Phase 2 finished after sections 1 to 9 were approved. `docs/phase-2/SUMMARY.md` sections
+2, 3, 10 and 11 describe the server as built. Where this section disagrees with sections
+1 to 9, this section wins. Section 5.3 is closed by it.
+
+1. **Two read-only server routes are needed** (section 1 said none). No route serves
+   static files, and no route serves a chapter's sources.
+   - `GET /` answers `player/dist/index.html` when it exists, else the Phase 2 placeholder.
+     `GET /assets/:file` serves one file from `player/dist/assets/`.
+   - `GET /chapters/:id/sources` answers `{sources:[{file, lines:[a,b], quote}]}` read
+     from the chapter's `chapter.json`.
+2. **The server's content policy is `default-src 'self'`.** No inline script or style, no
+   `data:` or `blob:` address, no outside host. The build must inline nothing, fonts are
+   files, and the export dialog is a native `<dialog>` element, because the shadcn Dialog
+   adds a style tag at run time, which the policy blocks. shadcn pieces used: Button,
+   Tabs, Tooltip, Input.
+3. **Captions arrive as WebVTT** from `GET /chapters/:id/captions`. There is no route for
+   `captions.json`. The player parses the VTT itself (4.2).
+4. **There are five statuses.** `pending` is added: a chapter that is listed but has no
+   video and is not rendering. Look: white block, dashed black border, label "waiting".
+   Not playable, no click.
+5. **Export modes.** The player sends `mode:"full"` first. On `409` (drafts exist) the
+   dialog names them and offers "Export drafts", which sends `mode:"drafts"`. Phase 2
+   makes no full-quality renders yet, so there is no "wait for full quality" choice
+   (replaces the second paragraph of 4.5).
+6. **Button events are stored and not shown.** `make_video`, `just_text` and
+   `retry_chapter` are accepted by `POST /api/message` and never appear in the thread.
+   The player marks the button as sent, for that page load only.
+7. **A failed chapter has no stored reason.** The block says "failed"; if a `chapter`
+   event carried a reason during this page load, the tooltip shows it.
+8. **A restarted server has a new address and key.** When state requests keep failing,
+   the page says: "Yap's server stopped. Run /yap again and open the new link."
+9. **Disconnect is pushed.** The server sends a `state` event when Claude's heartbeat
+   runs out, so the page needs no timer.
+10. **The title** shown in the header is the manifest's `title` (today the folder name).
+
+- **A17, parent spec section 4.3.** Add the two routes of point 1 to the endpoint table.
