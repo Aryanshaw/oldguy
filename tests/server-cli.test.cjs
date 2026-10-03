@@ -79,3 +79,71 @@ test('a stale server.json is replaced by --detach', async (t) => {
     try { process.kill(JSON.parse(fs.readFileSync(file, 'utf8')).pid, 'SIGTERM'); } catch { /* already gone */ }
   }
 });
+
+const { spawn } = require('node:child_process');
+const net = require('node:net');
+const { startServer } = require('../server/server.cjs');
+
+// Runs the yap CLI without blocking this process (so an in-process server can answer it); resolves {status, stdout, stderr}.
+function runYap(args) {
+  return new Promise((resolve) => {
+    const c = spawn(process.execPath, [YAP, ...args], { stdio: ['ignore', 'pipe', 'pipe'] });
+    let stdout = '';
+    let stderr = '';
+    c.stdout.on('data', (d) => { stdout += d; });
+    c.stderr.on('data', (d) => { stderr += d; });
+    c.on('close', (status) => resolve({ status, stdout, stderr }));
+  });
+}
+// Makes a slug folder with a server.json holding the given fields, runs --detach, kills whatever it started.
+async function detachWith(t, fileFields) {
+  const root = tempRoot(t);
+  const slugDir = path.join(root, 'demo');
+  fs.mkdirSync(path.join(slugDir, 'chapters'), { recursive: true });
+  fs.mkdirSync(path.join(slugDir, 'state'));
+  const file = path.join(slugDir, 'state', 'server.json');
+  fs.writeFileSync(file, JSON.stringify(fileFields));
+  try {
+    const r = await runYap(['serve', '--dir', slugDir, '--detach']);
+    return { r, slugDir, info: JSON.parse(fs.readFileSync(file, 'utf8')) };
+  } finally {
+    try { process.kill(JSON.parse(fs.readFileSync(file, 'utf8')).pid, 'SIGTERM'); } catch { /* nothing started */ }
+  }
+}
+
+test('server.json that does not name a real yap server is stale: pid 1, pid 0, dead port, wrong key', async (t) => {
+  // A live server in another folder that the bad files can point at.
+  const otherDir = path.join(tempRoot(t), 'other');
+  fs.mkdirSync(path.join(otherDir, 'chapters'), { recursive: true });
+  const live = await startServer({ slugDir: otherDir });
+  t.after(() => live.close());
+  const dead = await new Promise((resolve) => { const s = net.createServer().listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => resolve(p)); }); });
+  const cases = {
+    'pid 1': { pid: 1, port: live.port, key: live.key },
+    'pid 0': { pid: 0, port: live.port, key: live.key },
+    'dead port': { pid: process.pid, port: dead, key: live.key },
+    'wrong key': { pid: process.pid, port: live.port, key: 'f'.repeat(32) },
+    'wrong pid': { pid: process.pid + 1, port: live.port, key: live.key },
+  };
+  for (const [name, fields] of Object.entries(cases)) {
+    const { r, info } = await detachWith(t, { ...fields, url: `http://127.0.0.1:${fields.port}/?key=${fields.key}`, started_at: 'then' });
+    assert.equal(r.status, 0, `${name}: ${r.stderr}`);
+    assert.notEqual(info.port, live.port, name);
+    assert.notEqual(info.pid, fields.pid, name);
+    assert.equal(r.stdout.trim(), info.url, name);
+  }
+});
+
+test('a live server.json is reused but its stored url is never printed: the url is rebuilt from port and key', async (t) => {
+  const slugDir = path.join(tempRoot(t), 'demo');
+  fs.mkdirSync(path.join(slugDir, 'chapters'), { recursive: true });
+  const live = await startServer({ slugDir });
+  t.after(() => live.close());
+  const file = path.join(slugDir, 'state', 'server.json');
+  const info = JSON.parse(fs.readFileSync(file, 'utf8'));
+  fs.writeFileSync(file, JSON.stringify({ ...info, url: 'https://evil.example/phish' }));
+  const r = await runYap(['serve', '--dir', slugDir, '--detach']);
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(r.stdout.trim(), live.url);
+  assert.doesNotMatch(r.stdout, /evil/);
+});

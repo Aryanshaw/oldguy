@@ -23,7 +23,10 @@ test('no key, wrong key and wrong-length key are refused with 403', () => {
 
 test('the key is accepted from the header, the cookie and the query', () => {
   assert.equal(guard.check(fakeReq({ headers: { 'x-yap-key': KEY } })).ok, true);
-  assert.equal(guard.check(fakeReq({ headers: { cookie: `other=1; yap_key=${KEY}` } })).ok, true);
+  assert.equal(guard.check(fakeReq({ headers: { cookie: `other=1; yap_key_${PORT}=${KEY}` } })).ok, true);
+  // A cookie without the port in its name, or for another port, is ignored.
+  assert.equal(guard.check(fakeReq({ headers: { cookie: `yap_key=${KEY}` } })).ok, false);
+  assert.equal(guard.check(fakeReq({ headers: { cookie: `yap_key_${PORT + 1}=${KEY}` } })).ok, false);
   assert.equal(guard.check(fakeReq({ url: `/?key=${KEY}` })).ok, true);
 });
 
@@ -60,9 +63,11 @@ function bodyServer(opts) {
     const seen = {};
     const server = http.createServer((req, res) => {
       seen.req = req;
-      readJsonBody(req, opts).then(
+      // `delay` makes the handler wait a tick before answering, like a handler that does async work.
+      const wait = opts && opts.delay ? new Promise((r) => setImmediate(r)) : null;
+      readJsonBody(req, { ...opts, res }).then(
         (obj) => { res.writeHead(200); res.end(JSON.stringify(obj)); },
-        (err) => { res.writeHead(err.status || 500, { Connection: 'close' }); res.end(String(err.status)); },
+        async (err) => { if (wait) await wait; res.writeHead(err.status || 500); res.end(String(err.status)); },
       );
     });
     server.listen(0, '127.0.0.1', () => resolve({ server, seen, port: server.address().port }));
@@ -129,3 +134,52 @@ test('readJsonBody works on a plain stream too (unit)', async () => {
   s.end('{"ok":true}');
   assert.deepEqual(await readJsonBody(s), { ok: true });
 });
+
+test('a request target the URL parser rejects is refused, never thrown (guard unit)', () => {
+  for (const url of ['http://x:99999/', 'http://[/', '//', 'http://%zz/', undefined]) {
+    const r = guard.check({ method: 'GET', url, headers: { host: `127.0.0.1:${PORT}` } });
+    assert.equal(r.status, 403, String(url));
+  }
+  assert.equal(guard.check({ method: 'GET', url: '/', headers: null }).status, 403);
+  assert.equal(guard.check({ method: 'GET', url: '/', headers: { host: `127.0.0.1:${PORT}`, cookie: 7, 'x-yap-key': ['a'] } }).status, 403);
+});
+
+// Sends raw bytes to the port and resolves with {head, closed}: the status line (or '') and whether the server closed the socket.
+function raw(port, writer, wait = 3000) {
+  const net = require('node:net');
+  return new Promise((resolve) => {
+    const sock = net.connect({ host: '127.0.0.1', port });
+    let got = '';
+    const done = (closed) => { clearTimeout(t); sock.destroy(); resolve({ head: got.split('\r\n')[0], closed }); };
+    const t = setTimeout(() => done(false), wait);
+    sock.on('data', (c) => { got += c; });
+    sock.on('error', () => {});
+    sock.on('close', () => done(true));
+    writer(sock);
+  });
+}
+
+for (const delay of [false, true]) {
+  test(`a 10 MB body gets its real 413 status line, then the socket is closed (handler delay: ${delay})`, async () => {
+    const { server, port } = await bodyServer({ maxBytes: 100, delay });
+    try {
+      for (let i = 0; i < 5; i++) {
+        const r = await raw(port, (s) => {
+          s.write(`POST / HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 10485760\r\n\r\n`);
+          s.write(Buffer.alloc(10 * 1024 * 1024, 0x20));
+        });
+        assert.equal(r.head, 'HTTP/1.1 413 Payload Too Large');
+        assert.equal(r.closed, true);
+      }
+    } finally { server.close(); }
+  });
+
+  test(`a body that never finishes gets its real 408 status line, then the socket is closed (handler delay: ${delay})`, async () => {
+    const { server, port } = await bodyServer({ timeoutMs: 100, delay });
+    try {
+      const r = await raw(port, (s) => s.write('POST / HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 50\r\n\r\n{"a":'));
+      assert.equal(r.head, 'HTTP/1.1 408 Request Timeout');
+      assert.equal(r.closed, true);
+    } finally { server.close(); }
+  });
+}

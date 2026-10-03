@@ -39,7 +39,7 @@ function renderPage(manifest) {
 // GET /: with the key in the query, remember it in a cookie and redirect so it leaves the address bar; otherwise the page.
 function handleHome({ req, res, url, state }) {
   if (url.searchParams.has('key')) {
-    res.writeHead(302, { 'Set-Cookie': `yap_key=${state.key}; HttpOnly; SameSite=Strict; Path=/`, Location: '/' });
+    res.writeHead(302, { 'Set-Cookie': `yap_key_${state.port}=${state.key}; HttpOnly; SameSite=Strict; Path=/`, Location: '/' });
     return res.end();
   }
   const manifest = loadManifest(path.join(state.slugDir, 'manifest.json'));
@@ -47,10 +47,16 @@ function handleHome({ req, res, url, state }) {
   res.end(renderPage(manifest));
 }
 
+// GET /api/ping: tells a caller (the --detach check) this really is a yap server and which process runs it.
+function handlePing({ res }) {
+  sendJson(res, 200, { ok: true, pid: process.pid });
+}
+
 // The route table. A row is { method, pattern, handler }. pattern is a path; a segment like ":id" matches any one
 // segment and arrives in params.id. handler gets { req, res, url, params, state, sendJson, readJsonBody }, may be async.
 const ROUTES = [
   { method: 'GET', pattern: '/', handler: handleHome },
+  { method: 'GET', pattern: '/api/ping', handler: handlePing },
 ];
 
 // Tries to match a path against a pattern; returns the params object or null.
@@ -87,21 +93,24 @@ function answerError(res, err) {
   sendJson(res, 500, { error: 'internal error' });
 }
 
-// Builds the request listener: security headers, guard, then the router.
+// Builds the request listener: security headers, guard, then the router. Everything sits inside one try so a
+// throw (or a rejected handler) can never become an unhandled rejection that stops the process.
 function makeListener(state, routes, guard) {
   return async (req, res) => {
-    res.req = req;
-    for (const [name, value] of Object.entries(SECURITY_HEADERS)) res.setHeader(name, value);
-    const verdict = guard.check(req);
-    if (!verdict.ok) return sendJson(res, verdict.status, { error: verdict.reason });
     try {
-      const url = new URL(req.url, 'http://placeholder');
+      for (const [name, value] of Object.entries(SECURITY_HEADERS)) res.setHeader(name, value);
+      const verdict = guard.check(req);
+      if (!verdict.ok) return sendJson(res, verdict.status, { error: verdict.reason });
+      let url;
+      try { url = new URL(req.url, 'http://placeholder'); } catch { return sendJson(res, 400, { error: 'bad request' }); }
       const hit = route(routes, req.method, url.pathname);
       if (hit.status === 404) return sendJson(res, 404, { error: 'not found' });
       if (hit.status === 405) return sendJson(res, 405, { error: 'method not allowed' });
-      await hit.row.handler({ req, res, url, params: hit.params, state, sendJson, readJsonBody });
+      // The handler's readJsonBody knows its response, so a 413/408 can be answered before the socket is dropped.
+      const readBody = (r, opts) => readJsonBody(r, { ...opts, res });
+      await hit.row.handler({ req, res, url, params: hit.params, state, sendJson, readJsonBody: readBody });
     } catch (err) {
-      answerError(res, err);
+      try { answerError(res, err); } catch { res.destroy(); }
     }
   };
 }
@@ -115,13 +124,22 @@ function ensureManifest(slugDir) {
   return m;
 }
 
-// Writes state/server.json readable by the owner only (mode set at creation, and again in case the file already existed).
+// Writes state/server.json readable by the owner only. It is written as a new file (flag wx, mode 0600) next to the
+// target and renamed over it, so a link or an old looser file is replaced, never followed or edited.
+// Refuses when state/ is itself a link.
 function writeServerInfo(slugDir, info) {
   const dir = path.join(slugDir, 'state');
+  if (fs.existsSync(dir) && fs.lstatSync(dir).isSymbolicLink()) throw new Error('the state folder is a symbolic link; refusing to start');
   fs.mkdirSync(dir, { recursive: true });
   const file = path.join(dir, 'server.json');
-  fs.writeFileSync(file, JSON.stringify(info, null, 2) + '\n', { mode: 0o600 });
-  fs.chmodSync(file, 0o600);
+  const tmp = path.join(dir, `.server.json.${process.pid}.${crypto.randomBytes(4).toString('hex')}.tmp`);
+  try {
+    fs.writeFileSync(tmp, JSON.stringify(info, null, 2) + '\n', { mode: 0o600, flag: 'wx' });
+    fs.renameSync(tmp, file);
+  } catch (err) {
+    fs.rmSync(tmp, { force: true });
+    throw err;
+  }
   return file;
 }
 
@@ -130,13 +148,17 @@ function writeServerInfo(slugDir, info) {
 async function startServer({ slugDir, key = crypto.randomBytes(16).toString('hex'), port = 0, deps = {} }) {
   ensureManifest(slugDir);
   const routes = deps.routes || ROUTES;
-  const state = { slugDir, key, deps };
   const server = http.createServer();
+  // Slow headers or a slow request must not tie the server up (a video download is a response, so it is not affected).
+  server.headersTimeout = 10000;
+  server.requestTimeout = 30000;
   await new Promise((resolve, reject) => {
     server.once('error', reject);
     server.listen(port, '127.0.0.1', resolve);
   });
-  const actualPort = server.address().port;
+  const bound = server.address();
+  const actualPort = bound.port;
+  const state = { slugDir, key, port: actualPort, deps };
   server.on('request', makeListener(state, routes, createGuard({ key, port: actualPort })));
   const url = `http://127.0.0.1:${actualPort}/?key=${key}`;
   let infoFile;
@@ -152,7 +174,7 @@ async function startServer({ slugDir, key = crypto.randomBytes(16).toString('hex
     server.close(() => resolve());
     server.closeAllConnections();
   });
-  return { url, key, port: actualPort, close };
+  return { url, key, port: actualPort, address: bound.address, family: bound.family, server, close };
 }
 
 module.exports = { startServer, ROUTES, sendJson, escapeHtml };

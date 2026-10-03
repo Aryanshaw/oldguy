@@ -42,6 +42,9 @@ test('listens on 127.0.0.1 only, url carries the key, key is 32 hex and differs 
   const { srv } = await start(t);
   assert.match(srv.key, /^[0-9a-f]{32}$/);
   assert.equal(srv.url, `http://127.0.0.1:${srv.port}/?key=${srv.key}`);
+  // The address the socket is really bound to (not a string we built): 0.0.0.0 or :: would fail here.
+  assert.equal(srv.address, '127.0.0.1');
+  assert.equal(srv.family, 'IPv4');
   const other = await start(t);
   assert.notEqual(other.srv.key, srv.key);
 });
@@ -61,9 +64,10 @@ test('key in query sets the cookie and redirects to /; cookie alone then passes;
   const first = await req(srv, { url: `/?key=${srv.key}` });
   assert.equal(first.status, 302);
   assert.equal(first.headers.location, '/');
-  assert.equal(first.headers['set-cookie'][0], `yap_key=${srv.key}; HttpOnly; SameSite=Strict; Path=/`);
-  const page = await req(srv, { headers: { cookie: `yap_key=${srv.key}` } });
+  assert.equal(first.headers['set-cookie'][0], `yap_key_${srv.port}=${srv.key}; HttpOnly; SameSite=Strict; Path=/`);
+  const page = await req(srv, { headers: { cookie: `yap_key_${srv.port}=${srv.key}` } });
   assert.equal(page.status, 200);
+  assert.equal((await req(srv, { headers: { cookie: `yap_key=${srv.key}` } })).status, 403, 'plain yap_key is ignored');
   assert.match(page.headers['content-type'], /text\/html/);
   assert.equal((await req(srv, { headers: withKey(srv) })).status, 200);
 });
@@ -180,4 +184,105 @@ test('placeholder page lists chapters escaped, video only for ready ones, no scr
   assert.match(page.body, /<video controls preload="metadata" src="\/chapters\/intro\/video">/);
   assert.doesNotMatch(page.body, /chapters\/next\/video/);
   assert.equal(page.body.includes(slugDir), false);
+});
+
+test('two servers each accept their own cookie and refuse the other one', async (t) => {
+  const a = (await start(t)).srv;
+  const b = (await start(t)).srv;
+  const ca = { cookie: `yap_key_${a.port}=${a.key}` };
+  const cb = { cookie: `yap_key_${b.port}=${b.key}` };
+  assert.equal((await req(a, { headers: ca })).status, 200);
+  assert.equal((await req(b, { headers: cb })).status, 200);
+  assert.equal((await req(a, { headers: cb })).status, 403);
+  assert.equal((await req(b, { headers: ca })).status, 403);
+  // Both cookies in one browser jar: each server still finds its own.
+  assert.equal((await req(a, { headers: { cookie: `${cb.cookie}; ${ca.cookie}` } })).status, 200);
+});
+
+// Sends raw request text and resolves with the status line ('' if nothing came back).
+function raw(srv, text) {
+  return new Promise((resolve) => {
+    const s = net.connect({ host: '127.0.0.1', port: srv.port });
+    let got = '';
+    const t = setTimeout(() => { s.destroy(); resolve(got.split('\r\n')[0]); }, 2000);
+    s.on('data', (c) => { got += c; });
+    s.on('error', () => {});
+    s.on('close', () => { clearTimeout(t); resolve(got.split('\r\n')[0]); });
+    s.write(text);
+  });
+}
+
+test('malformed absolute-form targets are answered with a 4xx and the server keeps serving', async (t) => {
+  const { srv } = await start(t);
+  const host = `Host: 127.0.0.1:${srv.port}`;
+  for (const target of ['http://x:99999/', 'http://[/']) {
+    for (const extra of ['', `x-yap-key: ${srv.key}\r\n`]) {
+      const head = await raw(srv, `GET ${target} HTTP/1.1\r\n${host}\r\n${extra}Connection: close\r\n\r\n`);
+      assert.match(head, /^HTTP\/1\.1 4\d\d /, `${target} ${extra ? 'with key' : 'no key'}`);
+      assert.equal((await req(srv, { headers: withKey(srv) })).status, 200, 'still serving');
+    }
+  }
+});
+
+test('a handler that rejects asynchronously gives 500 and the server stays up', async (t) => {
+  const routes = [{ method: 'GET', pattern: '/ok', handler: ({ res, sendJson }) => sendJson(res, 200, { ok: true }) }, { method: 'GET', pattern: '/late', handler: async () => { await new Promise((r) => setImmediate(r)); throw new Error('late failure'); } }];
+  const { srv } = await start(t, { deps: { routes } });
+  const orig = process.stderr.write;
+  process.stderr.write = () => true;
+  let r;
+  try { r = await req(srv, { url: '/late', headers: withKey(srv) }); } finally { process.stderr.write = orig; }
+  assert.equal(r.status, 500);
+  assert.deepEqual(JSON.parse(r.body), { error: 'internal error' });
+  assert.equal((await req(srv, { url: '/ok', headers: withKey(srv) })).status, 200);
+});
+
+test('GET /api/ping answers {ok:true, pid} behind the guard', async (t) => {
+  const { srv } = await start(t);
+  assert.equal((await req(srv, { url: '/api/ping' })).status, 403);
+  const r = await req(srv, { url: '/api/ping', headers: withKey(srv) });
+  assert.deepEqual(JSON.parse(r.body), { ok: true, pid: process.pid });
+});
+
+test('server.json is never written through a symlink and a 0644 file is replaced, not edited', async (t) => {
+  const slugDir = tempSlug(t);
+  const victim = path.join(path.dirname(slugDir), 'victim.txt');
+  fs.writeFileSync(victim, 'untouched', { mode: 0o644 });
+  fs.mkdirSync(path.join(slugDir, 'state'));
+  const file = path.join(slugDir, 'state', 'server.json');
+  fs.symlinkSync(victim, file);
+  const srv = await startServer({ slugDir });
+  t.after(() => srv.close());
+  assert.equal(fs.readFileSync(victim, 'utf8'), 'untouched');
+  assert.equal(fs.statSync(victim).mode & 0o777, 0o644);
+  assert.equal(fs.lstatSync(file).isSymbolicLink(), false);
+  assert.equal(fs.lstatSync(file).mode & 0o777, 0o600);
+  assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).key, srv.key);
+  assert.deepEqual(fs.readdirSync(path.join(slugDir, 'state')), ['server.json'], 'no temp file left behind');
+});
+
+test('a pre-existing 0644 server.json gets a new inode (the old file never holds the key)', async (t) => {
+  const slugDir = tempSlug(t);
+  fs.mkdirSync(path.join(slugDir, 'state'));
+  const file = path.join(slugDir, 'state', 'server.json');
+  fs.writeFileSync(file, 'old', { mode: 0o644 });
+  const before = fs.statSync(file).ino;
+  const srv = await startServer({ slugDir });
+  t.after(() => srv.close());
+  assert.notEqual(fs.statSync(file).ino, before);
+  assert.equal(fs.statSync(file).mode & 0o777, 0o600);
+});
+
+test('a symlinked state/ folder makes start fail with a one-line reason and writes nothing through it', async (t) => {
+  const slugDir = tempSlug(t);
+  const elsewhere = path.join(path.dirname(slugDir), 'elsewhere');
+  fs.mkdirSync(elsewhere);
+  fs.symlinkSync(elsewhere, path.join(slugDir, 'state'));
+  await assert.rejects(startServer({ slugDir }), (e) => !/\n/.test(e.message) && /state/.test(e.message));
+  assert.deepEqual(fs.readdirSync(elsewhere), []);
+});
+
+test('server timeouts for slow headers and slow requests are set', async (t) => {
+  const { srv } = await start(t);
+  assert.equal(srv.server.headersTimeout, 10000);
+  assert.equal(srv.server.requestTimeout, 30000);
 });
