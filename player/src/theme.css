@@ -1,7 +1,7 @@
 @import "tailwindcss";
-@import "@fontsource/archivo/500.css";
-@import "@fontsource/archivo/700.css";
-@import "@fontsource/archivo/900.css";
+@import "@fontsource/archivo/latin-500.css";
+@import "@fontsource/archivo/latin-700.css";
+@import "@fontsource/archivo/latin-900.css";
 
 @theme {
   --color-yk-yellow: #F6C945;

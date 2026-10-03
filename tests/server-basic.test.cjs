@@ -20,7 +20,10 @@ function tempSlug(t) {
 // Starts a server for the test and closes it afterwards.
 async function start(t, opts = {}) {
   const slugDir = opts.slugDir || tempSlug(t);
-  const srv = await startServer({ slugDir, ...opts });
+  // An empty player folder, so these tests see the placeholder whether or not player/dist is built.
+  const playerDir = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-noplayer-'));
+  t.after(() => fs.rmSync(playerDir, { recursive: true, force: true }));
+  const srv = await startServer({ slugDir, ...opts, deps: { playerDir, ...(opts.deps || {}) } });
   t.after(() => srv.close());
   return { srv, slugDir };
 }
