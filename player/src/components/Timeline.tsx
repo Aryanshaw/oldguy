@@ -11,6 +11,8 @@ export interface TimelineProps {
   failReasons: Record<string, string>;
   /** Ready chapters whose video failed to load in the browser. */
   broken?: string[];
+  /** Store keys (`rt:<id>`) of retries already asked. */
+  retried?: string[];
   onSeek: (p: Position) => void;
   onRetry: (id: string) => void;
 }
@@ -50,7 +52,7 @@ const STATE_WORDS: Record<Look, string> = {
 const hasDuration = (c: Chapter): c is Chapter & { duration_s: number } =>
   typeof c.duration_s === 'number' && Number.isFinite(c.duration_s) && c.duration_s > 0;
 
-export function Timeline({ chapters, position, failReasons, broken = [], onSeek, onRetry }: TimelineProps) {
+export function Timeline({ chapters, position, failReasons, broken = [], retried = [], onSeek, onRetry }: TimelineProps) {
   const items = blocks(chapters);
   const curIdx = position ? chapters.findIndex((c) => c.id === position.chapterId && c.status === 'ready') : -1;
 
@@ -68,6 +70,7 @@ export function Timeline({ chapters, position, failReasons, broken = [], onSeek,
                 : curIdx >= 0 && i < curIdx
                   ? 'played'
                   : 'upcoming';
+          const asked = look === 'failed' && retried.includes('rt:' + c.id);
           const disabled = look === 'rendering' || look === 'pending' || look === 'stale';
           const draft = c.quality === 'draft';
           const dur = hasDuration(c) ? c.duration_s : null;
@@ -75,7 +78,7 @@ export function Timeline({ chapters, position, failReasons, broken = [], onSeek,
           const fill = look === 'current' && dur && position ? Math.min(100, Math.max(0, (position.offset / dur) * 100)) : 0;
           const name = [
             c.title,
-            STATE_WORDS[look],
+            asked ? 'retry asked' : STATE_WORDS[look],
             ...(followUp && (look === 'upcoming' || look === 'played' || look === 'current') ? ['follow-up'] : []),
             ...(draft ? ['draft'] : []),
             ...(dur !== null ? [fmt(dur)] : []),
@@ -121,14 +124,14 @@ export function Timeline({ chapters, position, failReasons, broken = [], onSeek,
                   {draft && (
                     <span className="relative shrink-0 rounded-[4px] bg-yk-black px-[5px] text-[10px] text-yk-cream">draft</span>
                   )}
-                  {LABEL[look] && (
+                  {(asked || LABEL[look]) && (
                     <span
                       className={cn(
                         'relative ml-auto shrink-0 whitespace-nowrap',
                         look === 'rendering' && 'rounded-[4px] bg-yk-black px-[6px] py-px text-yk-cream',
                       )}
                     >
-                      {LABEL[look]}
+                      {asked ? 'retry asked' : LABEL[look]}
                     </span>
                   )}
                 </button>

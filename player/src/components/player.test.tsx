@@ -135,6 +135,20 @@ describe('broken chapters', () => {
   });
 });
 
+describe('broken chapters after a re-render', () => {
+  it('drops an id once its chapter is no longer ready, and keeps ids that are still ready', () => {
+    const { rerender } = render(<Harness chapters={[ch('a'), ch('b')]} />);
+    eng.fail('a');
+    eng.fail('b');
+    expect(lastBroken).toEqual(['a', 'b']);
+    rerender(<Harness chapters={[ch('a'), ch('b', { status: 'rendering', duration_s: null })]} />);
+    expect(lastBroken).toEqual(['a']);
+    // the re-rendered chapter becomes playable again and is not marked broken
+    rerender(<Harness chapters={[ch('a'), ch('b')]} />);
+    expect(lastBroken).toEqual(['a']);
+  });
+});
+
 describe('play button', () => {
   it('calls play and flips its label to Pause when playing', async () => {
     render(<Harness chapters={[ch('a')]} />);

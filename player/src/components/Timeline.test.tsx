@@ -99,6 +99,12 @@ describe('looks', () => {
     expect(block(/^Title a/)).toHaveTextContent('draft');
     expect(block(/^Title a/).getAttribute('aria-label')).toContain('draft');
   });
+  it('failed block whose retry was asked reads retry asked', () => {
+    setup([ch('a'), ch('b', { status: 'failed', duration_s: null })], { position: null, retried: ['rt:b'] });
+    const el = block('Title b, retry asked');
+    expect(el).toHaveTextContent('retry asked');
+    expect(el).not.toHaveTextContent('failed, retry');
+  });
   it('broken ready block renders as failed', () => {
     setup([ch('a'), ch('b'), ch('c')], { broken: ['c'] });
     const el = block('Title c, failed, retry, 1:04');

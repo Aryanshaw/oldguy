@@ -53,6 +53,11 @@ export function usePlayer(chapters: Chapter[], create: CreateEngine = createEngi
 
   useEffect(() => {
     engineRef.current?.setChapters(chapters);
+    // A re-rendered chapter leaves `ready` and comes back playable: forget its old failure.
+    setBroken((prev) => {
+      const next = prev.filter((id) => chapters.find((c) => c.id === id)?.status === 'ready');
+      return next.length === prev.length ? prev : next;
+    });
   }, [chapters]);
 
   const play = useCallback(() => void engineRef.current?.play(), []);
