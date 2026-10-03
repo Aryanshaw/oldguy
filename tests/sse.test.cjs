@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const http = require('node:http');
+const net = require('node:net');
 const { EventEmitter } = require('node:events');
 const { createHub } = require('../lib/sse.cjs');
 const { startServer } = require('../server/server.cjs');
@@ -240,4 +241,28 @@ test('an open stream stays open past a short request timeout', async (t) => {
   assert.equal(closed, false);
   await s.wait((e) => e.filter((x) => x.event === 'ping').length >= 2);
   s.req.destroy();
+});
+
+test('a client that stops reading is dropped once its backlog passes 1 MB; others are unaffected and memory stays bounded', async (t) => {
+  const { srv } = await start(t, { pingMs: 100000 });
+  const good = await openStream(srv);
+  await good.wait((e) => e.length >= 1);
+  // A raw client that asks for the stream and then never reads again.
+  const stalled = net.connect(srv.port, '127.0.0.1');
+  t.after(() => stalled.destroy());
+  await new Promise((r) => stalled.once('connect', r));
+  stalled.write(`GET /api/stream HTTP/1.1\r\nHost: 127.0.0.1:${srv.port}\r\nx-yap-key: ${srv.key}\r\n\r\n`);
+  stalled.pause();
+  const end = Date.now() + 2000;
+  while (srv.state.hub.size() < 2 && Date.now() < end) await new Promise((r) => setTimeout(r, 10));
+  assert.equal(srv.state.hub.size(), 2);
+  const rssBefore = process.memoryUsage().rss;
+  const payload = { text: 'x'.repeat(20000) };
+  let sent = 0;
+  while (srv.state.hub.size() > 1 && sent < 3000) { srv.state.hub.broadcast('reply', payload); sent++; await new Promise((r) => setImmediate(r)); }
+  assert.equal(srv.state.hub.size(), 1, `stalled client still held after ${sent} sends`);
+  assert.ok(process.memoryUsage().rss - rssBefore < 100 * 1024 * 1024, 'memory grew without bound');
+  srv.state.hub.broadcast('reply', { text: 'still here' });
+  await good.wait((e) => e.some((x) => x.data.text === 'still here'));
+  good.req.destroy();
 });

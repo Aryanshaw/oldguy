@@ -23,6 +23,11 @@ function lib(fn) {
   }
 }
 
+// Tells the open tabs. The change is already stored, so a failure here is only logged and never changes the answer.
+function tell(state, event, makeData) {
+  try { state.hub.broadcast(event, makeData()); } catch (err) { state.logError(err); }
+}
+
 // Where the chat files live.
 const eventsFile = (state) => path.join(state.slugDir, 'state', 'events.jsonl');
 const threadFile = (state) => path.join(state.slugDir, 'state', 'thread.jsonl');
@@ -82,7 +87,7 @@ async function handleMessage({ req, res, state, sendJson, readJsonBody }) {
   if (text !== undefined) input.text = text;
   if (context !== undefined) input.context = context;
   const event = lib(() => appendEvent(eventsFile(state), input, { now: clockDate(state) }));
-  state.hub.broadcast('state', buildState(state));
+  tell(state, 'state', () => buildState(state));
   sendJson(res, 200, { event });
 }
 
@@ -92,7 +97,7 @@ async function handleReply({ req, res, state, sendJson, readJsonBody }) {
   const input = { in_reply_to, text };
   if (sources !== undefined) input.sources = sources;
   const reply = lib(() => appendReply(threadFile(state), input, { eventsFile: eventsFile(state), now: clockDate(state) }));
-  state.hub.broadcast('reply', { ...reply, role: 'claude' });
+  tell(state, 'reply', () => ({ ...reply, role: 'claude' }));
   sendJson(res, 200, { reply });
 }
 
@@ -101,14 +106,15 @@ async function handleHeartbeat({ req, res, state, sendJson, readJsonBody }) {
   await readJsonBody(req);
   const before = isConnected(state);
   state.lastHeartbeat = clock(state);
-  if (!before) state.hub.broadcast('state', buildState(state));
+  if (!before) tell(state, 'state', () => buildState(state));
   sendJson(res, 200, { ok: true });
 }
 
-// Checks the text-or-null fields of a chapter row (the manifest library does not look at these two).
-function checkFreeText(fields) {
-  for (const key of ['placement_reason', 'question']) {
-    if (fields[key] !== undefined && fields[key] !== null && typeof fields[key] !== 'string') throw httpError(400, `${key} must be text or null`);
+// Checks that each named field, when present, is text (or text/null where the rule says so). Runs before the queue.
+function checkTypes(obj, { text = [], textOrNull = [] }) {
+  for (const key of text) if (obj[key] !== undefined && typeof obj[key] !== 'string') throw httpError(400, `${key} must be text`);
+  for (const key of textOrNull) {
+    if (obj[key] !== undefined && obj[key] !== null && typeof obj[key] !== 'string') throw httpError(400, `${key} must be text or null`);
   }
 }
 
@@ -117,13 +123,13 @@ function addChange(body) {
   const unknown = Object.keys(body).filter((k) => !ADD_FIELDS.includes(k));
   if (unknown.length) throw httpError(400, `unknown field "${unknown[0].replace(/\s+/g, ' ')}"`);
   if (typeof body.id !== 'string') throw httpError(400, 'id must be text');
-  checkFreeText(body);
+  checkTypes(body, { textOrNull: ['after', 'parent_id', 'title', 'placement_reason', 'question'] });
   return (m) => {
     if (m.chapters.some((c) => c.id === body.id)) throw httpError(409, `chapter "${body.id}" already exists`);
     for (const [key, v] of [['after', body.after], ['parent_id', body.parent_id]]) {
       if (v !== undefined && v !== null && !m.chapters.some((c) => c.id === v)) throw httpError(400, `${key} "${String(v).replace(/\s+/g, ' ')}" names no chapter`);
     }
-    const row = { id: body.id, title: body.title === undefined ? body.id : body.title };
+    const row = { id: body.id, title: body.title ?? body.id };
     for (const key of ['parent_id', 'placement_reason', 'question']) if (body[key] !== undefined) row[key] = body[key];
     const place = body.after ?? body.parent_id ?? undefined;
     return lib(() => insertChapter(m, row, { after: place === null ? undefined : place }));
@@ -143,7 +149,7 @@ function setChange(state, body) {
   if (!fields || typeof fields !== 'object' || Array.isArray(fields) || Object.keys(fields).length === 0) throw httpError(400, 'fields must be an object with something to change');
   const bad = Object.keys(fields).find((k) => !SETTABLE.includes(k));
   if (bad !== undefined) throw httpError(400, `field "${bad.replace(/\s+/g, ' ')}" cannot be set (allowed: ${SETTABLE.join(', ')})`);
-  checkFreeText(fields);
+  checkTypes(fields, { text: ['status', 'quality', 'title'], textOrNull: ['placement_reason', 'question'] });
   return (m) => {
     if (!m.chapters.some((c) => c.id === body.id)) throw httpError(404, `no chapter "${body.id.replace(/\s+/g, ' ')}"`);
     const next = lib(() => setChapterFields(m, body.id, fields));
@@ -174,7 +180,7 @@ async function handleChapters({ req, res, state, sendJson, readJsonBody }) {
     state.logError(err);
     return sendJson(res, 500, { error: 'could not save the manifest' });
   }
-  state.hub.broadcast('chapter', { op: body.op, ...(typeof body.id === 'string' ? { id: body.id } : {}), manifest });
+  tell(state, 'chapter', () => ({ op: body.op, ...(typeof body.id === 'string' ? { id: body.id } : {}), manifest }));
   sendJson(res, 200, { manifest });
 }
 
@@ -187,4 +193,4 @@ const API_ROUTES = [
   { method: 'POST', pattern: '/api/heartbeat', handler: handleHeartbeat },
 ];
 
-module.exports = { API_ROUTES, buildState };
+module.exports = { API_ROUTES };

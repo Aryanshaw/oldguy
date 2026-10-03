@@ -220,7 +220,9 @@ test('set status ready is refused (409) unless the files prove it right now', as
 
 test('50 simultaneous chapter writes: valid manifest, every add exactly once, no temp files left', async (t) => {
   const seeded = Array.from({ length: 10 }, (_, i) => [`seed-${i}`, 'pending']);
-  const { srv, slugDir, manifestFile } = await setup(t, seeded);
+  // beforeSave hands control back to the event loop between load and save, so without the queue jobs would overwrite each other.
+  const yieldNow = () => new Promise((r) => setTimeout(r, Math.random() * 5));
+  const { srv, slugDir, manifestFile } = await setup(t, seeded, { beforeSave: yieldNow });
   const jobs = [];
   for (let i = 0; i < 50; i++) {
     jobs.push(i % 2 === 0
@@ -258,9 +260,82 @@ test('a failed save keeps the old manifest, answers 500 without detail, and the 
 
 test('state.updateManifest is one queue: a failing job does not break the next', async (t) => {
   const { srv, manifestFile } = await setup(t, [['a', 'pending']]);
-  const bad = srv.state.updateManifest(() => { throw new Error('nope'); });
-  const good = srv.state.updateManifest((m) => ({ ...m, title: 'Changed' }));
+  const order = [];
+  const slow = srv.state.updateManifest(async (m) => { await new Promise((r) => setTimeout(r, 30)); order.push('slow'); return { ...m, title: 'Slow' }; });
+  const bad = srv.state.updateManifest(() => { order.push('bad'); throw new Error('nope'); });
+  const good = srv.state.updateManifest((m) => { order.push(`good saw ${m.title}`); return { ...m, title: 'Changed' }; });
   await assert.rejects(bad, /nope/);
   assert.equal((await good).title, 'Changed');
+  await slow;
+  assert.deepEqual(order, ['slow', 'bad', 'good saw Slow']);
   assert.equal(loadManifest(manifestFile).title, 'Changed');
+});
+
+// ---- fix round 1 ----
+
+// Values of the wrong type that a hostile caller might send.
+function deepArray(n) { let v = []; for (let i = 0; i < n; i++) v = [v]; return v; }
+const HOSTILE = [{ toString: 1 }, { valueOf: 1, toString: 1 }, [1], deepArray(1000), 5, true, { constructor: {} }];
+
+test('chapter ops: every wrong type is a 400, never a 500, and the manifest is not touched', async (t) => {
+  const logged = [];
+  const { srv, manifestFile, root } = await setup(t, [['a', 'pending'], ['b', 'pending']], { logError: (e) => logged.push(e) });
+  const before = fs.readFileSync(manifestFile);
+  const bodies = [];
+  for (const h of HOSTILE) {
+    for (const f of ['id', 'after', 'parent_id', 'title', 'placement_reason', 'question']) bodies.push({ op: 'add', id: 'new', [f]: h });
+    bodies.push({ op: 'reorder', ids: h }, { op: 'reorder', ids: ['a', h] });
+    bodies.push({ op: 'set', id: h, fields: { title: 'x' } }, { op: 'set', id: 'a', fields: h });
+    for (const f of ['status', 'quality', 'title', 'placement_reason', 'question']) bodies.push({ op: 'set', id: 'a', fields: { [f]: h } });
+    bodies.push({ op: h });
+  }
+  bodies.push({ op: 'add', id: 'new', after: null, title: 5 }, { op: 'set', id: 'a', fields: { status: null } });
+  for (const b of bodies) assertCleanError(await call(srv, 'POST', '/api/chapters', b), 400, root);
+  for (const raw of ['{"op":"add","id":"n","__proto__":{"x":1}}', '{"op":"add","id":"n","constructor":{}}', '{"op":"set","id":"a","fields":{"__proto__":{"x":1}}}', '{"op":"set","id":"a","fields":{"constructor":"x"}}']) {
+    assertCleanError(await call(srv, 'POST', '/api/chapters', undefined, { raw }), 400, root);
+  }
+  assert.deepEqual(fs.readFileSync(manifestFile), before);
+  assert.deepEqual(logged, []);
+  // null is fine where the rule allows it
+  assert.equal((await call(srv, 'POST', '/api/chapters', { op: 'add', id: 'ok', after: null, parent_id: null, placement_reason: null, question: null })).status, 200);
+});
+
+test('every error body from every route is one line', async (t) => {
+  const { srv, root } = await setup(t, [['a', 'pending']]);
+  const m = await call(srv, 'POST', '/api/message', { type: 'message', text: 'q' });
+  const id = m.json.event.id;
+  const cases = [
+    ['/api/reply', { in_reply_to: 'evt\n9', text: 'x' }],
+    ['/api/reply', { in_reply_to: id, text: 'x', sources: [{ file: '/abs\npath', lines: '1' }] }],
+    ['/api/reply', { in_reply_to: id, text: 'x', sources: [{ file: 'a.js', lines: '1\n2' }] }],
+    ['/api/reply', { in_reply_to: id, text: 'x', sources: [{ file: 'a.js', lines: '1\r\n2' }] }],
+    ['/api/message', { type: 'bad\ntype' }],
+    ['/api/message', { type: 'message', text: 'x', context: { chapter_id: 'a\nb', t: 1 } }],
+    ['/api/chapters', { op: 'add', id: 'x', after: 'no\nsuch' }],
+    ['/api/chapters', { op: 'set', id: 'no\nsuch', fields: { title: 'x' } }],
+    ['/api/chapters', { op: 'set', id: 'a', fields: { 'bad\nfield': 1 } }],
+    ['/api/chapters', { op: 'reorder', ids: ['x\ny'] }],
+  ];
+  for (const [url, body] of cases) {
+    const r = await call(srv, 'POST', url, body);
+    assert.ok(r.status === 400 || r.status === 404, `${url} ${JSON.stringify(body)} -> ${r.text}`);
+    assert.ok(!/[\r\n]/.test(r.json.error), JSON.stringify(r.json.error));
+    assertCleanError(r, r.status, root);
+  }
+});
+
+test('a broken manifest after start: message and heartbeat are stored and still answer 200; the failure is logged', async (t) => {
+  const logged = [];
+  const { srv, slugDir, manifestFile } = await setup(t, [['a', 'pending']], { logError: (e) => logged.push(e) });
+  fs.writeFileSync(manifestFile, '{ broken');
+  const r = await call(srv, 'POST', '/api/message', { type: 'message', text: 'hello' });
+  assert.equal(r.status, 200, r.text);
+  assert.equal(lines(path.join(slugDir, 'state', 'events.jsonl')).length, 1);
+  assert.ok(logged.length >= 1);
+  const reply = await call(srv, 'POST', '/api/reply', { in_reply_to: r.json.event.id, text: 'ok' });
+  assert.equal(reply.status, 200);
+  const hb = await call(srv, 'POST', '/api/heartbeat', {});
+  assert.equal(hb.status, 200);
+  assert.equal(srv.state.lastHeartbeat !== null, true);
+  assert.equal(lines(path.join(slugDir, 'state', 'thread.jsonl')).length, 1);
 });

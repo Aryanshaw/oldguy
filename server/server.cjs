@@ -128,7 +128,7 @@ function route(routes, method, pathname) {
 // Answers a handler's failure: a known status error keeps its short message, anything else becomes a plain 500 (real error to stderr).
 function answerError(res, err) {
   if (res.headersSent) return res.end();
-  if (err && Number.isInteger(err.status) && err.status >= 400 && err.status < 500) return sendJson(res, err.status, { error: err.message });
+  if (err && Number.isInteger(err.status) && err.status >= 400 && err.status < 500) return sendJson(res, err.status, { error: String(err.message).replace(/\s+/g, ' ') });
   process.stderr.write(`yap server: ${err && err.stack ? err.stack : err}\n`);
   sendJson(res, 500, { error: 'internal error' });
 }
@@ -184,13 +184,14 @@ function writeServerInfo(slugDir, info) {
 }
 
 // Makes the one queue every manifest change goes through: each job loads the file, changes it with a pure function from
-// lib/manifest.cjs, and saves it atomically, one job at a time. A job that fails does not stop the jobs behind it.
+// lib/manifest.cjs (the change may be async), and saves it atomically, one job at a time. A job that fails does not stop the jobs behind it.
 function makeManifestQueue(slugDir, deps) {
   const file = path.join(slugDir, 'manifest.json');
   let tail = Promise.resolve();
   return (change) => {
-    const job = tail.then(() => {
-      const next = change(loadManifest(file));
+    const job = tail.then(async () => {
+      const next = await change(loadManifest(file));
+      if (deps.beforeSave) await deps.beforeSave();
       saveManifest(file, next, deps.fs ? { fs: deps.fs } : undefined);
       return next;
     });
@@ -201,7 +202,7 @@ function makeManifestQueue(slugDir, deps) {
 
 // Starts the server on 127.0.0.1 and resolves with { url, key, port, close() }.
 // deps (all optional, for tests): routes replaces the route table; now is a clock in ms; pingMs is the stream ping
-// interval; fs is used to save the manifest; logError receives unexpected save failures.
+// interval; fs is used to save the manifest; beforeSave is awaited between change and save (tests); logError receives unexpected save failures.
 async function startServer({ slugDir, key = crypto.randomBytes(16).toString('hex'), port = 0, deps = {} }) {
   ensureManifest(slugDir);
   const routes = deps.routes || ROUTES;
