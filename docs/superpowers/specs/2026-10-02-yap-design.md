@@ -555,3 +555,27 @@ Current: `hooks/hooks.json  session-start.sh`. Actual: `hooks/session-start.cjs`
 - `GET /api/state` `thread` = viewer messages (from `events.jsonl`) merged with Claude's replies (from `thread.jsonl`) in time order.
 - `state/server.json` holds `url`, `key`, `port`, `pid`, `started_at`; file mode 0600.
 - The placeholder page at `GET /` (replaced by the real player in Phase 3).
+
+---
+
+## 15. Amendments of 2026-10-03 (from Phase 3)
+
+Amendments A10 to A17 come from the Phase 3 spec (`2026-10-03-phase-3-player-design.md`), sections 9 and 10. They are copied as written there, except A14, which is reworded to point at both places that define the looks. Section numbers inside an amendment name the section of this spec it changes; "point 1" in A17 names the numbered point of Phase 3 spec section 10. They supersede the sections they name; the accepted text above is left as written.
+
+- **A10, section 4.7.** Add: "Styling uses Tailwind and shadcn/ui components restyled to
+  the house look. The player's dependencies live in `player/package.json`; the repository
+  root stays free of runtime dependencies."
+- **A11, section 4.7.** Replace "then turns green" with "then takes the normal ready
+  look". The player uses no green.
+- **A12, section 4.10.** Add cream `#FFF1CC` as the player's page ground and white as its
+  panel ground. The look is Neo-Brutalism: 3px black borders, hard offset shadows, flat
+  colour.
+- **A13, A6 follow-up.** Captions are shown by the player as an overlay, on by default,
+  with a toggle. This closes the question A6 left to Phase 3.
+- **A14, section 4.7.** Add the `pending`, `stale` and `draft` looks from section 4.1 and section 10 point 4 of the Phase 3 spec.
+- **A15, section 4.9.** "A folder the user picks" becomes "a folder the user names as an
+  absolute path in the export dialog".
+- **A16, section 4.10.** The logo is the speech bubble with a play triangle plus the
+  tilted "yap" block. The alarm-clock mascot stays a corner badge and needs a redraw
+  before release; the current drawing reads as a bear. Not blocking Phase 3.
+- **A17, parent spec section 4.3.** Add the two routes of point 1 to the endpoint table.

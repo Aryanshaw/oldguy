@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Yap brand board</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+:root{--y:#F6C945;--o:#FF8A1F;--k:#14110A;--c:#FFF1CC;--w:#fff;--r:#FF6B57}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:var(--k);color:var(--k);font-family:"Archivo",sans-serif;padding:20px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(200px,1fr));gap:16px}
+.p{position:relative;border-radius:16px;background:var(--c);padding:22px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.p>small{position:absolute;left:16px;bottom:12px;font:500 10px "JetBrains Mono",monospace;letter-spacing:.08em;opacity:.6}
+.p>small.n{left:auto;right:16px}
+.bd{border:3px solid var(--k)}
+.sh{box-shadow:5px 5px 0 var(--k)}
+.mono{font-family:"JetBrains Mono",monospace}
+svg{display:block}
+
+.lock{display:flex;align-items:center;gap:18px}
+.lock svg{width:84px}
+.word{font-weight:900;font-size:76px;line-height:1;letter-spacing:-.04em;background:var(--y);padding:0 18px 8px;transform:rotate(-2deg);border-radius:6px}
+
+.cons{background:var(--w);background-image:linear-gradient(#14110A14 1px,transparent 1px),linear-gradient(90deg,#14110A14 1px,transparent 1px);background-size:20px 20px}
+.cons svg{width:190px;overflow:visible}
+
+.app{background:var(--o);padding:18px}
+.win{width:100%;max-width:360px;background:var(--c);border-radius:12px;overflow:hidden}
+.win .top{display:flex;gap:5px;padding:7px 9px;border-bottom:3px solid var(--k);background:var(--w)}
+.win .top i{width:8px;height:8px;border-radius:50%;border:2px solid var(--k)}
+.win .body{padding:10px;display:flex;flex-direction:column;gap:9px}
+.win .v{height:92px;background:var(--k);border-radius:8px;display:grid;place-items:center;color:var(--y);font-weight:900;font-size:17px}
+.tl{display:flex;gap:5px;height:22px}
+.tl i{border:3px solid var(--k);border-radius:6px;background:var(--w)}
+.tl .d{background:var(--k)}.tl .cu{background:var(--y);transform:translateY(-3px);box-shadow:3px 3px 0 var(--k)}
+.hz{background:repeating-linear-gradient(-45deg,var(--o) 0 7px,var(--c) 7px 14px)!important}
+.tl .f{background:var(--r)}
+
+.ess{background:var(--y)}
+.ess h1{font-weight:900;font-size:clamp(30px,3.6vw,54px);line-height:.95;letter-spacing:-.04em}
+
+.col{background:var(--w);gap:12px;flex-wrap:wrap;align-content:center}
+.sw{width:calc(50% - 6px);height:42%;border-radius:10px;display:flex;align-items:flex-end;padding:8px 10px;font:700 11px "JetBrains Mono",monospace}
+
+.type{flex-direction:column;align-items:flex-start;justify-content:center;gap:6px;padding-left:34px}
+.type b{font-weight:900;font-size:110px;line-height:.85;letter-spacing:-.05em}
+.type span{font-weight:700;font-size:15px}
+.type .mono{font-size:13px;background:var(--k);color:var(--y);padding:3px 8px;border-radius:5px;font-weight:500}
+
+.masc{background:var(--o)}
+.masc svg{width:170px;overflow:visible}
+
+.stick{gap:22px}
+.icon{width:104px;height:104px;border-radius:26px;background:var(--y);display:grid;place-items:center}
+.icon svg{width:62px}
+.die{background:var(--w);border-radius:50%;width:92px;height:92px;display:grid;place-items:center;transform:rotate(8deg)}
+.die svg{width:62px;height:62px;overflow:visible}
+.die2{background:var(--k);color:var(--y);font-weight:900;font-size:22px;padding:6px 14px;border-radius:8px;transform:rotate(-6deg);border:3px solid var(--k);outline:3px solid var(--w)}
+
+.ui{background:var(--w);flex-wrap:wrap;gap:14px;align-content:center}
+.play{width:50px;height:50px;border-radius:50%;background:var(--y);display:grid;place-items:center;font-size:17px}
+.btn{background:var(--o);padding:9px 20px;font-weight:900;font-size:15px;border-radius:10px}
+.bub{background:var(--y);padding:8px 13px;font-weight:700;font-size:13px;border-radius:14px 14px 2px 14px}
+.chip{padding:6px 10px;border-radius:8px}
+.chip b{background:var(--k);color:var(--c);font-size:12px;padding:2px 7px;border-radius:4px}
+.tab{padding:6px 16px;font-weight:900;font-size:13px;border-radius:10px;background:var(--k);color:var(--y)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="mark" viewBox="0 0 100 100">
+    <path d="M16 10h68a10 10 0 0 1 10 10v42a10 10 0 0 1-10 10H46L22 92V72h-6A10 10 0 0 1 6 62V20a10 10 0 0 1 10-10z" fill="#F6C945" stroke="#14110A" stroke-width="6" stroke-linejoin="round"/>
+    <path d="M40 25l30 16-30 16z" fill="#14110A" stroke="#14110A" stroke-width="4" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="clock" viewBox="0 0 120 120">
+    <g stroke="#14110A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M40 100l-8 12M80 100l8 12" fill="none"/>
+      <path d="M60 14v10" fill="none"/>
+      <circle cx="33" cy="26" r="13" fill="#FFF1CC"/>
+      <circle cx="87" cy="26" r="13" fill="#FFF1CC"/>
+      <rect x="100" y="58" width="12" height="10" rx="2" fill="#FFF1CC"/>
+      <circle cx="60" cy="66" r="40" fill="#F6C945"/>
+      <path d="M48 76q12 16 24 0z" fill="#14110A"/>
+    </g>
+    <circle cx="46" cy="58" r="5" fill="#14110A"/><circle cx="74" cy="58" r="5" fill="#14110A"/>
+  </symbol>
+</svg>
+
+<div class="p"><div class="lock"><svg><use href="#mark"/></svg><span class="word bd sh">yap</span></div><small>LOGO</small><small class="n">01</small></div>
+
+<div class="p cons"><svg viewBox="0 0 100 100">
+  <use href="#mark"/>
+  <g fill="none" stroke="#FF8A1F" stroke-width=".8" stroke-dasharray="2 2"><circle cx="50" cy="41" r="34"/><circle cx="50" cy="41" r="19"/><path d="M-6 41h112M50-6v104M-6 72h112M22 72v26"/></g>
+</svg><small>MARK: SPEECH + PLAY</small><small class="n">02</small></div>
+
+<div class="p app"><div class="win bd sh"><div class="top"><i></i><i></i><i></i></div><div class="body"><div class="v">Splitting a job</div><div class="tl"><i class="d" style="flex:4"></i><i class="d" style="flex:5"></i><i class="cu" style="flex:6"></i><i style="flex:5"></i><i class="hz" style="flex:4"></i><i class="f" style="flex:3"></i></div></div></div><small>PLAYER</small><small class="n">03</small></div>
+
+<div class="p ess"><h1>Claude yaps.<br>You watch.</h1><small class="n">04</small></div>
+
+<div class="p col">
+  <div class="sw bd" style="background:var(--y)">#F6C945</div>
+  <div class="sw bd" style="background:var(--o)">#FF8A1F</div>
+  <div class="sw bd" style="background:var(--k);color:var(--c)">#14110A</div>
+  <div class="sw bd" style="background:var(--c)">#FFF1CC</div>
+  <small class="n">05</small>
+</div>
+
+<div class="p type"><b>Aa</b><span>Archivo Black, Bold, Medium</span><span class="mono">planner/split.ts:41</span><small class="n">06</small></div>
+
+<div class="p masc"><svg><use href="#clock"/></svg><small>MASCOT</small><small class="n">07</small></div>
+
+<div class="p stick"><div class="icon bd sh"><svg><use href="#mark"/></svg></div><div class="die bd sh"><svg><use href="#clock"/></svg></div><span class="die2">yap</span><small>ICON + STICKERS</small><small class="n">08</small></div>
+
+<div class="p ui"><span class="play bd sh">▶</span><span class="btn bd sh">Export</span><span class="tab bd">Chat</span><span class="bub bd">Why split a job?</span><span class="chip bd hz"><b>rendering</b></span><small>COMPONENTS</small><small class="n">09</small></div>
+</body>
+</html>

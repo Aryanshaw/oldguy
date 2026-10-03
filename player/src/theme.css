@@ -1,0 +1,47 @@
+@import "tailwindcss";
+@import "@fontsource/archivo/latin-500.css";
+@import "@fontsource/archivo/latin-700.css";
+@import "@fontsource/archivo/latin-900.css";
+
+@theme {
+  --color-yk-yellow: #F6C945;
+  --color-yk-orange: #FF8A1F;
+  --color-yk-black: #14110A;
+  --color-yk-cream: #FFF1CC;
+  --color-yk-white: #FFFFFF;
+  --color-yk-red: #FF6B57;
+  --font-sans: "Archivo", system-ui, sans-serif;
+}
+
+@utility bd {
+  border: 3px solid var(--color-yk-black);
+}
+@utility sh {
+  box-shadow: 4px 4px 0 var(--color-yk-black);
+}
+@utility sh-lg {
+  box-shadow: 8px 8px 0 var(--color-yk-black);
+}
+
+body {
+  margin: 0;
+  background: var(--color-yk-cream);
+  color: var(--color-yk-black);
+  font-family: var(--font-sans);
+}
+
+@keyframes yk-stripe-move {
+  to {
+    background-position: -22.6px 0;
+  }
+}
+.yk-stripes {
+  background: repeating-linear-gradient(-45deg, #ff8a1f 0 8px, #fff1cc 8px 16px);
+  background-size: 200% 100%;
+  animation: yk-stripe-move 1.2s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .yk-stripes {
+    animation: none;
+  }
+}

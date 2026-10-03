@@ -10,6 +10,7 @@ import { scanChapter } from '../lib/chapter-scan.mts';
 import { serveFile, safeChapterFile } from '../lib/range.mts';
 import { createHub } from '../lib/sse.mts';
 import { API_ROUTES, clearHeartbeatTimer } from './api.mts';
+import { PLAYER_ROUTES, readPlayerIndex } from './player-routes.mts';
 import { startWatcher } from '../lib/watcher.mts';
 import { makeChapterSync } from './chapter-sync.mts';
 import { liveServer } from '../lib/live-server.mts';
@@ -65,9 +66,10 @@ function handleHome({ res, url, state }: RouteContext): void {
     res.end();
     return;
   }
-  const manifest = loadManifest(path.join(state.slugDir, 'manifest.json'));
+  // The built player when it exists, else the placeholder.
+  const index = readPlayerIndex(state);
   res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-  res.end(renderPage(manifest));
+  res.end(index || renderPage(loadManifest(path.join(state.slugDir, 'manifest.json'))));
 }
 
 // GET /api/ping: tells a caller (the --detach check) this really is a yap server and which process runs it.
@@ -116,6 +118,7 @@ const ROUTES: Route[] = [
   { method: 'HEAD', pattern: '/chapters/:id/video', handler: mediaHandler('video') },
   { method: 'GET', pattern: '/chapters/:id/poster', handler: mediaHandler('poster') },
   { method: 'GET', pattern: '/chapters/:id/captions', handler: mediaHandler('captions') },
+  ...PLAYER_ROUTES,
   ...API_ROUTES,
 ];
 
@@ -156,6 +159,12 @@ function answerError(res: ServerResponse, err: unknown): void {
   sendJson(res, 500, { error: 'internal error' });
 }
 
+// True when a raw request path has a ".." segment. The URL parser treats "\\" like "/" and decodes %2e, so both
+// separators are split on and each piece is decoded before it is compared.
+function hasDotDotSegment(rawPath: string): boolean {
+  return rawPath.split(/[\\/]/).some((seg) => { try { return decodeURIComponent(seg).split(/[\\/]/).includes('..'); } catch { return false; } });
+}
+
 // Builds the request listener: security headers, guard, then the router. Everything sits inside one try so a
 // throw (or a rejected handler) can never become an unhandled rejection that stops the process.
 function makeListener(state: ServerState, routes: Route[], guard: Guard): (req: IncomingMessage, res: ServerResponse) => Promise<void> {
@@ -166,6 +175,9 @@ function makeListener(state: ServerState, routes: Route[], guard: Guard): (req: 
       if (!verdict.ok) return sendJson(res, verdict.status, { error: verdict.reason });
       let url: URL;
       try { url = new URL(String(req.url), 'http://placeholder'); } catch { return sendJson(res, 400, { error: 'bad request' }); }
+      // The URL parser folds a ".." segment (even written %2e%2e) into its parent, so a request meant for one place would
+      // land on another route. Answer 404 for any raw path that has one.
+      if (hasDotDotSegment(String(req.url).split('?')[0])) return sendJson(res, 404, { error: 'not found' });
       const hit = route(routes, req.method, url.pathname);
       if (hit.status === 404) return sendJson(res, 404, { error: 'not found' });
       if (hit.status === 405) return sendJson(res, 405, { error: 'method not allowed' });

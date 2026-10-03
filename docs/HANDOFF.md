@@ -2,13 +2,14 @@
 
 # Yap — handoff (continue the discussion in `~/Documents/pracice/yap`)
 
-Updated 2026-10-03 (after Phase 2). Read this first, then the spec, `docs/phase-1/SUMMARY.md` and `docs/phase-2/SUMMARY.md`.
+Updated 2026-10-03 (after Phase 3). Read this first, then the spec, `docs/phase-1/SUMMARY.md`, `docs/phase-2/SUMMARY.md` and `docs/phase-3/SUMMARY.md`.
 
 ## 0. Where we are
 
 - Repo: `~/Documents/pracice/yap`. Branches (nothing pushed or merged, owner approval needed):
   `master` (spec only) <- `phase-0-spikes` (~17 commits) <- `phase-1-generator` (~60 commits,
-  now also holds the Phase 2 plan, commit `c254f21`).
+  now also holds the Phase 2 plan, commit `c254f21`) <- `phase-2-server` (31 commits) <-
+  `phase-3-player` (29 commits above `20da770`).
 - Spec: `docs/superpowers/specs/2026-10-02-yap-design.md`, approved, amended with Phase 0 results.
   **Do not re-derive it; read it.**
 - **Phase 0 (spikes) done.** Evidence in `docs/spikes/` (SUMMARY.md, ENV.md). Key facts: parallel
@@ -30,8 +31,17 @@ Updated 2026-10-03 (after Phase 2). Read this first, then the spec, `docs/phase-
   plain-JavaScript launchers that give old Node one clear sentence; shared data shapes are exported types; the rules
   are tests (`tests/code-rules.test.cjs`). Read `docs/ARCHITECTURE.md`. Correction to the owner's earlier choice:
   `.cts` was dropped for `.mts` because the type checker does not follow `require()` in `.cts` files.
-- Later: Phase 3 player (React+Vite prebuilt), Phase 4 chat bridge (Monitor), Polish (README,
-  demo video, `npx yap-setup` installer with consent checklist).
+- **Phase 3 (browser player) done, final review done (in-session, see SUMMARY section 8), merged with `master` including the TypeScript refactor (server routes ported to `server/player-routes.mts`)**, on branch
+  `phase-3-player` (worktree `../yap-phase-3`). Built: the React+Vite
+  player committed as `player/dist/` (two-video engine, live timeline, captions, Chat and
+  Sources tabs, export dialog), two read-only server routes (`/assets/:file`,
+  `/chapters/:id/sources`), a Playwright e2e, `check:dist` and a CI workflow (never run
+  remotely). Player tests 218, root suite green, e2e 1 test. **Read `docs/phase-3/SUMMARY.md`**, section
+  5.1 first (the chapter join measures ~120-135 ms against the spec's 20-35 ms; owner must judge),
+  then section 4 (21 controller rulings to overrule from) and `docs/phase-3/ACCEPTANCE.md`.
+- Next: Phase 4 chat bridge (`yap listen`; what the page already posts is in
+  `docs/phase-3/SUMMARY.md` section 6), then Polish (README, demo video, `npx yap-setup`
+  installer with consent checklist).
 - Name: **Yap** ("Claude yaps. You watch."). Domain `justyap.dev` or `justyap.io` (owner buys;
   not yet bought).
 

@@ -1,0 +1,24 @@
+name: player
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            player/package-lock.json
+      # The root has dev-only tools (TypeScript for `npm run check`, which `npm test` runs first); no runtime deps.
+      - run: npm ci
+      - run: npm test
+      - name: Player checks
+        working-directory: player
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+          npm run check:dist

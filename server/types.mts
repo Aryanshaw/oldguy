@@ -50,6 +50,7 @@ type ServerDeps = {
   afterCheck?: () => unknown;
   createReadStream?: CreateReadStream;
   logError?: (err: unknown) => void;
+  playerDir?: string;
 };
 // What every handler can read: where the video lives, the session key, the port, the live parts and the flags.
 type ServerState = {

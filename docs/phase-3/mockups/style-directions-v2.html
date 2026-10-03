@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Yap style directions</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Fredoka:wght@400;600;700&family=Geist:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=Pixelify+Sans:wght@400;600&family=Press+Start+2P&display=swap">
+<style>
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:#050505;color:#ddd;font-family:"Geist",system-ui,sans-serif;display:flex;flex-direction:column}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+p{margin:0}
+
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px 16px;border-bottom:1px solid #222}
+.bar .t{padding:6px 12px;font-size:12.5px;border-radius:6px;color:#999}
+.bar .t.on{background:#F6C945;color:#14110A;font-weight:600}
+.bar .note{flex:1;min-width:200px;font-size:12px;color:#888;padding:0 10px;line-height:1.4}
+.pick{padding:6px 14px;font-size:12.5px;border:1px solid #FF8A1F;color:#FF8A1F;border-radius:6px}
+.pick.selected{background:#FF8A1F;color:#14110A}
+.d{flex:1;min-height:0;overflow:hidden}
+.d[hidden]{display:none!important}
+
+/* shared: the video frame content (what the scene kit renders) */
+.vid{position:relative;background:#14110A;overflow:hidden;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;container-type:size}
+.scene{width:72cqw;display:flex;flex-direction:column;align-items:center;gap:3cqh;font-family:"Helvetica Neue",Arial,sans-serif}
+.scene h4{font-size:5.2cqw;font-weight:900;color:#F6C945;line-height:1}
+.card{width:100%;background:#2A2417;border:.35cqw solid #F6C945;font:1.55cqw/1.75 ui-monospace,Menlo,monospace;color:#FFF6DC}
+.card .fl{background:#F6C945;color:#14110A;font-weight:700;padding:.3cqw 1.4cqw}
+.card p{padding:0 1.4cqw;white-space:pre}
+.card p.hl{background:#FF8A1F;color:#14110A}
+.cap{position:absolute;bottom:6%;left:50%;transform:translateX(-50%);background:#000d;color:#F6C945;padding:.5cqw 1.4cqw;font:600 1.7cqw "Helvetica Neue",Arial,sans-serif;white-space:nowrap}
+.sg{min-width:0;position:relative;overflow:hidden;cursor:pointer}
+.sg span{white-space:nowrap}
+.who,.sg .r,.sg .du{display:none}
+.chat{display:flex;flex-direction:column;gap:14px;overflow:auto;min-height:0;flex:1}
+.src{display:flex;flex-wrap:wrap;gap:6px}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+@keyframes bl{50%{opacity:.25}}
+@keyframes mv{to{background-position:-22.6px 0}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+
+/* ================= A. NEO-BRUTALISM ================= */
+.nb{background:#FFF1CC;color:#14110A;font-family:"Archivo",sans-serif;display:grid;grid-template-columns:minmax(0,1fr) 360px;grid-template-rows:auto minmax(0,1fr);gap:18px 24px;padding:18px 28px 28px}
+.nb .bd{border:3px solid #14110A}
+.nb header{grid-column:1/-1;display:flex;align-items:center;gap:14px}
+.nb .logo{font-weight:900;font-size:28px;background:#F6C945;box-shadow:4px 4px 0 #14110A;padding:0 14px;transform:rotate(-2deg)}
+.nb .tag{font-weight:700;font-size:13px}
+.nb .gap{flex:1}
+.nb .pill{border-radius:99px;padding:4px 12px;font-weight:700;font-size:12px;background:#fff}
+.nb .pill::before{content:"● ";color:#2aa84a}
+.nb .btn{background:#FF8A1F;box-shadow:4px 4px 0 #14110A;padding:8px 18px;font-weight:900;font-size:14px;border-radius:10px}
+.nb .stage{display:flex;flex-direction:column;gap:16px;min-height:0;min-width:0}
+.nb .vid{border-radius:14px;box-shadow:8px 8px 0 #14110A}
+.nb .ctl{display:flex;align-items:center;gap:14px}
+.nb .play{width:46px;height:46px;border-radius:50%;background:#F6C945;box-shadow:3px 3px 0 #14110A;font-size:16px;flex:none}
+.nb .ttl{font-weight:900;font-size:22px;letter-spacing:-.01em}
+.nb .time{font-weight:700;font-size:14px;font-variant-numeric:tabular-nums;background:#14110A;color:#FFF1CC;padding:3px 10px;border-radius:6px}
+.nb .tl{display:flex;gap:8px;height:42px;padding-top:4px}
+.nb .sg{border:3px solid #14110A;border-radius:10px;background:#fff;padding:0 10px;display:flex;align-items:center;gap:6px;font-weight:700;font-size:12px}
+.nb .sg .n{opacity:.55}
+.nb .sg.done{background:#14110A;color:#FFF1CC}
+.nb .sg.cur{background:linear-gradient(90deg,#F6C945 55%,#fff 55%);box-shadow:4px 4px 0 #14110A;transform:translateY(-4px);overflow:visible}
+.nb .sg.fu{background:#FFD9A8;border-style:dashed}
+.nb .sg.pend{background:repeating-linear-gradient(-45deg,#FF8A1F 0 8px,#FFF1CC 8px 16px);background-size:200% 100%;animation:mv 1.2s linear infinite}
+.nb .sg.pend .t{background:#14110A;color:#FFF1CC;padding:1px 6px;border-radius:4px}
+.nb .sg.fail{background:#FF6B57}
+.nb .panel{background:#fff;border-radius:14px;box-shadow:8px 8px 0 #14110A;display:flex;flex-direction:column;min-height:0;padding:14px;gap:14px}
+.nb .tabs{display:flex;gap:8px}
+.nb .tabs span{flex:1;text-align:center;font-weight:900;font-size:13px;padding:7px;border:3px solid #14110A;border-radius:10px}
+.nb .tabs .on{background:#14110A;color:#F6C945}
+.nb .q{align-self:flex-end;max-width:88%;background:#F6C945;border:3px solid #14110A;border-radius:14px 14px 2px 14px;padding:8px 12px;font-weight:700;font-size:13.5px}
+.nb .a{border:3px solid #14110A;border-radius:14px 14px 14px 2px;padding:10px 12px;font-size:13.5px;line-height:1.5;font-weight:500;box-shadow:3px 3px 0 #14110A;display:flex;flex-direction:column;gap:8px}
+.nb .src span{font:700 11px ui-monospace,Menlo,monospace;background:#FFD9A8;padding:2px 6px;border-radius:4px}
+.nb .acts button{border:3px solid #14110A;border-radius:8px;padding:4px 10px;font-weight:900;font-size:12px}
+.nb .acts button:first-child{background:#FF8A1F}
+.nb .stt{font-weight:700;font-size:12px;background:#FFF1CC;border:3px dashed #14110A;border-radius:10px;padding:8px 10px}
+.nb .cmp{display:flex;gap:8px}
+.nb .cmp div{flex:1;border:3px solid #14110A;border-radius:10px;padding:9px 12px;font-size:13px;color:#7a6d4d;font-weight:500}
+.nb .cmp button{background:#14110A;color:#F6C945;font-weight:900;border-radius:10px;padding:0 16px}
+
+/* ================= B. SWISS ================= */
+.sw{background:#0b0b0b;color:#f2efe6;font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;display:grid;grid-template-columns:230px minmax(0,1fr) 330px;grid-template-rows:auto minmax(0,1fr) auto;column-gap:28px;padding:0 32px 22px}
+.sw header{grid-column:1/-1;display:grid;grid-template-columns:230px 1fr 1fr 1fr auto;column-gap:28px;padding:16px 0 12px;border-bottom:1px solid #ffffff38;font-size:12px;margin-bottom:22px;align-items:baseline}
+.sw header b{font-size:20px;letter-spacing:-.03em}
+.sw header span{color:#a9a59b}
+.sw header span i{font-style:normal;color:#f2efe6}
+.sw header a{color:#F6C945;font-weight:700;border-bottom:2px solid #F6C945}
+.sw .left{display:flex;flex-direction:column;min-height:0}
+.sw .num{font-size:168px;font-weight:700;line-height:.8;letter-spacing:-.06em;color:#F6C945;margin-left:-8px}
+.sw .ttl{font-size:28px;font-weight:700;letter-spacing:-.02em;line-height:1.05;margin-top:22px}
+.sw dl{margin-top:20px;font-size:12px;display:grid;grid-template-columns:80px 1fr;row-gap:5px;border-top:1px solid #ffffff38;padding-top:10px}
+.sw dt{color:#a9a59b}.sw dd{margin:0}
+.sw .gap{flex:1}
+.sw .ctl{display:flex;align-items:baseline;gap:12px;font-variant-numeric:tabular-nums}
+.sw .play{font-size:13px;font-weight:700;background:#F6C945;color:#0b0b0b;padding:8px 16px}
+.sw .time{font-size:22px;font-weight:700;letter-spacing:-.02em}
+.sw .time em{font-style:normal;color:#77736a;font-weight:400;font-size:13px}
+.sw .stage{display:flex;min-height:0;min-width:0}
+.sw .panel{display:flex;flex-direction:column;min-height:0;gap:14px}
+.sw .tabs{display:flex;gap:18px;font-size:12px;font-weight:700;border-bottom:1px solid #ffffff38;padding-bottom:8px}
+.sw .tabs span{color:#77736a}.sw .tabs .on{color:#f2efe6}
+.sw .who{display:block;font-style:normal;font-size:10.5px;color:#a9a59b}
+.sw .q,.sw .a{display:grid;grid-template-columns:52px 1fr;font-size:13.5px;line-height:1.45;row-gap:6px;border-bottom:1px solid #ffffff1c;padding-bottom:12px}
+.sw .q p{font-weight:700}
+.sw .a>*:not(.who):not(p){grid-column:2}
+.sw .src span{font:11px ui-monospace,Menlo,monospace;color:#F6C945}
+.sw .acts button{font-size:12px;font-weight:700;border-bottom:2px solid #f2efe6;padding-bottom:1px}
+.sw .acts button:first-child{color:#F6C945;border-color:#F6C945}
+.sw .stt{font-size:12px;color:#FF8A1F;font-weight:700;padding-left:52px}
+.sw .cmp{border-top:2px solid #f2efe6;padding-top:9px;display:flex;justify-content:space-between;font-size:13.5px;color:#77736a}
+.sw .cmp b{color:#F6C945}
+.sw .tl{grid-column:1/-1;display:flex;gap:10px;margin-top:22px}
+.sw .sg{border-top:4px solid #3a3833;padding-top:7px;display:flex;flex-direction:column;gap:1px;font-size:12px}
+.sw .sg .n{color:#a9a59b;font-size:11px}
+.sw .sg .t{font-weight:700}
+.sw .sg .du{display:block;color:#77736a;font-size:11px;font-variant-numeric:tabular-nums}
+.sw .sg.done{border-color:#F6C945}
+.sw .sg.cur{border-image:linear-gradient(90deg,#F6C945 55%,#3a3833 55%) 1}
+.sw .sg.cur .t{color:#F6C945}
+.sw .sg.pend{border-color:#FF8A1F;border-top-style:dashed}.sw .sg.pend .du{color:#FF8A1F}
+.sw .sg.fail{border-color:#e5412d}.sw .sg.fail .du{color:#e5412d}
+
+/* ================= C. EDITORIAL ================= */
+.ed{background:#0f0d0a;color:#e8e0cf;font-family:"Geist",sans-serif;display:grid;grid-template-columns:minmax(0,1fr) 320px;grid-template-rows:auto minmax(0,1fr);column-gap:56px;padding:0 64px 30px}
+.ed header{grid-column:1/-1;display:grid;grid-template-columns:1fr auto 1fr;align-items:baseline;padding:20px 0 18px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#8f8777}
+.ed header b{font:italic 400 30px "Instrument Serif",serif;letter-spacing:0;text-transform:none;color:#e8e0cf}
+.ed header a{justify-self:end;color:#F6C945}
+.ed .stage{display:flex;flex-direction:column;min-height:0;min-width:0}
+.ed .vid{border-radius:3px;box-shadow:0 0 0 1px #ffffff14,0 40px 80px #000}
+.ed .under{display:flex;align-items:flex-end;gap:24px;padding:20px 0 16px}
+.ed .eye{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:#F6C945}
+.ed .ttl{font:400 46px/1 "Instrument Serif",serif;margin-top:8px}
+.ed .ttl i{color:#8f8777}
+.ed .gap{flex:1}
+.ed .time{font-size:13px;font-variant-numeric:tabular-nums;color:#8f8777}.ed .time b{color:#e8e0cf;font-weight:500}
+.ed .play{width:48px;height:48px;border-radius:50%;border:1px solid #e8e0cf55;font-size:13px}
+.ed .tl{display:flex;gap:6px}
+.ed .sg{border-top:1px solid #ffffff2e;padding-top:7px;font:italic 15px "Instrument Serif",serif;color:#8f8777;display:flex;gap:8px;align-items:baseline}
+.ed .sg .n{display:none}.ed .sg .r{display:inline}
+.ed .sg .t{font:11.5px "Geist",sans-serif;display:none}
+.ed .sg.done{border-top:2px solid #F6C945;color:#e8e0cf}
+.ed .sg.cur{border-top:2px solid;border-image:linear-gradient(90deg,#F6C945 55%,#ffffff2e 55%) 1;color:#F6C945}
+.ed .sg.cur .t,.ed .sg.pend .t,.ed .sg.fail .t{display:inline}
+.ed .sg.pend{border-top:1px dashed #FF8A1F;color:#FF8A1F;animation:bl 2s ease-in-out infinite}
+.ed .sg.fail{border-top-color:#c8553f;color:#c8553f}
+.ed .panel{display:flex;flex-direction:column;min-height:0;gap:18px;border-left:1px solid #ffffff14;padding-left:32px}
+.ed .tabs{display:flex;gap:20px;font:italic 22px "Instrument Serif",serif}
+.ed .tabs span{color:#5f594d}.ed .tabs .on{color:#e8e0cf}
+.ed .chat{gap:18px}
+.ed .q p{font:italic 19px/1.25 "Instrument Serif",serif;border-left:2px solid #F6C945;padding-left:12px}
+.ed .a{font-size:13.5px;line-height:1.6;color:#b9b1a0;display:flex;flex-direction:column;gap:10px}
+.ed .src{counter-reset:f}
+.ed .src span{font:11px ui-monospace,Menlo,monospace;color:#8f8777;flex-basis:100%}
+.ed .src span::before{counter-increment:f;content:counter(f) "  ";color:#F6C945}
+.ed .acts{gap:18px}
+.ed .acts button{font-size:12.5px;border-bottom:1px solid #e8e0cf55;padding-bottom:2px}
+.ed .acts button:first-child{color:#F6C945;border-color:#F6C945}
+.ed .stt{font:italic 15px "Instrument Serif",serif;color:#FF8A1F}
+.ed .cmp{border-bottom:1px solid #e8e0cf55;padding-bottom:9px;font:italic 17px "Instrument Serif",serif;color:#5f594d;display:flex;justify-content:space-between}
+.ed .cmp b{font:500 12px "Geist",sans-serif;color:#F6C945;align-self:center}
+
+/* ================= D. CLAY ================= */
+.cl{--hi:inset 0 5px 8px #ffffffb0;--lo:inset 0 -7px 10px #7a43001f;background:#FFE4B8;color:#3a2a14;font-family:"Fredoka",sans-serif;display:grid;grid-template-columns:minmax(0,1fr) 350px;grid-template-rows:auto minmax(0,1fr);gap:16px 24px;padding:16px 28px 26px}
+.cl header{grid-column:1/-1;display:flex;align-items:center;gap:12px}
+.cl .mascot{width:40px;height:40px;border-radius:50%;background:#F6C945;box-shadow:var(--hi),var(--lo),0 6px 10px #b9730055;position:relative;margin-top:6px}
+.cl .mascot::before{content:"";position:absolute;top:-7px;left:1px;width:14px;height:14px;border-radius:50%;background:#FF8A1F;box-shadow:24px 0 0 #FF8A1F}
+.cl .mascot::after{content:"";position:absolute;top:15px;left:11px;width:5px;height:8px;border-radius:5px;background:#3a2a14;box-shadow:13px 0 0 #3a2a14}
+.cl .logo{font-weight:700;font-size:30px;letter-spacing:-.02em}
+.cl .gap{flex:1}
+.cl .pill{font-size:13px;font-weight:600;padding:7px 14px;border-radius:99px;background:#fff6e2;box-shadow:var(--hi),var(--lo),0 6px 12px #c98a3a44}
+.cl .pill::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#58c26a;margin-right:7px}
+.cl .btn{font-weight:700;font-size:15px;padding:10px 22px;border-radius:99px;background:#FF8A1F;color:#fff;box-shadow:var(--hi),inset 0 -7px 10px #a3470055,0 10px 16px #e06f0066}
+.cl .stage{display:flex;flex-direction:column;gap:16px;min-height:0;min-width:0}
+.cl .frame{flex:1;min-height:0;display:flex;padding:14px;border-radius:38px;background:#fff6e2;box-shadow:var(--hi),var(--lo),0 20px 34px #c98a3a55}
+.cl .vid{border-radius:26px}
+.cl .dock{display:flex;align-items:center;gap:16px;padding:12px 22px 12px 12px;border-radius:99px;background:#fff6e2;box-shadow:var(--hi),var(--lo),0 14px 24px #c98a3a44}
+.cl .play{width:52px;height:52px;border-radius:50%;background:#F6C945;font-size:17px;flex:none;box-shadow:var(--hi),inset 0 -7px 10px #a37a0055,0 8px 14px #d9a41a77}
+.cl .ttl{font-weight:600;font-size:17px;white-space:nowrap}
+.cl .time{font-size:13px;font-variant-numeric:tabular-nums;color:#8a6f47;white-space:nowrap}
+.cl .tl{flex:1;display:flex;gap:6px;height:22px;align-items:center}
+.cl .sg{height:16px;border-radius:99px;background:#f0d4a3;box-shadow:inset 0 3px 5px #7a430033}
+.cl .sg span{display:none}
+.cl .sg.done{background:#F6C945;box-shadow:var(--hi),inset 0 -4px 5px #a37a0044}
+.cl .sg.cur{height:22px;background:linear-gradient(90deg,#F6C945 55%,#f0d4a3 55%);box-shadow:inset 0 3px 5px #ffffff88,0 4px 8px #d9a41a66}
+.cl .sg.pend{background:#FF8A1F;animation:bl 1.4s ease-in-out infinite}
+.cl .sg.fail{background:#f2705c}
+.cl .panel{display:flex;flex-direction:column;min-height:0;gap:14px;padding:16px;border-radius:38px;background:#fff6e2;box-shadow:var(--hi),var(--lo),0 20px 34px #c98a3a55}
+.cl .tabs{display:flex;padding:5px;border-radius:99px;background:#f0d4a3;box-shadow:inset 0 3px 6px #7a430033}
+.cl .tabs span{flex:1;text-align:center;font-weight:600;font-size:14px;padding:7px;border-radius:99px;color:#8a6f47}
+.cl .tabs .on{background:#fff6e2;color:#3a2a14;box-shadow:var(--hi),0 4px 8px #c98a3a44}
+.cl .q{align-self:flex-end;max-width:88%;padding:10px 16px;border-radius:22px 22px 6px 22px;background:#F6C945;font-weight:600;font-size:14px;box-shadow:var(--hi),inset 0 -5px 8px #a37a0033,0 8px 14px #d9a41a55}
+.cl .a{padding:12px 16px;border-radius:22px 22px 22px 6px;background:#fff;font-size:14px;line-height:1.5;box-shadow:var(--lo),0 8px 14px #c98a3a33;display:flex;flex-direction:column;gap:9px}
+.cl .src span{font:600 11px ui-monospace,Menlo,monospace;background:#FFE4B8;padding:3px 8px;border-radius:99px}
+.cl .acts button{font-weight:600;font-size:13px;padding:6px 14px;border-radius:99px;background:#f0d4a3}
+.cl .acts button:first-child{background:#FF8A1F;color:#fff;box-shadow:var(--hi),0 5px 9px #e06f0055}
+.cl .stt{font-size:13px;font-weight:600;color:#c2610a;text-align:center}
+.cl .cmp{display:flex;gap:8px;align-items:center;padding:6px 6px 6px 18px;border-radius:99px;background:#f0d4a3;box-shadow:inset 0 3px 6px #7a430033;font-size:14px;color:#8a6f47}
+.cl .cmp div{flex:1}
+.cl .cmp button{width:38px;height:38px;border-radius:50%;background:#F6C945;font-weight:700;box-shadow:var(--hi),0 4px 8px #d9a41a66}
+
+/* ================= E. PIXEL ================= */
+.px{--b:#FFF6DC;background:#1b1611;color:#FFF6DC;font:16px/1.35 "Pixelify Sans",monospace;display:grid;grid-template-columns:minmax(0,1fr) 350px;grid-template-rows:auto minmax(0,1fr);gap:20px 28px;padding:16px 30px 28px;image-rendering:pixelated}
+.px .ps{font-family:"Press Start 2P",monospace}
+.px .pb{box-shadow:-4px 0 0 var(--b),4px 0 0 var(--b),0 -4px 0 var(--b),0 4px 0 var(--b)}
+.px header{grid-column:1/-1;display:flex;align-items:center;gap:16px}
+.px .mascot{display:grid;grid-template-columns:repeat(9,4px);grid-auto-rows:4px}
+.px .logo{font-size:22px;color:#F6C945;text-shadow:3px 3px 0 #FF8A1F}
+.px .gap{flex:1}
+.px .p1{font-size:9px;color:#7CE07C;animation:bl 1.2s steps(2) infinite}
+.px .btn{--b:#14110A;font-size:10px;background:#F6C945;color:#14110A;padding:9px 14px;outline:4px solid #FF8A1F;outline-offset:4px;margin-right:8px}
+.px .stage{display:flex;flex-direction:column;gap:18px;min-height:0;min-width:0;padding:4px}
+.px .vid{--b:#F6C945}
+.px .ctl{display:flex;align-items:center;gap:16px}
+.px .play{--b:#14110A;width:34px;height:34px;background:#F6C945;color:#14110A;font-size:12px;outline:4px solid #F6C945;outline-offset:4px;margin:8px}
+.px .stg{font-size:9px;color:#FF8A1F}
+.px .ttl{font-size:22px;font-weight:600}
+.px .time{font-size:10px}
+.px .tl{display:flex;gap:12px;height:34px;padding:4px}
+.px .sg{--b:#5a4c36;background:#2c241a;display:flex;align-items:center;justify-content:center;overflow:visible;font-size:15px}
+.px .sg .n,.px .sg .t{display:none}
+.px .sg.done{--b:#F6C945;background:repeating-linear-gradient(90deg,#F6C945 0 12px,#d9ac2a 12px 16px)}
+.px .sg.cur{--b:#FFF6DC;background:linear-gradient(90deg,#0000 55%,#2c241a 55%),repeating-linear-gradient(90deg,#F6C945 0 12px,#d9ac2a 12px 16px)}
+.px .sg.cur::before{content:"▼";position:absolute;left:55%;top:-22px;margin-left:-7px;color:#FFF6DC;font-size:13px;animation:bl 1s steps(2) infinite}
+.px .sg.fu{--b:#FF8A1F}
+.px .sg.pend{--b:#14110A;background:#FF8A1F;outline:4px solid #FF8A1F;outline-offset:4px}
+.px .sg.pend::after{content:"?";font:14px "Press Start 2P";color:#14110A;animation:bl 1s steps(2) infinite}
+.px .sg.fail{--b:#e5412d;background:#3a1510}
+.px .sg.fail::after{content:"x";font:12px "Press Start 2P";color:#e5412d}
+.px .panel{display:flex;flex-direction:column;min-height:0;gap:16px;padding:4px}
+.px .tabs{display:flex;gap:18px;font:10px "Press Start 2P"}
+.px .tabs span{color:#7a6c55}.px .tabs .on{color:#F6C945}.px .tabs .on::before{content:"▶ "}
+.px .chat{gap:18px;padding:4px}
+.px .q,.px .a{background:#000;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.px .who{display:block;font:normal 8px "Press Start 2P";color:#F6C945}
+.px .q .who{color:#FF8A1F}
+.px .src span{font-size:13px;color:#7CE07C}
+.px .acts{gap:16px}
+.px .acts button{font-size:15px;color:#b3a67f}
+.px .acts button:first-child{color:#F6C945}.px .acts button:first-child::before{content:"▶ "}
+.px .stt{font:8px/1.8 "Press Start 2P";color:#FF8A1F}
+.px .cmp{--b:#F6C945;background:#000;padding:11px 14px;margin:4px;color:#b3a67f}
+.px .cmp::before{content:"> ";color:#F6C945}.px .cmp::after{content:"_";color:#F6C945;animation:bl 1s steps(2) infinite}
+
+/* ================= F. BENTO ================= */
+.bt{background:#090908;color:#eee9dc;font-family:"Geist",sans-serif;display:grid;grid-template-columns:minmax(0,2.1fr) minmax(0,1fr) minmax(0,1.15fr);grid-template-rows:auto minmax(0,1fr) auto;gap:12px;padding:14px}
+.bt .tile{background:#151411;border-radius:22px;box-shadow:inset 0 0 0 1px #ffffff0f;padding:18px;min-height:0;min-width:0;display:flex;flex-direction:column;gap:12px}
+.bt .eye{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8d8778}
+.bt .v{grid-row:1/3;padding:8px}
+.bt .vid{border-radius:16px}
+.bt .now{grid-column:2/4;flex-direction:row;align-items:center;gap:18px;background:#F6C945;color:#14110A;box-shadow:none}
+.bt .now .eye{color:#14110Aaa}
+.bt .now .ttl{font-size:30px;font-weight:600;letter-spacing:-.03em;line-height:1.05;margin-top:4px}
+.bt .gap{flex:1}
+.bt .time{font-size:14px;font-weight:500;font-variant-numeric:tabular-nums}
+.bt .play{width:54px;height:54px;border-radius:50%;background:#14110A;color:#F6C945;font-size:16px;flex:none}
+.bt .list{display:flex;flex-direction:column;gap:2px;overflow:auto}
+.bt .list .sg{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:12px;font-size:13.5px;flex:none!important}
+.bt .list .sg .n{font:11px ui-monospace,Menlo,monospace;color:#8d8778;width:18px}
+.bt .list .sg .t{flex:1;overflow:hidden;text-overflow:ellipsis}
+.bt .list .sg .du{display:inline;font-size:12px;color:#8d8778;font-variant-numeric:tabular-nums}
+.bt .list .sg.done{color:#8d8778}
+.bt .list .sg.cur{background:#ffffff0f;box-shadow:inset 3px 0 0 #F6C945}
+.bt .list .sg.fu{padding-left:26px}
+.bt .list .sg.pend .du{color:#FF8A1F}.bt .list .sg.pend .t{color:#FF8A1F}
+.bt .list .sg.fail .du,.bt .list .sg.fail .t{color:#f2705c}
+.bt .q{align-self:flex-end;max-width:90%;background:#2a2822;padding:8px 12px;border-radius:14px 14px 4px 14px;font-size:13.5px}
+.bt .a{font-size:13.5px;line-height:1.55;color:#cfc9ba;display:flex;flex-direction:column;gap:9px}
+.bt .src span{font:11px ui-monospace,Menlo,monospace;background:#ffffff0d;padding:3px 8px;border-radius:6px;color:#F6C945}
+.bt .acts button{font-size:12.5px;padding:6px 12px;border-radius:99px;box-shadow:inset 0 0 0 1px #ffffff26}
+.bt .acts button:first-child{background:#F6C945;color:#14110A;font-weight:600;box-shadow:none}
+.bt .stt{font-size:12px;color:#FF8A1F}
+.bt .cmp{display:flex;align-items:center;gap:8px;background:#0c0b0a;border-radius:14px;padding:6px 6px 6px 14px;font-size:13.5px;color:#8d8778}
+.bt .cmp div{flex:1}
+.bt .cmp button{width:32px;height:32px;border-radius:10px;background:#FF8A1F;color:#14110A;font-weight:600}
+.bt .strip{flex-direction:row;align-items:center;gap:14px;padding:14px 18px}
+.bt .strip .tl{flex:1;display:flex;gap:5px;height:10px}
+.bt .strip .sg{border-radius:99px;background:#2e2c26}
+.bt .strip .sg span{display:none}
+.bt .strip .sg.done{background:#F6C945}
+.bt .strip .sg.cur{background:linear-gradient(90deg,#F6C945 55%,#2e2c26 55%)}
+.bt .strip .sg.pend{background:#FF8A1F;animation:bl 1.4s ease-in-out infinite}
+.bt .strip .sg.fail{background:#f2705c}
+.bt .ex{grid-column:2/4;flex-direction:row;align-items:center;font-size:13px;color:#8d8778;padding:14px 18px}
+.bt .ex b{color:#7CE07C;font-weight:500}
+.bt .ex button{background:#eee9dc;color:#14110A;font-weight:600;font-size:13px;padding:8px 16px;border-radius:99px}
+</style>
+</head>
+<body>
+<div class="bar" id="bar"></div>
+
+<section class="d nb" data-name="Neo-Brutalism" data-note="Thick borders, hard shadows, flat colour. Same DNA as the scene kit, moved to a cream ground so the dark video is the anchor. Chapter names printed in the timeline.">
+  <header><span class="logo bd">yap</span><span class="tag">Claude yaps. You watch.</span><span class="gap"></span><span class="pill bd">Claude connected</span><button class="btn bd">Export</button></header>
+  <div class="stage">
+    <div class="vid bd"></div>
+    <div class="ctl"><button class="play bd">▶</button><span class="ttl">Splitting a job</span><span class="gap" style="flex:1"></span><span class="time">2:05 / 5:35</span></div>
+    <div class="tl" data-tl></div>
+  </div>
+  <aside class="panel bd">
+    <div class="tabs"><span class="on">Chat</span><span>Sources</span></div>
+    <div class="chat" data-chat></div>
+    <div class="cmp"><div>Ask about this chapter</div><button>Ask</button></div>
+  </aside>
+</section>
+
+<section class="d sw" hidden data-name="Swiss" data-note="Strict grid, one grotesque, giant chapter number, no boxes at all. Timeline is a row of columns with rule, title and duration. Colour only where something is true: played, rendering, failed.">
+  <header><b>Yap</b><span>Project <i>vindex / job-planner</i></span><span>Commit <i>9e4a53b</i></span><span>Claude <i>connected</i></span><a>Export</a></header>
+  <div class="left">
+    <div class="num">03</div>
+    <div class="ttl">Splitting<br>a job</div>
+    <dl><dt>Duration</dt><dd>1:04</dd><dt>Sources</dt><dd>2 files</dd><dt>Quality</dt><dd>Draft</dd></dl>
+    <span class="gap"></span>
+    <div class="ctl"><button class="play">Play</button><span class="time">2:05 <em>/ 5:35</em></span></div>
+  </div>
+  <div class="stage"><div class="vid"></div></div>
+  <aside class="panel">
+    <div class="tabs"><span class="on">Chat</span><span>Sources</span></div>
+    <div class="chat" data-chat></div>
+    <div class="cmp"><span>Ask about this chapter</span><b>Send</b></div>
+  </aside>
+  <div class="tl" data-tl></div>
+</section>
+
+<section class="d ed" hidden data-name="Editorial" data-note="Luxury typography on a warm near-black. Serif chapter title, roman numerals on a hairline timeline, questions set as pull quotes, sources as footnotes. Quietest of the six.">
+  <header><span>A walkthrough of the job planner</span><b>Yap</b><a>Export</a></header>
+  <div class="stage">
+    <div class="vid"></div>
+    <div class="under"><div><div class="eye">Chapter three of six</div><div class="ttl">Splitting <i>a job</i></div></div><span class="gap"></span><span class="time"><b>2:05</b> / 5:35</span><button class="play">▶</button></div>
+    <div class="tl" data-tl></div>
+  </div>
+  <aside class="panel">
+    <div class="tabs"><span class="on">Questions</span><span>Sources</span></div>
+    <div class="chat" data-chat></div>
+    <div class="cmp"><span>Ask about this chapter</span><b>SEND</b></div>
+  </aside>
+</section>
+
+<section class="d cl" hidden data-name="Claymorphism" data-note="Soft, puffy, friendly. Matches the cheery helper voice and gives the alarm-clock mascot a natural home. Timeline lives inside the control pill, names on hover only.">
+  <header><span class="mascot"></span><span class="logo">yap</span><span class="gap"></span><span class="pill">Claude connected</span><button class="btn">Export</button></header>
+  <div class="stage">
+    <div class="frame"><div class="vid"></div></div>
+    <div class="dock"><button class="play">▶</button><span class="ttl">Splitting a job</span><div class="tl" data-tl></div><span class="time">2:05 / 5:35</span></div>
+  </div>
+  <aside class="panel">
+    <div class="tabs"><span class="on">Chat</span><span>Sources</span></div>
+    <div class="chat" data-chat></div>
+    <div class="cmp"><div>Ask about this chapter</div><button>↑</button></div>
+  </aside>
+</section>
+
+<section class="d px" hidden data-name="Pixel Art" data-note="8-bit game. Chapters are stages, the rendering chapter is a question block, chat is an RPG dialogue box. Most personality, least serious.">
+  <header><span class="mascot" id="pxm"></span><span class="logo ps">YAP</span><span class="gap"></span><span class="p1 ps">CLAUDE READY</span><button class="btn ps pb">EXPORT</button></header>
+  <div class="stage">
+    <div class="vid pb"></div>
+    <div class="ctl"><button class="play pb">▶</button><div><div class="stg ps">STAGE 3 OF 6</div><div class="ttl">Splitting a job</div></div><span class="gap" style="flex:1"></span><span class="time ps">2:05 / 5:35</span></div>
+    <div class="tl" data-tl data-pb></div>
+  </div>
+  <aside class="panel">
+    <div class="tabs"><span class="on">CHAT</span><span>SOURCES</span></div>
+    <div class="chat" data-chat data-pb></div>
+    <div class="cmp pb">ask about this chapter</div>
+  </aside>
+</section>
+
+<section class="d bt" hidden data-name="Bento Grid" data-note="Rounded tiles, each with one job. Only direction with a visible chapter list, which the spec said should not take panel space, so treat that tile as a question.">
+  <div class="tile v"><div class="vid"></div></div>
+  <div class="tile now"><div><div class="eye">Now playing, 3 of 6</div><div class="ttl">Splitting a job</div></div><span class="gap"></span><span class="time">2:05 / 5:35</span><button class="play">▶</button></div>
+  <div class="tile"><div class="eye">Chapters</div><div class="list" data-tl></div></div>
+  <div class="tile"><div class="eye">Chat</div><div class="chat" data-chat></div><div class="cmp"><div>Ask about this chapter</div><button>↑</button></div></div>
+  <div class="tile strip"><span class="eye">Timeline</span><div class="tl" data-tl></div></div>
+  <div class="tile ex"><span><b>●</b> Claude connected</span><span class="gap"></span><button>Export</button></div>
+</section>
+
+<template id="scene"><div class="scene"><h4>Splitting a job</h4><div class="card"><div class="fl">planner/split.ts</div><p>39  export function split(job: Job) {</p><p>40    const pages = paginate(job.source)</p><p class="hl">41    return pages.map(p =&gt; child(job, p))</p><p>42  }</p></div></div><div class="cap">Each page becomes its own small job.</div></template>
+<template id="chat">
+  <div class="q"><i class="who">You</i><p>Why split a job before queueing it?</p></div>
+  <div class="a"><i class="who">Claude</i><p>Splitting first lets each page retry alone. One bad page no longer fails the whole upload.</p><div class="src"><span>planner/split.ts:41</span><span>queue/enqueue.ts:17</span></div><div class="acts"><button>Make it a chapter</button><button>Got it</button></div></div>
+  <div class="q"><i class="who">You</i><p>What if two workers race for one page?</p></div>
+  <div class="stt">Rendering a new chapter, about 0:48 left</div>
+</template>
+<script>
+const CH=[["01","I","Why a planner","0:38",38,"done"],["02","II","Intake queue","0:52",52,"done"],["03","III","Splitting a job","1:04",64,"cur"],["↳","","Retries","0:31",31,"fu"],["04","IV","Workers and locks","0:58",58,""],["05","V","Racing workers","rendering",48,"pend"],["06","VI","Failure paths","failed, retry",44,"fail"]];
+const $=(s,r=document)=>[...r.querySelectorAll(s)];
+$(".vid").forEach(v=>v.appendChild(document.getElementById("scene").content.cloneNode(true)));
+$("[data-chat]").forEach(c=>{c.appendChild(document.getElementById("chat").content.cloneNode(true));if("pb" in c.dataset)$(".q,.a",c).forEach(e=>e.classList.add("pb"))});
+$("[data-tl]").forEach(t=>t.innerHTML=CH.map(c=>`<div class="sg ${c[5]}${"pb" in t.dataset?" pb":""}" style="flex:${c[4]}" title="${c[2]}"><span class="n">${c[0]}</span><span class="r">${c[1]}</span><span class="t">${c[2]}</span><span class="du">${c[3]}</span></div>`).join(""));
+// pixel mascot: alarm clock
+const M=["o.......o","oo.yyy.oo",".yyyyyyy.","yykyyykyy","yykyyykyy","yyyyyyyyy","yyykkkyyy",".yyyyyyy.","..o...o.."],K={y:"#F6C945",o:"#FF8A1F",k:"#14110A"};
+document.getElementById("pxm").innerHTML=M.join("").split("").map(c=>`<i style="background:${K[c]||"none"}"></i>`).join("");
+const D=$(".d"),bar=document.getElementById("bar");
+D.forEach((d,i)=>{const b=document.createElement("button");b.className="t";b.textContent=(i+1)+"  "+d.dataset.name;b.onclick=()=>show(i);bar.appendChild(b)});
+const note=document.createElement("span");note.className="note";bar.appendChild(note);
+const pick=document.createElement("button");pick.className="pick";bar.appendChild(pick);
+pick.onclick=()=>{if(window.toggleSelect)toggleSelect(pick);else pick.classList.toggle("selected")};
+function show(i){D.forEach((d,j)=>d.hidden=i!==j);$(".t",bar).forEach((b,j)=>b.classList.toggle("on",i===j));note.textContent=D[i].dataset.note;pick.dataset.choice=D[i].dataset.name;pick.textContent="Pick "+D[i].dataset.name;pick.classList.remove("selected")}
+show(0);
+addEventListener("keydown",e=>{const n=+e.key;if(n>=1&&n<=D.length)show(n-1)});
+</script>
+</body>
+</html>
