@@ -170,7 +170,8 @@ describe('composer', () => {
     const box = screen.getByRole('textbox');
     await user.type(box, 'keep me');
     await user.click(screen.getByRole('button', { name: 'Ask' }));
-    expect(await screen.findByText('Server said no')).toBeInTheDocument();
+    const err = await screen.findByText('Server said no');
+    expect(err.className).toMatch(/bg-yk-red/);
     expect(box).toHaveValue('keep me');
     expect(screen.getByRole('button', { name: 'Ask' })).toBeEnabled();
   });

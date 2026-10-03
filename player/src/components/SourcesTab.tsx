@@ -54,7 +54,7 @@ export function SourcesTab({
       <section className="flex flex-col gap-2">
         {title && <h3 className={`text-sm font-black ${WRAP}`}>{title}</h3>}
         {current === null ? null : current.list === null ? (
-          <p className="text-sm font-bold">Could not load sources.</p>
+          <p role="alert" className="bd rounded-[10px] bg-yk-red px-3 py-1.5 text-sm font-bold text-yk-black">Could not load sources.</p>
         ) : current.list.length === 0 ? (
           <p className="text-sm font-bold opacity-70">This chapter lists no sources.</p>
         ) : (

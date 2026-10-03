@@ -75,7 +75,7 @@ export function ChatTab({ store, position, chapters }: Props) {
             </div>
           ) : (
             <div key={e.id} data-role="claude" className="flex flex-col gap-2">
-              <div className="bd flex flex-col gap-2 rounded-[14px_14px_14px_2px] bg-yk-white px-3 py-2.5 shadow-[3px_3px_0_var(--color-yk-black)]">
+              <div className="bd flex flex-col gap-2 rounded-[14px_14px_14px_2px] bg-yk-white px-3 py-2.5 sh">
                 <p className={`text-[13.5px] leading-normal whitespace-pre-wrap ${WRAP}`}>{e.text}</p>
                 {e.sources && e.sources.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
@@ -139,7 +139,7 @@ export function ChatTab({ store, position, chapters }: Props) {
           <span className="self-end text-[11px] font-bold tabular-nums">{`${text.length}/${LIMIT}`}</span>
         )}
         {error && (
-          <p role="alert" className={`text-xs font-bold text-[#B3261E] ${WRAP}`}>
+          <p role="alert" className={`bd rounded-[10px] bg-yk-red px-3 py-1.5 text-xs font-bold text-yk-black ${WRAP}`}>
             {error}
           </p>
         )}
