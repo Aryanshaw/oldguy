@@ -1,4 +1,4 @@
-import type { AppState, ChapterSource, ThreadEntry } from '@/types';
+import type { AppState, ChapterSource, StoredEvent } from '@/types';
 
 export class ApiError extends Error {
   status: number;
@@ -56,8 +56,8 @@ export async function postMessage(body: {
   type: 'message' | 'make_video' | 'just_text' | 'retry_chapter';
   text?: string;
   context?: { chapter_id: string; t: number };
-}): Promise<ThreadEntry> {
-  const res = await post<{ event: ThreadEntry }>('/api/message', body);
+}): Promise<StoredEvent> {
+  const res = await post<{ event: StoredEvent }>('/api/message', body);
   return res.event;
 }
 

@@ -59,7 +59,10 @@ describe('postMessage', () => {
     const fetchMock = vi.fn((_u: string, _i?: RequestInit) => reply(200, JSON.stringify({ event })));
     vi.stubGlobal('fetch', fetchMock);
     const body = { type: 'message' as const, text: 'hi', context: { chapter_id: 'overview', t: 3 } };
-    expect(await postMessage(body)).toEqual(event);
+    const got = await postMessage(body);
+    expect(got).toEqual(event);
+    expect(got.type).toBe('message');
+    expect(got).not.toHaveProperty('role');
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe('/api/message');
     expect(init?.method).toBe('POST');

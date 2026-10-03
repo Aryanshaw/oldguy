@@ -52,3 +52,11 @@ export interface Cue {
   end: number;
   text: string;
 }
+
+export interface StoredEvent {
+  id: string;
+  ts: string;
+  type: 'message' | 'make_video' | 'just_text' | 'retry_chapter';
+  text?: string;
+  context?: { chapter_id: string; t: number };
+}
