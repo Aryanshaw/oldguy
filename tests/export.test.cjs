@@ -73,7 +73,7 @@ test('joins ready chapters in manifest order and copies script and sources byte 
   assert.deepEqual(fs.readdirSync(p.destDir).sort(), ['demo.mp4', 'script.md', 'sources.json']);
 });
 
-test('argv is an array with the concat flags, the real ffmpeg name and a temp output beside the final name', async (t) => {
+test('argv is an array with the concat flags, the real ffmpeg name and a temp output in a private folder inside dest', async (t) => {
   const p = project(t, [['a', 'ready']]);
   const f = fakeExec();
   await run(p, { exec: f.exec });
@@ -81,7 +81,8 @@ test('argv is an array with the concat flags, the real ffmpeg name and a temp ou
   assert.equal(file, 'ffm');
   assert.deepEqual(args.slice(0, 7), ['-nostdin', '-y', '-f', 'concat', '-safe', '0', '-i']);
   assert.deepEqual(args.slice(8, 12), ['-c', 'copy', '-movflags', '+faststart']);
-  assert.equal(args[12], path.join(p.destDir, `demo.mp4.tmp-${process.pid}`));
+  assert.equal(path.dirname(path.dirname(args[12])), fs.realpathSync(p.destDir));
+  assert.match(path.basename(path.dirname(args[12])), /^\.yap-export-/);
   assert.equal(args.length, 13);
 });
 
@@ -105,7 +106,7 @@ test('a chapter path with a line break is refused and nothing runs', async (t) =
   const odd = path.join(p.root, 'line\nbreak');
   fs.renameSync(p.yap, odd);
   const f = fakeExec();
-  await assert.rejects(run(p, { slugDir: path.join(odd, 'demo'), exec: f.exec }), (e) => !e.message.includes(p.root));
+  await assert.rejects(run(p, { slugDir: path.join(odd, 'demo'), exec: f.exec }), (e) => e.status === 409 && e.message === 'a chapter file path contains a line break, so it cannot be joined');
   assert.equal(f.calls.length, 0);
   assert.deepEqual(fs.readdirSync(p.destDir), []);
 });
@@ -248,12 +249,26 @@ test('route: ffmpeg failure is a one-line 500 with no absolute path', async (t) 
   assert.ok(!r.text.includes(p.root));
 });
 
-test('route: no chapter to join and full mode with drafts are 409', async (t) => {
+test('route: no chapter to join is 409 and nothing is written', async (t) => {
   const p = project(t, [['a', 'pending']]);
-  const { post } = await serve(t, p, { exec: fakeExec().exec });
+  const f = fakeExec();
+  const { post } = await serve(t, p, { exec: f.exec });
   const r = await post({ dest: p.destDir, mode: 'drafts' });
   assert.equal(r.status, 409);
+  assert.match(r.json.error, /no ready chapter/);
   assert.ok(!r.text.includes(p.root));
+  assert.equal(f.calls.length, 0);
+});
+
+test('route: full mode (the default) with a draft chapter is 409 naming it', async (t) => {
+  const p = project(t, [['a', 'ready', 'draft']]);
+  const f = fakeExec();
+  const { post } = await serve(t, p, { exec: f.exec });
+  const r = await post({ dest: p.destDir });
+  assert.equal(r.status, 409, r.text);
+  assert.ok(r.json.error.includes('a'));
+  assert.deepEqual(fs.readdirSync(p.destDir), []);
+  assert.equal(f.calls.length, 0);
 });
 
 test('route: bad dest values are 400 with a one-line message that does not echo the path', async (t) => {
@@ -312,4 +327,154 @@ test('route: needs the key', async (t) => {
     r.end(JSON.stringify({ dest: p.destDir }));
   });
   assert.equal(status, 403);
+});
+
+// ---- fix round 1 ----
+
+test('I-1: an unsafe manifest slug is refused (409): nothing written anywhere, ffmpeg not run', async (t) => {
+  for (const slug of ['../escaped', 'a/b', '-rf', '..', '', 'a\nb']) {
+    const p = project(t, [['a', 'ready']]);
+    const f = fakeExec();
+    await assert.rejects(run(p, { manifest: { ...p.manifest, slug }, exec: f.exec }), (e) => e.status === 409 && /slug/.test(e.message) && !e.message.includes(p.root), JSON.stringify(slug));
+    assert.equal(f.calls.length, 0);
+    assert.deepEqual(fs.readdirSync(p.destDir), []);
+    assert.deepEqual(fs.readdirSync(p.root).sort(), ['.yap', 'out']);
+  }
+});
+
+test('I-2: a real folder named ..x inside .yap is refused, a sibling named .yapx is accepted', async (t) => {
+  const p = project(t, [['a', 'ready']]);
+  const { post } = await serve(t, p, { exec: fakeExec().exec });
+  fs.mkdirSync(path.join(p.yap, '..x'));
+  assert.equal((await post({ dest: path.join(p.yap, '..x'), mode: 'drafts' })).status, 400);
+  const sib = path.join(p.root, '.yapx');
+  fs.mkdirSync(sib);
+  const ok = await post({ dest: sib, mode: 'drafts' });
+  assert.equal(ok.status, 200, ok.text);
+  assert.ok(fs.existsSync(path.join(sib, 'demo.mp4')));
+});
+
+// Wraps a fake exec so something happens in the middle of the ffmpeg run (before it writes its output).
+function duringRun(inner, hook) {
+  return async (file, args, opts) => { await hook(args); return inner.exec(file, args, opts); };
+}
+
+test('I-3: a file that appears at the chosen name during the run is not overwritten; the export lands on -2', async (t) => {
+  const p = project(t, [['a', 'ready']]);
+  const exec = duringRun(fakeExec(), () => fs.writeFileSync(path.join(p.destDir, 'demo.mp4'), 'MINE'));
+  const r = await run(p, { exec });
+  assert.deepEqual(r.files, ['demo-2.mp4', 'script-2.md', 'sources-2.json']);
+  assert.equal(fs.readFileSync(path.join(p.destDir, 'demo.mp4'), 'utf8'), 'MINE');
+  assert.equal(fs.readFileSync(path.join(p.destDir, 'demo-2.mp4'), 'utf8'), 'JOINED');
+  assert.deepEqual(fs.readdirSync(p.destDir).sort(), ['demo-2.mp4', 'demo.mp4', 'script-2.md', 'sources-2.json']);
+});
+
+test('I-3: a link planted at the old predictable temp name is left alone and its target unchanged', async (t) => {
+  const p = project(t, [['a', 'ready']]);
+  const victim = path.join(p.root, 'victim.txt');
+  fs.writeFileSync(victim, 'SAFE');
+  const planted = path.join(p.destDir, `demo.mp4.tmp-${process.pid}`);
+  fs.symlinkSync(victim, planted);
+  const r = await run(p, { exec: fakeExec().exec });
+  assert.equal(r.file, 'demo.mp4');
+  assert.equal(fs.readFileSync(victim, 'utf8'), 'SAFE');
+  assert.ok(fs.lstatSync(planted).isSymbolicLink());
+});
+
+test('I-3: ffmpeg writes into a private folder inside dest, which is gone after success and after failure', async (t) => {
+  const p = project(t, [['a', 'ready']]);
+  const seen = [];
+  const mk = (inner) => duringRun(inner, (args) => {
+    const dir = path.dirname(args[args.length - 1]);
+    seen.push({ parent: path.dirname(dir), mode: fs.statSync(dir).mode & 0o777 });
+  });
+  await run(p, { exec: mk(fakeExec()) });
+  await assert.rejects(run(p, { exec: mk(fakeExec({ failOn: [1, 2] })) }));
+  assert.equal(seen.length, 3);
+  for (const s of seen) assert.deepEqual(s, { parent: fs.realpathSync(p.destDir), mode: 0o700 });
+  assert.deepEqual(fs.readdirSync(p.destDir).sort(), ['demo.mp4', 'script.md', 'sources.json']);
+});
+
+test('6: script.md appearing during the run ends in success on the next suffix for all three', async (t) => {
+  const p = project(t, [['a', 'ready']]);
+  const exec = duringRun(fakeExec(), () => fs.writeFileSync(path.join(p.destDir, 'script.md'), 'MINE'));
+  const r = await run(p, { exec });
+  assert.deepEqual(r.files, ['demo-2.mp4', 'script-2.md', 'sources-2.json']);
+  assert.equal(fs.readFileSync(path.join(p.destDir, 'script.md'), 'utf8'), 'MINE');
+  assert.deepEqual(fs.readdirSync(p.destDir).sort(), ['demo-2.mp4', 'script-2.md', 'script.md', 'sources-2.json']);
+});
+
+test('4: a symlinked dest with a trailing slash or dot is refused', async (t) => {
+  const p = project(t, [['a', 'ready']]);
+  const { post } = await serve(t, p, { exec: fakeExec().exec });
+  const link = path.join(p.root, 'link');
+  fs.symlinkSync(p.destDir, link);
+  for (const dest of [link + '/', link + '//', link + '/.']) {
+    const r = await post({ dest, mode: 'drafts' });
+    assert.equal(r.status, 400, dest);
+  }
+  assert.deepEqual(fs.readdirSync(p.destDir), []);
+});
+
+test('5: server close() aborts a running export, waits for it, and nothing is published afterwards', async (t) => {
+  const p = project(t, [['a', 'ready']]);
+  let sawSignal = null;
+  let started;
+  const begun = new Promise((res) => { started = res; });
+  const inner = fakeExec();
+  const exec = (file, args, opts) => {
+    if (!args.includes('concat')) return inner.exec(file, args, opts);
+    sawSignal = opts && opts.signal;
+    started();
+    return new Promise((_, reject) => { sawSignal.addEventListener('abort', () => reject(new Error('aborted'))); });
+  };
+  const { srv, post } = await serve(t, p, { exec });
+  const pending = post({ dest: p.destDir, mode: 'drafts' }).catch(() => ({}));
+  await begun;
+  assert.ok(sawSignal && typeof sawSignal.aborted === 'boolean');
+  await srv.close();
+  assert.equal(sawSignal.aborted, true);
+  assert.equal(srv.state.exporting, false);
+  assert.deepEqual(fs.readdirSync(p.destDir), []);
+  await pending;
+  assert.deepEqual(fs.readdirSync(p.destDir), []);
+});
+
+test('5: an export whose ffmpeg ignores the abort still publishes nothing once stopped', async (t) => {
+  const p = project(t, [['a', 'ready']]);
+  const ac = new AbortController();
+  const inner = fakeExec();
+  const exec = async (file, args, opts) => { ac.abort(); return inner.exec(file, args, opts); };
+  await assert.rejects(run(p, { exec, signal: ac.signal }), (e) => e.status === 500 && /stopped/.test(e.message));
+  assert.deepEqual(fs.readdirSync(p.destDir), []);
+});
+
+test('7: the ffmpeg reason keeps 3/4 intact, drops a real folder name with spaces, and is capped at 200 characters', async (t) => {
+  const p = project(t, [['a', 'ready']]);
+  const spaced = path.join(p.root, 'My Project');
+  fs.symlinkSync(p.yap, spaced);
+  const viaLink = path.join(spaced, 'demo');
+  const real = fs.realpathSync(path.join(p.slugDir, 'chapters', 'a', 'chapter.mp4'));
+  const reasonOf = async (stderr, slugDir = p.slugDir) => {
+    const f = fakeExec({ failOn: [1, 2], stderr });
+    try { await run(p, { slugDir, exec: f.exec }); } catch (e) { return e.message; }
+    return null;
+  };
+  assert.equal(await reasonOf('frame 3/4 done'), 'ffmpeg failed: frame 3/4 done');
+  const m = await reasonOf(`${path.join(fs.realpathSync(p.yap), 'demo', 'chapters', 'a', 'chapter.mp4')}: bad`, viaLink);
+  assert.equal(m, 'ffmpeg failed: chapter.mp4: bad');
+  assert.ok(real.length > 0 && !m.includes('My Project'));
+  const long = await reasonOf('x'.repeat(500));
+  assert.ok(!long.includes('\n') && long.length <= 'ffmpeg failed: '.length + 200);
+});
+
+test('8: mode and other fields are type-checked before dest touches the disk', async (t) => {
+  const p = project(t, [['a', 'ready']]);
+  const { post } = await serve(t, p, { exec: fakeExec().exec });
+  const missing = path.join(p.root, 'nope');
+  for (const body of [{ dest: missing, mode: 7 }, { dest: missing, mode: 'drafts', extra: 1 }]) {
+    const r = await post(body);
+    assert.equal(r.status, 400);
+    assert.match(r.json.error, /mode|field/);
+  }
 });
