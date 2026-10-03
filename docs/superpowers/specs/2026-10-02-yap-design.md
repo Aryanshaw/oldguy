@@ -414,3 +414,144 @@ starts, because earlier phases change what later ones need.
 | 3. Player | Browser UI: timeline, tabs, pending segment, export | Worth building only once real chapters exist |
 | 4. Chat bridge | Browser questions become answers and new chapters | Riskiest and most novel, so it comes after the parts it needs are proven |
 | Polish | README, a demo video made by Yap about Yap, the doctor | Last |
+
+---
+
+## 14. Amendments of 2026-10-03 (from Phase 1)
+
+The owner approved amendments A1 to A9 on 2026-10-03. They supersede the sections they name; the accepted text above is left as written.
+
+### A1. Section 4.1, the chapter folder
+
+Current:
+
+```
+chapters/<id>/            id is stable and has no number in it
+  scene.html              the chapter's **standalone root composition** with its own
+                          `data-duration` (a sub-composition fragment cannot be rendered alone)
+  narration.txt  narration.wav  captions.vtt  captions.json (word timings)
+  chapter.mp4  poster.jpg
+  sources.json            sources used by this chapter
+```
+
+Proposed:
+
+```
+specs/<id>.json           the spec Claude hands to `yap scaffold`, one per chapter
+chapters/<id>/            id is a stable slug with no number in it
+  chapter.json            id, title, sources (file, lines, quote), sentences (claim|framing, source_ids), scene
+  narration.txt           the sentences joined by one space
+  narration.wav           16-bit 24 kHz mono, 40 ms lead and 120 ms tail silence
+  beats.json              one timed beat per sentence; timing "words" or "sentence-share"
+  captions.vtt  captions.json (word timings)
+  index.html              the chapter's **standalone root composition** with its own
+                          `data-duration` (Hyperframes renders a folder whose root page is index.html)
+  build.json              v2 fingerprint of the audited text, its commit and the six built files
+  chapter.mp4             present only after a successful render
+  render.json             the build.json hash the video was rendered from
+```
+
+And drop `poster.jpg` from 4.1 and from the manifest example in 4.2 (`"poster"`), or mark it "produced by
+Phase 2". Phase 1 does not make posters. The per-chapter `sources.json` is folded into `chapter.json`; the
+slug-level `sources.json` stays.
+
+### A2. Section 4.2, `verified_against_commit` per chapter
+
+Current (manifest example): `"verified_against_commit": "abc1234",` once per video.
+
+Proposed: keep the field, but state that its source is each chapter's `build.json`
+(`verified_against_commit`, full 40-character id or `null` when the project is not a git repo or `--root` was
+not given), and that chapters made at different times may carry different commits. Add to the chapter entry:
+`"verified_against_commit": "<40 hex or null>"`.
+
+### A3. Section 4.5 point 5, `session.json`
+
+Current: "writes `{session_id, transcript_path, cwd}` to `.yap/session.json` on every `startup` and `resume`".
+
+Proposed: "writes `{session_id, transcript_path, cwd, source, data_dir, updated_at}` to `.yap/session.json` on
+every `startup` and `resume`. `data_dir` is the plugin data folder Claude Code gave the hook
+(`CLAUDE_PLUGIN_DATA`), or `null` when that folder is not inside `<config>/plugins/data/`. Every `yap` command
+reads `data_dir` from the nearest `session.json` above the working folder when the variable is not in its own
+environment, because Claude Code sets it for hooks but not for Claude's shell (measured, Phase 1)."
+
+### A4. Section 5 step 1, the Hyperframes skills
+
+Current: "It does **not** install the Hyperframes domain skills: like `brag`, `SKILL.md` lists the ones it
+needs (`hyperframes-core`, `-animation`, `-creative`, `-keyframes`, `-cli`) in its "Read:" lines, and on first
+use Claude installs any that are missing with the Hyperframes `skills` subcommand".
+
+Proposed: "Yap ships no Hyperframes skills and never sends Claude to look for one. The exact pinned commands it
+needs (`npx --yes hyperframes@<version> check|snapshot|render|tts|transcribe`) are written inline in
+`references/render.md` and `narrate.md`." (In Phase 1 a reference to an unshipped skill made Claude search the
+whole disk for 51 s.)
+
+### A5. Section 5 steps 5 to 8, the per-chapter pipeline
+
+Current step 7 and 8 (summarised): gates per chapter (`hyperframes check`, dense snapshots, claim audit), then
+"each chapter renders at `--quality draft`, up to 3 chapters at once ... Each chapter is registered with the
+server as soon as it is ready ... A `delivery`-quality render then runs in the background".
+
+Proposed replacement for steps 5 to 8:
+
+- "**Scenes.** Four kit pieces in v1: `title`, `steps`, `code-card`, `callout`. A code card holds at most 68
+  columns per line (a tab counts 4) and never wraps; a longer line is shown as a prefix ending in a visible
+  `…`. The audit checks every card line against the repository, exactly like a quote."
+- "**Per-chapter pipeline, in story order.** For each chapter: scaffold, audit, narrate, then render as a
+  blocking foreground step before the next chapter starts. The first chapter is playable within about 150 s on
+  an 8 GB machine (measured). Claude never ends its turn while a render runs, and gives narrate and render a
+  10-minute command limit."
+- "**Check gate.** `yap render` runs `hyperframes check` on every chapter it is about to render and refuses the
+  chapter on any layout error; the skill does not get to render around it. Dense snapshots are a manual
+  tool for Claude, not a gate."
+- "**Render.** Draft quality, `--workers 2`, one chapter at a time in v1. The scheduler still supports a cap
+  of up to 3 with one lone retry, but the skill does not use it, because overlapping narrate and render on an
+  8 GB machine starved whisper and because a background render dies with a headless session. Whether Phase 2's
+  server restores overlap is an open decision. A `delivery`-quality re-render is deferred past Phase 2."
+- Drop "Generated WAVs are cached by a hash of their text" from step 6; Phase 1 caches at the render level
+  (`build.json` and `render.json`), and narrate always re-speaks.
+
+### A6. Section 5 step 6 / 5.6, captions
+
+Current: "Captions are always on."
+
+Proposed: "Captions are written as files (`captions.vtt`, `captions.json`) and are part of the build fingerprint.
+They are not burned into the mp4. Whether and how the player shows them (on by default, toggle) is decided in
+Phase 3." Today, a viewer of the raw mp4 sees no captions.
+
+### A7. Section 6, failure handling
+
+Add two bullets:
+
+- "**Chapter changed after narrate** (any of `chapter.json`, `narration.txt`, the wav, beats, captions or
+  `index.html`): `yap render` refuses it with a one-line redo instruction. The only recovery is fix the spec,
+  delete the folder, scaffold, audit, narrate again. Claude never edits those files in place."
+- "**Layout check fails** (`hyperframes check` reports clipped or overflowing text or a runtime error): the
+  chapter is `failed` with the check's first output line; the old video, if any, is kept; nothing renders until
+  the spec is fixed."
+
+And refine "Code changed later": "each chapter's `build.json` records the commit it was verified against (HEAD
+of `--root` at narrate time; a dirty working tree is not detected in v1)."
+
+### A8. Section 4.1 / 4.2, machine-readable story order (new)
+
+Current: order lives only in the manifest, which only the server writes; in Phase 1 it lives in `script.md`
+prose and in the order Claude passes to `--only`.
+
+Proposed: "The skill writes `.yap/<slug>/order.json`: `{"chapters": ["<id>", ...]}` in story order, before the
+first scaffold, and rewrites it when a chapter is added. Phase 2's server seeds the manifest's chapter order
+from it and then owns the order." (Alternative, if the owner prefers one file: an `order` list at the top of
+`sources.json`.) Without this, Phase 2 would have to parse `script.md` headings.
+
+### A9. Section 10, repository layout
+
+Current: `hooks/hooks.json  session-start.sh`. Actual: `hooks/session-start.cjs` (Node, not shell). And the
+`lib/` and `scene-kit/` folders plus `tests/` and `fixtures/` should be listed as they exist.
+
+### Phase 2 additions
+
+- Manifest chapter `status` values are `pending | rendering | ready | failed | stale`. `pending` = scaffolded or narrated, not rendered yet; `stale` = a video exists but no longer matches the audited build.
+- Manifest row fields `build_sha256` and `verified_against_commit`; order = array position (story index), so no stored `story_index` field is needed.
+- `claude_connected` in `GET /api/state`.
+- `GET /api/state` `thread` = viewer messages (from `events.jsonl`) merged with Claude's replies (from `thread.jsonl`) in time order.
+- `state/server.json` holds `url`, `key`, `port`, `pid`, `started_at`; file mode 0600.
+- The placeholder page at `GET /` (replaced by the real player in Phase 3).
