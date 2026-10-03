@@ -26,7 +26,7 @@ const COMMANDS = {
   reply: { summary: 'answer the viewer in the player chat (--in-reply-to, --text, --source)', run: runReply },
   'add-chapter': { summary: 'add a chapter to the story (--id, --after, --title, --parent, --reason)', run: runAddChapter },
   'set-status': { summary: 'set a chapter\'s status (--id, --status)', run: runSetStatus },
-  order: { summary: 'write the story order: yap order <id,id,...>', run: runOrder },
+  order: { summary: 'write the story order (and move chapters on a running page): yap order <id,id,...>', run: runOrder },
 };
 
 // Prints each command name with its one-line summary.

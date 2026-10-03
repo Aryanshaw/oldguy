@@ -420,3 +420,37 @@ test('M-4: a failed write of order.json exits 1 with one line, leaves the old fi
   assert.deepEqual(fs.readdirSync(blocked).sort(), ['chapters', 'order.json']);
   assert.ok(fs.statSync(path.join(blocked, 'order.json')).isDirectory());
 });
+
+test('order: with a server running, chapters already on the page move to the new order', async (t) => {
+  const { slugDir, manifest } = await withServer(t, ['alpha', 'beta', 'gamma']);
+  assert.deepEqual(manifest().chapters.map((c) => c.id), ['alpha', 'beta', 'gamma']);
+  const r = await run(runOrder, ['--dir', slugDir, 'gamma,alpha,beta']);
+  assert.deepEqual([r.code, r.out, r.err], [0, 'order written: 3 chapters; the page now shows the new order\n', '']);
+  assert.deepEqual(manifest().chapters.map((c) => c.id), ['gamma', 'alpha', 'beta']);
+  const same = await run(runOrder, ['--dir', slugDir, 'gamma,alpha,beta']);
+  assert.deepEqual([same.code, same.out], [0, 'order written: 3 chapters\n']);
+});
+
+test('order: a chapter the list does not name stays right after the chapter it followed; unknown ids are only written to the file', async (t) => {
+  const { slugDir, manifest } = await withServer(t, ['alpha', 'beta', 'gamma', 'delta']);
+  assert.deepEqual(manifest().chapters.map((c) => c.id), ['alpha', 'beta', 'delta', 'gamma']);
+  const r = await run(runOrder, ['--dir', slugDir, 'gamma,not-made-yet,alpha']);
+  assert.equal(r.code, 0);
+  assert.deepEqual(manifest().chapters.map((c) => c.id), ['gamma', 'alpha', 'beta', 'delta']);
+  assert.deepEqual(readOrder(slugDir).ids, ['gamma', 'not-made-yet', 'alpha']);
+});
+
+test('order: a server.json left by a dead server counts as no server; a server that answers badly exits 1 after writing the file', async (t) => {
+  const slugDir = slugFolder(t);
+  writeInfo(slugDir, { url: 'x', key: 'a'.repeat(32), port: await deadPort(), pid: process.pid, started_at: new Date().toISOString() });
+  const dead = await run(runOrder, ['--dir', slugDir, 'intro,outro']);
+  assert.deepEqual([dead.code, dead.out, dead.err], [0, 'order written: 2 chapters\n', '']);
+  const fake = net.createServer((s) => s.once('data', () => s.end('HTTP/1.1 500 Internal Server Error\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}'))).listen(0, '127.0.0.1');
+  await new Promise((resolve) => fake.once('listening', resolve));
+  t.after(() => fake.close());
+  writeInfo(slugDir, { url: 'x', key: 'a'.repeat(32), port: fake.address().port, pid: process.pid, started_at: new Date().toISOString() });
+  const bad = await run(runOrder, ['--dir', slugDir, 'outro,intro']);
+  assert.equal(bad.code, 1);
+  assert.match(bad.err, /^[^\n]*the page keeps its old order\n$/);
+  assert.deepEqual(readOrder(slugDir).ids, ['outro', 'intro']);
+});

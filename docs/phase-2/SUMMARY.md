@@ -934,12 +934,12 @@ re-ran the acceptance script against the real server: 61 of 61, no check changed
    next time that chapter's status or build changes, and at every restart, once its folder exists.
 4. The earlier ruling that a row without a folder is left alone was narrowed: at start, a row claiming a video
    with no folder becomes `failed`. Downside: none seen.
-5. Moving an existing chapter by rewriting `order.json` is NOT supported and was NOT fixed (there is no second
-   fix round). `skills/yap/SKILL.md` tells Claude to run `yap order` again when a chapter is moved; once the
-   manifest exists that changes nothing on the page. Adding and removing chapters works. The owner chooses:
-   change the skill's wording, or add a `yap reorder` command over the existing `reorder` operation of
-   `POST /api/chapters`. While open: Claude may believe a move took effect when the page still shows the
-   old order.
+5. Moving an existing chapter: at the final review this did not work (rewriting `order.json` changed nothing
+   once the manifest existed, though the skill tells Claude to run `yap order` again for a move). Fixed
+   afterwards at the owner's request, inside `yap order` itself rather than as a new command: after writing
+   `order.json` it asks a running server for its chapter list and sends the `reorder` operation, so the page
+   follows. A chapter the list does not name stays right after the chapter it followed. With no server running
+   it only writes the file, as before. The skill text needed no change.
 
 ### 11.4 Still open after the final round (add to section 8)
 
