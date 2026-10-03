@@ -61,6 +61,22 @@ rewritten to give the same result for every input (each listed in the ledger).
   types, so the checker needs them (shown by the first attempt of the player proof above, which failed until the Node
   types were provided). Phase 3 can either rely on `@types/node` (normal in a Vite project) or add a types-only entry file.
 
+## Old against new, command by command
+
+After the owner asked for an independent check and the reviewer could not be dispatched, the old code (`06f6320`, before
+the migration) and the new code (`24bd08d`) were run side by side on the same fixture project: 103 scenarios, each
+recording exit code, stdout, stderr and the files written, with paths, ports, keys, times and process ids masked.
+The scenarios cover help and bad commands; `audit`, `beats`, `captions`, `pad-wav`, `scaffold`, `render --dry-run`,
+`narrate`, `order`, `doctor` (text and JSON) with good and bad input; the SessionStart hook with good, garbage, empty and
+relative input (and the `session.json` it writes); a real detached server driven with `serve`, `add-chapter`,
+`set-status`, `order` and `reply`; and 17 raw HTTP calls (state, message, reply, chapters, heartbeat, ping, export, video,
+home, 404, 405, bad JSON, wrong types). **99 matched exactly. The other 4 differed only in expected ways:** the doctor's
+Node line now says `need 22.18 or newer` where it said `need 22 or newer` (the intended new floor; in both text and JSON
+output), and two server answers differed only by a clock value and a process id my masking missed. After masking those,
+all 103 are identical, and the files written (`chapter.json`, `narration.txt`, `manifest.json`, `order.json`, the event
+and thread files, caption and padded-audio output) are identical too. This is a self-run check, not an independent
+review; the harness was a throwaway script and is not kept in the repository.
+
 ## Final review (self-review, no independent reviewer was available)
 
 Re-checked at the end: stale `.cjs` mentions in source (one comment fixed), every `as` cast (the only uncommented ones
