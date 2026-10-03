@@ -10,6 +10,7 @@ const { runScaffold } = require('../lib/scaffold-cli.cjs');
 const { runNarrate } = require('../lib/narrate-cli.cjs');
 const { runRender } = require('../lib/render-cli.cjs');
 const { runServe } = require('../lib/server-cli.cjs');
+const { runReply, runAddChapter, runSetStatus, runOrder } = require('../lib/client-cli.cjs');
 
 // One row per command.
 const COMMANDS = {
@@ -22,6 +23,10 @@ const COMMANDS = {
   render: { summary: 'audit every chapter, then render the ones that pass to mp4', run: runRender },
   narrate: { summary: 'make a chapter\'s narration audio, beats, captions and page', run: runNarrate },
   serve: { summary: 'start the local video player server (--detach to run in the background)', run: runServe },
+  reply: { summary: 'answer the viewer in the player chat (--in-reply-to, --text, --source)', run: runReply },
+  'add-chapter': { summary: 'add a chapter to the story (--id, --after, --title, --parent, --reason)', run: runAddChapter },
+  'set-status': { summary: 'set a chapter\'s status (--id, --status)', run: runSetStatus },
+  order: { summary: 'write the story order: yap order <id,id,...>', run: runOrder },
 };
 
 // Prints each command name with its one-line summary.
