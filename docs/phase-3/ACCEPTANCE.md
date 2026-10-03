@@ -13,7 +13,7 @@ Needs: `HYPERFRAMES_FFMPEG_PATH` pointing at a working ffmpeg (Homebrew's ffmpeg
 | Keyed URL loads, title equals `manifest.title`, four timeline blocks, the fourth `rendering` | pass | title "demo" |
 | No console message, page error or `securitypolicyviolation` for the whole run | pass | the only console line is Chromium's log of the one 409 the test provokes (full export with drafts); asserted to occur exactly once |
 | Play: time passes 6.5 s within 12 s (two joins crossed) | pass | clock 0:06 to 0:09 |
-| Join: outgoing element's `ended` to the first painted frame of the incoming visible element (spike 6's metric; asserted <= 100 ms per join) | **FAIL** | before R18: 121/135, 131/121, 120/126 ms; after R18: 117/126, 121/129, 124/130 ms |
+| Join: outgoing element's `ended` to the first painted frame of the incoming visible element (spike 6's metric; asserted <= 160 ms per join, a regression guard set from measured data, see below) | pass | R20, three runs: 129/123, 128/134, 124/130 ms |
 | Audio coverage: each chapter's `played` ranges merge to one range covering [0, 2.9]; no `error` event; both `video.error` null; visible element not muted | pass | |
 | Caption cue "One intro caption line." visible in chapter one | pass | |
 | Escape closes the export dialog in a real browser | pass | |
@@ -25,7 +25,7 @@ Needs: `HYPERFRAMES_FFMPEG_PATH` pointing at a working ffmpeg (Homebrew's ffmpeg
 
 ### Join measurements
 
-Asserted: `ended` of the outgoing element to the first painted frame (`requestVideoFrameCallback`, `expectedDisplayTime`, visible element only) of the incoming one, at most 100 ms per join. Spec 5.1 rule 2 and spike 6 expect 20-35 ms. The assertion fails; the test is left failing on purpose.
+Asserted: `ended` of the outgoing element to the first painted frame (`requestVideoFrameCallback`, `expectedDisplayTime`, visible element only) of the incoming one, at most 160 ms per join (`JOIN_ENDED_TO_FRAME_MAX_MS`). Spec 5.1 rule 2 and spike 6 expect 20-35 ms; that does not reproduce on this machine (see "Join investigation"). The bar was first 100 ms and failed at 117-135 ms in every run; controller ruling R20 set it to 160 ms, the worst join in the investigation (about 132 ms; single e2e runs have reached 134-135 ms) plus about one frame. It is a regression guard against the swap getting slower, not the spec's target.
 
 Logged only (not asserted), per join, two runs of `npm run e2e`:
 
@@ -36,7 +36,7 @@ Logged only (not asserted), per join, two runs of `npm run e2e`:
 | 2 | 1 | 131 ms | 2 ms | none | 183 ms | 263 ms |
 | 2 | 2 | 121 ms | 2 ms | none | 167 ms | 264 ms |
 
-The raw `timeupdate` gap sits on Chromium's ~265 ms `timeupdate` cadence and says nothing about stalls. `canplay` did not fire on the incoming element after `ended` (it was already loaded). `play`/`playing` fire 2 ms after `ended` (one run 42 ms), so the call to play is prompt; the remaining ~120 ms until a frame is painted is not explained by these events. Cause not isolated. The `Cache-Control: no-store` suspicion is not supported: one request per chapter video during a play, none at the swap. The server header was not touched and no threshold was loosened.
+The raw `timeupdate` gap sits on Chromium's ~265 ms `timeupdate` cadence and says nothing about stalls. `canplay` did not fire on the incoming element after `ended` (it was already loaded). `play`/`playing` fire 2 ms after `ended` (one run 42 ms), so the call to play is prompt; the remaining ~120 ms until a frame is painted is not explained by these events. The `Cache-Control: no-store` suspicion is not supported: one request per chapter video during a play, none at the swap. The server header was not touched.
 
 After R18 (idle element hidden with `opacity: 0`, `pointer-events: none`, `aria-hidden` instead of `visibility: hidden`), three runs:
 
@@ -49,9 +49,20 @@ After R18 (idle element hidden with `opacity: 0`, `pointer-events: none`, `aria-
 | 3 | 1 | 124 ms | 7 ms | none | 183 ms | 265 ms |
 | 3 | 2 | 130 ms | 4 ms | none | 183 ms | 263 ms |
 
-No change: the hiding style is not the cause. `canplay` still does not fire on the incoming element. The assertion still fails; no other engine change was tried.
+No change: the hiding style makes no difference. `canplay` still does not fire on the incoming element. These runs failed the 100 ms bar then in force; no other engine change was tried.
 
-Environment caveat: headless Chromium; `expectedDisplayTime` may include compositor latency that spike 6 did not measure the same way. Owner or controller to decide whether the 100 ms bar is the right one for this harness or the engine needs work.
+Environment caveat: headless Chromium; `expectedDisplayTime` may include compositor latency that spike 6 did not measure the same way.
+
+After R20 (bar set to 160 ms, nothing else changed), three runs, all pass:
+
+| Run | Join | ended to first frame | play()/playing after ended | canplay | last frame to first frame | raw timeupdate gap |
+|---|---|---|---|---|---|---|
+| 1 | 1 | 129 ms | 27 ms | none | 200 ms | 242 ms |
+| 1 | 2 | 123 ms | 3 / 4 ms | none | 150 ms | 263 ms |
+| 2 | 1 | 128 ms | 2 ms | none | 183 ms | 257 ms |
+| 2 | 2 | 134 ms | 3 ms | none | 183 ms | 252 ms |
+| 3 | 1 | 124 ms | 2 ms | none | 183 ms | 256 ms |
+| 3 | 2 | 130 ms | 2 ms | none | 167 ms | 255 ms |
 
 ### Join investigation
 
@@ -71,7 +82,7 @@ Conclusions:
 - Muting accounts for about 30-40 ms (not 80+): audio output start-up after the swap. The player must play sound, so it cannot be muted.
 - Headed vs headless makes no difference (spike 6 headed: 78-96 ms).
 - Spike 6's recorded 20-35 ms did not reproduce with this machine, Chromium build and clips (even muted it reads 76-96 ms here). Clips or Chromium version are the remaining differences; they were not isolated further.
-- No player change was made. With sound on, a 100 ms bar is not reachable in this harness even by the spike's own page; the bar (or the 20-35 ms target) needs the controller's ruling. The e2e assertion stays at 100 ms and fails.
+- No player change was made. With sound on, a 100 ms bar is not reachable in this harness even by the spike's own page. Ruling R20 set the e2e bar to 160 ms (worst ~132 ms plus about one frame) as a regression guard; the 20-35 ms target is flagged for the owner.
 
 ## Manual look check
 
@@ -82,7 +93,7 @@ Done means (spec section 1):
 
 | # | Line | Result | Note |
 |---|---|---|---|
-| 1 | Several chapters play start to finish with no visible stall at a join | concern | plays 0:00 to 0:09 across two joins; ended to first frame 120-135 ms vs 20-35 ms expected (see above) |
+| 1 | Several chapters play start to finish with no visible stall at a join | met as far as this machine allows | about 120 ms join (about 3 frames at 25 fps), the same as spike 6's own page measured here; the 20-35 ms target in spec 5.1 rule 2 is not reproducible on this Chromium. Flagged for the owner. |
 | 2 | Timeline shows every chapter state and updates live over SSE | partial | ready and rendering seen in the browser; failed, stale, pending, follow-up and live updates are unit-tested only, the fixture does not produce them |
 | 3 | A question is posted, appears in the thread, survives a reload | pass | bubble with "waiting" and the "Claude isn't connected" notice |
 | 4 | Export writes the files to a folder the viewer names | pass | mp4, script.md, sources.json; the rendering chapter listed as left out |
