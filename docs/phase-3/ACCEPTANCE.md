@@ -53,6 +53,26 @@ No change: the hiding style is not the cause. `canplay` still does not fire on t
 
 Environment caveat: headless Chromium; `expectedDisplayTime` may include compositor latency that spike 6 did not measure the same way. Owner or controller to decide whether the 100 ms bar is the right one for this harness or the engine needs work.
 
+### Join investigation
+
+Throwaway script (not committed) ran spike 6's page (`plain` mode, opacity hiding) and the player against the e2e fixture's clips, same Playwright Chromium, 3 runs each. Metric: `ended` to the first painted frame of the visible element, in ms (`expectedDisplayTime`; the frame-callback time is about 0-17 ms lower), joins 1 and 2 per run.
+
+| Experiment | Run 1 | Run 2 | Run 3 |
+|---|---|---|---|
+| A. spike 6, muted, headless | 78 / 80 | 76 / 79 | 93 / 94 |
+| B. spike 6, unmuted, headless | 109 / 116 | 118 / 105 | 120 / 110 |
+| C. player, both videos muted, headless | 90 / 96 | 94 / 81 | 93 / 80 |
+| Player, unmuted, headless (as shipped) | 124 / 129 | 132 / 124 | 120 / 129 |
+| D. spike 6, muted, headed | 96 / 84 | 90 / 78 | 85 / 91 |
+| D. player, unmuted, headed | 128 / 117 | 119 / 128 | 122 / 117 |
+
+Conclusions:
+- The player matches spike 6's page under the same conditions: unmuted, both sit at about 105-130 ms; muted, both at about 76-96 ms. The player's swap code adds roughly 10 ms at most.
+- Muting accounts for about 30-40 ms (not 80+): audio output start-up after the swap. The player must play sound, so it cannot be muted.
+- Headed vs headless makes no difference (spike 6 headed: 78-96 ms).
+- Spike 6's recorded 20-35 ms did not reproduce with this machine, Chromium build and clips (even muted it reads 76-96 ms here). Clips or Chromium version are the remaining differences; they were not isolated further.
+- No player change was made. With sound on, a 100 ms bar is not reachable in this harness even by the spike's own page; the bar (or the 20-35 ms target) needs the controller's ruling. The e2e assertion stays at 100 ms and fails.
+
 ## Manual look check
 
 Screenshots (fixture, paused in chapter one with its caption showing): `docs/phase-3/acceptance-1440.png`, `docs/phase-3/acceptance-900.png`.
