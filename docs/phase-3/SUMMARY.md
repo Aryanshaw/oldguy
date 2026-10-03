@@ -23,7 +23,7 @@ page's one copy of the server's state; it loads `/api/state` once and then liste
 (SSE). *Spike 6* is the Phase 0 experiment (`spikes/06-chapter-gap`) that measured the join. The *ledger* is the
 work log `.superpowers/sdd/2026-10-03-phase-3-player/progress.md`. The *controller* is the Claude session that ran
 the plan, handed each task to an implementer and a reviewer, and took decisions where the plan was silent; those
-decisions are the *rulings* `R1` to `R20` in section 4.
+decisions are the *rulings* `R1` to `R21` in section 4.
 
 ---
 
@@ -151,6 +151,7 @@ story of section 5.1.
 | R18 | Task 12 fix round 2 | `VideoStage` hides the idle element with `opacity: 0`, `pointer-events: none` and `aria-hidden` (as spike 6 did), not `visibility: hidden`, since Chromium can skip compositing a visibility-hidden video and this was the one structural difference found; re-measure. | The gap stays and the controller rules on the bar with data. (It stayed: 117 to 130 ms.) |
 | R19 | Task 12 fix round 3 | A controlled experiment, not a guess: run spike 6's own page in the same headless Chromium with the e2e's clips, muted and unmuted, and the player with both elements muted; whichever factor moves the number is the cause; a fix lands only if small and isolated, else the numbers go to the owner. | One round spent on measurement. |
 | R20 | Task 12 fix round 4 | The e2e join bar becomes 160 ms per join (`ended` to first painted frame, unmuted, headless Chromium): a regression guard set from measured data (worst 132 ms plus about one frame), not the spec's 20 to 35 ms, which spike 6's own page cannot reach under these conditions. ACCEPTANCE.md records Done-means 1 as "met as far as this machine allows" and flags it for the owner; the engine is not the cause (R19 data); holding a target no implementation reaches here would leave the suite permanently red. | The owner may judge ~120 ms a visible stall; the next step is an overlap or early-start design that spec 5.1 rule 2 would have to allow. |
+| R21 | Task 13 | Task 13 (documents only) gets no separate task review; the final whole-branch review checks SUMMARY.md against the ledger and the code. | A documentation error survives with one review seat fewer. |
 
 Models used (ledger header, not a ruling): implementers on the mid-size model; prose tasks 0 and 13 on the
 judgment model; reviewers on the mid-size model, except the most capable one for Task 1 (path security), Task 6
@@ -394,6 +395,27 @@ the wrong model; the Task 12 fixture needs the static ffmpeg and a one-time `npx
 
 ## 8. Final review
 
-**Pending.** The controller runs the whole-branch review (`phase-2-server..phase-3-player`) after this summary
-and fills in this section: what it found, which Critical and Important findings were fixed and in which commits,
-which statements above those commits overtake, and the new deferred Minors.
+The whole-branch review (`20da770..a1fd4e6`) could not be sent to a reviewer agent: the session's auto-mode
+permission check blocked the dispatch. On the owner's standing instruction ("if it blocks again run native"),
+the controller ran it in its own session. It is therefore not an independent review.
+
+What was checked: root `npm test` 610 of 610, player tests 215 of 215, typecheck clean, `check:dist` matching a
+fresh build; `server/player-routes.cjs` and the `server/server.cjs` changes (guard order, the `..` segment check,
+asset name and type rules, sources filtering); `App.tsx` wiring; the CI workflow; the store's button presses;
+the engine's end-of-video recovery; this summary's rulings table against the ledger.
+
+Findings, both fixed test first in `a492d4a`:
+
+| # | Severity | Finding | Fix |
+|---|---|---|---|
+| F1 | Important | `store.press` had no in-flight guard. A double click posted `make_video`, `just_text` or `retry_chapter` twice, so Phase 4 would act twice (for example, make two chapters). | A key that is pending or already sent posts nothing; a failed press frees the key. Two store tests. |
+| F2 | Important | Engine: after the video ended, seek, play, pause, then the seek target breaks or is removed. The next `play()` replayed the finished last chapter while the position stayed at its end (Task 6's deferred P3/P4). | `recover()` returns to `ended` whenever the last chapter has finished and the state is not already `ended`, so `play()` restarts. One engine test. |
+
+After the fixes: player tests 218 of 218, root 610 of 610, typecheck clean, `player/dist` rebuilt and matching.
+The end-to-end test was not re-run after `a492d4a` (it needs the static ffmpeg and takes minutes); neither fix
+touches the join, export or notices that it exercises.
+
+Rulings: R21 was added after this summary was first written (row above). No ruling was overturned.
+
+Deferred Minors: all others in section 5 stay deferred. None blocks merge: each is cosmetic, test-only, or
+below what a viewer can see.
