@@ -57,6 +57,16 @@ function makeChapterSync(state) {
       if (typeof c.title === 'string' && c.title !== '' && c.title !== row.title) patch.title = c.title;
       next = setChapterFields(next, c.id, patch);
     }
+    // First look after start: a row that claims a build (ready, stale or rendering) but whose folder is not there is failed.
+    // Pending and failed rows may simply be waiting for their folder (added through the API), so they are left alone.
+    if (diff.first) {
+      const seen = new Set(diff.added.map((c) => c.id));
+      for (const row of next.chapters) {
+        if (!['ready', 'stale', 'rendering'].includes(row.status) || seen.has(row.id)) continue;
+        next = setChapterFields(next, row.id, { status: 'failed' });
+        lost.push(row.id);
+      }
+    }
     for (const id of diff.removed) {
       if (!next.chapters.some((r) => r.id === id)) continue;
       next = setChapterFields(next, id, { status: 'failed' });

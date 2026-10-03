@@ -699,3 +699,55 @@ test('I3: after a redo with a new title in chapter.json, the row title follows o
   await srv.state.watcher.pollNow();
   assert.equal(rowOf(slugDir, 'intro').title, 'A better title');
 });
+
+// ---- final review R6 amendment: rows that claim a build but have no folder at start ----
+
+// Writes manifest.json with the given [id, status] rows (no chapter folders at all).
+function seedManifest(slugDir, rows) {
+  let m = newManifest({ title: 'Demo', slug: 'demo', audience: 'beginner' });
+  for (const [id, status] of rows) m = insertChapter(m, { id, title: id, status });
+  saveManifest(path.join(slugDir, 'manifest.json'), m);
+}
+
+test('R6: at start a ready, stale or rendering row with no folder becomes failed', async (t) => {
+  const slugDir = tempSlug(t);
+  seedManifest(slugDir, [['r', 'ready'], ['s', 'stale'], ['g', 'rendering']]);
+  await boot(t, slugDir);
+  for (const id of ['r', 's', 'g']) assert.equal(rowOf(slugDir, id).status, 'failed', id);
+});
+
+test('R6: the first diff broadcasts one chapter event per such row with the reason "chapter folder is missing"', async (t) => {
+  const slugDir = tempSlug(t);
+  seedManifest(slugDir, [['r', 'ready'], ['p', 'pending']]);
+  const { makeChapterSync } = require('../server/chapter-sync.cjs');
+  const sent = [];
+  const file = path.join(slugDir, 'manifest.json');
+  const state = {
+    slugDir, deps: {}, logError: (e) => { throw e; }, hub: { broadcast: (event, data) => sent.push({ event, data }) },
+    updateManifest: async (change) => { const next = change(loadManifest(file)); saveManifest(file, next); return next; },
+  };
+  const sync = makeChapterSync(state);
+  await sync.onChange({ added: [], changed: [], removed: [], order: [], first: true });
+  assert.deepEqual(sent.map((e) => [e.event, e.data.id, e.data.reason]), [['chapter', 'r', 'chapter folder is missing']]);
+  sync.stop();
+});
+
+test('R6: a pending or failed row with no folder is left alone at start', async (t) => {
+  const slugDir = tempSlug(t);
+  seedManifest(slugDir, [['p', 'pending'], ['f', 'failed']]);
+  await boot(t, slugDir);
+  assert.equal(rowOf(slugDir, 'p').status, 'pending');
+  assert.equal(rowOf(slugDir, 'f').status, 'failed');
+});
+
+test('R6: a ready row whose folder exists stays ready, and only the first poll applies the rule', async (t) => {
+  const slugDir = tempSlug(t);
+  makeChapter(slugDir, 'here');
+  seedManifest(slugDir, [['here', 'ready']]);
+  const { srv } = await boot(t, slugDir);
+  assert.equal(rowOf(slugDir, 'here').status, 'ready');
+  // a row set ready through the API for a folder that does not exist yet is not touched by later polls
+  await call(srv, 'POST', '/api/chapters', { op: 'add', id: 'api-row' });
+  await srv.state.watcher.pollNow();
+  assert.equal(rowOf(slugDir, 'api-row').status, 'pending');
+});

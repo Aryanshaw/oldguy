@@ -220,7 +220,10 @@ function makeManifestQueue(slugDir, deps, isClosing) {
   const update = (change) => {
     if (isClosing()) return Promise.reject(Object.assign(new Error('the server is closing'), { status: 503 }));
     const job = tail.then(async () => {
-      const next = normaliseRows(await change(loadManifest(file)));
+      const loaded = loadManifest(file);
+      const next = normaliseRows(await change(loaded));
+      // A job that changed nothing (it handed back the very same manifest) saves nothing.
+      if (next === loaded) return next;
       if (deps.beforeSave) await deps.beforeSave();
       saveManifest(file, next, deps.fs ? { fs: deps.fs } : undefined);
       return next;

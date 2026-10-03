@@ -176,6 +176,14 @@ test('placeholder page lists chapters escaped, video only for ready ones, no scr
   m = insertChapter(m, { id: 'intro', title: '<script>alert(1)</script>', status: 'ready' });
   m = insertChapter(m, { id: 'next', title: 'Next one', status: 'pending' });
   saveManifest(path.join(slugDir, 'manifest.json'), m);
+  // A ready row needs a real ready folder: at start a ready row without one is marked failed.
+  const dir = path.join(slugDir, 'chapters', 'intro');
+  const build = JSON.stringify({ version: 2, verified_against_commit: 'a'.repeat(40), sha256: {} });
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'chapter.json'), JSON.stringify({ id: 'intro', title: '<script>alert(1)</script>' }));
+  fs.writeFileSync(path.join(dir, 'build.json'), build);
+  fs.writeFileSync(path.join(dir, 'render.json'), JSON.stringify({ build_sha256: require('../lib/build-record.cjs').sha256(build) }));
+  fs.writeFileSync(path.join(dir, 'chapter.mp4'), 'MP4');
   const { srv } = await start(t, { slugDir });
   const page = await req(srv, { headers: withKey(srv) });
   assert.match(page.body, /Tom &amp; &lt;b&gt;Jerry&lt;\/b&gt;/);
