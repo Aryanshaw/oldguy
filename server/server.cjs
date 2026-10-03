@@ -195,11 +195,19 @@ function removeOwnInfo(file, key) {
   } catch { /* missing or unreadable: nothing of ours to remove */ }
 }
 
-// The one place that keeps a promise about posters: a chapter that is not ready never keeps a poster picture, whoever
-// changed its status. A ready row without a poster is what makes the watcher take a new frame.
-function dropStalePosters(m) {
-  if (!m.chapters.some((c) => c.status !== 'ready' && c.poster !== null)) return m;
-  return { ...m, chapters: m.chapters.map((c) => (c.status !== 'ready' && c.poster !== null ? { ...c, poster: null } : c)) };
+// The one place that keeps the row-shape promises, whoever changed a row: a chapter that is not ready never keeps a
+// poster, and its video and captions paths are set exactly when it is ready (null otherwise). A ready row without a
+// poster is what makes the watcher take a new frame.
+function normaliseRows(m) {
+  const fix = (c) => {
+    const ready = c.status === 'ready';
+    const video = ready ? `chapters/${c.id}/chapter.mp4` : null;
+    const captions = ready ? `chapters/${c.id}/captions.vtt` : null;
+    const poster = ready ? c.poster : null;
+    return video === c.video && captions === c.captions && poster === c.poster ? c : { ...c, video, captions, poster };
+  };
+  const chapters = m.chapters.map(fix);
+  return chapters.every((c, i) => c === m.chapters[i]) ? m : { ...m, chapters };
 }
 
 // Makes the one queue every manifest change goes through: each job loads the file, changes it with a pure function from
@@ -209,7 +217,7 @@ function makeManifestQueue(slugDir, deps) {
   let tail = Promise.resolve();
   return (change) => {
     const job = tail.then(async () => {
-      const next = dropStalePosters(await change(loadManifest(file)));
+      const next = normaliseRows(await change(loadManifest(file)));
       if (deps.beforeSave) await deps.beforeSave();
       saveManifest(file, next, deps.fs ? { fs: deps.fs } : undefined);
       return next;

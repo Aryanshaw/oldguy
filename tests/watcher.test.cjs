@@ -641,3 +641,61 @@ test('N2: close() stops waiting for a stuck extraction after the bound; the port
   assert.equal(events.length, seen);
   assert.equal(fs.existsSync(path.join(dir, 'poster.jpg')), false);
 });
+
+// ---- final review I3: video and captions are set exactly when a chapter is ready; titles follow chapter.json ----
+
+test('I3: a chapter added through the API, then built on disk and found by one poll, has both paths set', async (t) => {
+  const slugDir = tempSlug(t);
+  const { srv } = await boot(t, slugDir);
+  assert.equal((await call(srv, 'POST', '/api/chapters', { op: 'add', id: 'later', title: 'Later' })).status, 200);
+  assert.equal(rowOf(slugDir, 'later').video, null);
+  makeChapter(slugDir, 'later');
+  await srv.state.watcher.pollNow();
+  const row = rowOf(slugDir, 'later');
+  assert.equal(row.status, 'ready');
+  assert.equal(row.video, 'chapters/later/chapter.mp4');
+  assert.equal(row.captions, 'chapters/later/captions.vtt');
+});
+
+test('I3: a ready row that goes stale has video, captions and poster all null', async (t) => {
+  const slugDir = tempSlug(t);
+  const dir = makeChapter(slugDir, 'intro');
+  const { srv } = await boot(t, slugDir);
+  await srv.state.posterIdle();
+  assert.ok(rowOf(slugDir, 'intro').poster && rowOf(slugDir, 'intro').video);
+  fs.writeFileSync(path.join(dir, 'build.json'), BUILD2);
+  await srv.state.watcher.pollNow();
+  const row = rowOf(slugDir, 'intro');
+  assert.equal(row.status, 'stale');
+  assert.deepEqual([row.video, row.captions, row.poster], [null, null, null]);
+});
+
+test('I3: a pending row found by the watcher has video and captions null', async (t) => {
+  const slugDir = tempSlug(t);
+  makeChapter(slugDir, 'draft', { withVideo: false });
+  await boot(t, slugDir);
+  const row = rowOf(slugDir, 'draft');
+  assert.equal(row.status, 'pending');
+  assert.deepEqual([row.video, row.captions], [null, null]);
+});
+
+test('I3: setting a row ready by the API also fills the paths, and failed clears them', async (t) => {
+  const slugDir = tempSlug(t);
+  makeChapter(slugDir, 'intro');
+  const { srv } = await boot(t, slugDir);
+  assert.equal((await setStatus(srv, 'intro', 'failed')).status, 200);
+  assert.deepEqual([rowOf(slugDir, 'intro').video, rowOf(slugDir, 'intro').captions], [null, null]);
+  assert.equal((await setStatus(srv, 'intro', 'ready')).status, 200);
+  assert.equal(rowOf(slugDir, 'intro').video, 'chapters/intro/chapter.mp4');
+});
+
+test('I3: after a redo with a new title in chapter.json, the row title follows on the next poll', async (t) => {
+  const slugDir = tempSlug(t);
+  const dir = makeChapter(slugDir, 'intro');
+  const { srv } = await boot(t, slugDir);
+  assert.equal(rowOf(slugDir, 'intro').title, 'Title intro');
+  fs.writeFileSync(path.join(dir, 'chapter.json'), JSON.stringify({ id: 'intro', title: 'A better title' }));
+  fs.writeFileSync(path.join(dir, 'build.json'), BUILD2);
+  await srv.state.watcher.pollNow();
+  assert.equal(rowOf(slugDir, 'intro').title, 'A better title');
+});

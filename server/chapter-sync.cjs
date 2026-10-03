@@ -16,7 +16,7 @@ function newRow(c) {
   return {
     id: c.id, title: c.title || c.id, parent_id: null, placement_reason: 'core', status: mapStatus(c.status, null), quality: 'draft',
     duration_s: c.durationS, build_sha256: c.buildSha256, verified_against_commit: c.verifiedAgainstCommit,
-    video: `chapters/${c.id}/chapter.mp4`, captions: `chapters/${c.id}/captions.vtt`, poster: null, question: null,
+    video: null, captions: null, poster: null, question: null,
   };
 }
 
@@ -44,7 +44,7 @@ function makeChapterSync(state) {
   const abort = new AbortController();
 
   // Applies one diff to the manifest. Fills `jobs` with chapters that need a poster and `lost` with ids whose folder is gone.
-  // A ready row without a poster means "take one"; the manifest queue clears the poster of any row that is not ready.
+  // A ready row without a poster means "take one"; the manifest queue sets video and captions (only when ready) and clears the poster of any row that is not ready.
   function applyDiff(m, diff, jobs, lost) {
     const listed = new Set(readOrder(slugDir).ids || []);
     let next = m;
@@ -53,7 +53,8 @@ function makeChapterSync(state) {
       if (c.status === 'ready' && (!row || !row.poster || row.build_sha256 !== c.buildSha256)) jobs.push(c);
       if (!row) { next = placeRow(next, newRow(c), diff.order, listed); continue; }
       const patch = { status: mapStatus(c.status, row.status), duration_s: c.durationS, build_sha256: c.buildSha256, verified_against_commit: c.verifiedAgainstCommit };
-      if (!row.title) patch.title = c.title || c.id;
+      // The chapter folder is the source of truth for the title once it exists.
+      if (typeof c.title === 'string' && c.title !== '' && c.title !== row.title) patch.title = c.title;
       next = setChapterFields(next, c.id, patch);
     }
     for (const id of diff.removed) {
