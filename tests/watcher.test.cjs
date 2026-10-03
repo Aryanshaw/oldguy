@@ -281,14 +281,14 @@ test('editing build.json turns the row stale (404 before the poll); re-rendering
   assert.equal(rowOf(slugDir, 'intro').status, 'ready');
   assert.equal(calls.length, 2);
   assert.equal((await api(srv, '/chapters/intro/video')).status, 200);
-  // flipping away and back with the same build does not take another frame
+  // a chapter that leaves ready loses its poster, so coming back ready (even with the same build) takes a fresh frame
   fs.rmSync(path.join(dir, 'chapter.mp4'));
   await srv.state.watcher.pollNow();
   fs.writeFileSync(path.join(dir, 'chapter.mp4'), 'MP4');
   await srv.state.watcher.pollNow();
   await srv.state.posterIdle();
   assert.equal(rowOf(slugDir, 'intro').status, 'ready');
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, 3);
 });
 
 test('a folder that disappears marks its row failed with the reason in the event; rows never scaffolded are left alone', async (t) => {
@@ -327,4 +327,205 @@ test('close() stops the watcher', async (t) => {
   const { srv } = await boot(t, slugDir, { deps: { clearInterval: () => { cleared++; } } });
   await srv.close();
   assert.equal(cleared, 1);
+});
+
+// ---- fix round 1: posters follow the current build; close waits for poster work ----
+// A fake exec whose calls can be held: a call for chapter `id` waits for gates[id]() to be released or for its abort signal.
+function gatedExec() {
+  const g = { calls: [], gates: {}, aborted: [], n: 0 };
+  g.hold = (id) => { let release; const p = new Promise((r) => { release = r; }); g.gates[id] = { p, release }; };
+  g.exec = async (file, args, opts = {}) => {
+    const tmp = args[args.length - 1];
+    const id = path.basename(path.dirname(tmp));
+    g.calls.push({ id, args });
+    fs.writeFileSync(tmp, `JPEG-${++g.n}`);
+    const gate = g.gates[id];
+    if (!gate) return;
+    delete g.gates[id];
+    await new Promise((resolve, reject) => {
+      gate.p.then(resolve);
+      if (opts.signal) opts.signal.addEventListener('abort', () => { g.aborted.push(id); reject(new Error('aborted')); });
+    });
+  };
+  return g;
+}
+const callsFor = (g, id) => g.calls.filter((c) => c.id === id).length;
+const tick = () => new Promise((r) => setImmediate(r));
+
+test('I1: ready A with poster -> edit to B (stale) -> restart -> re-render B takes a new frame, set by the new extraction', async (t) => {
+  const slugDir = tempSlug(t);
+  const dir = makeChapter(slugDir, 'intro');
+  const g = gatedExec();
+  const first = await startServer({ slugDir, deps: { exec: g.exec, ffmpeg: 'f', logError() {}, setInterval: () => ({ unref() {} }), clearInterval() {} } });
+  await first.state.posterIdle();
+  assert.equal(rowOf(slugDir, 'intro').poster, 'chapters/intro/poster.jpg');
+  assert.equal(fs.readFileSync(path.join(dir, 'poster.jpg'), 'utf8'), 'JPEG-1');
+  fs.writeFileSync(path.join(dir, 'build.json'), BUILD2);
+  await first.state.watcher.pollNow();
+  assert.equal(rowOf(slugDir, 'intro').status, 'stale');
+  assert.equal(rowOf(slugDir, 'intro').poster, null);
+  await first.close();
+  const second = await startServer({ slugDir, deps: { exec: g.exec, ffmpeg: 'f', logError() {}, setInterval: () => ({ unref() {} }), clearInterval() {} } });
+  t.after(() => second.close());
+  assert.equal(g.calls.length, 1);
+  fs.writeFileSync(path.join(dir, 'render.json'), JSON.stringify({ build_sha256: sha256(BUILD2) }));
+  await second.state.watcher.pollNow();
+  await second.state.posterIdle();
+  assert.equal(g.calls.length, 2);
+  assert.equal(rowOf(slugDir, 'intro').status, 'ready');
+  assert.equal(rowOf(slugDir, 'intro').poster, 'chapters/intro/poster.jpg');
+  assert.equal(fs.readFileSync(path.join(dir, 'poster.jpg'), 'utf8'), 'JPEG-2');
+});
+
+test('I1: a chapter whose folder vanishes loses its poster; the same build returning gets a new extraction', async (t) => {
+  const slugDir = tempSlug(t);
+  const dir = makeChapter(slugDir, 'intro');
+  const g = gatedExec();
+  const { srv } = await boot(t, slugDir, { deps: { exec: g.exec } });
+  await srv.state.posterIdle();
+  const saved = fs.readdirSync(dir).map((f) => [f, fs.readFileSync(path.join(dir, f))]);
+  fs.rmSync(dir, { recursive: true });
+  await srv.state.watcher.pollNow();
+  assert.equal(rowOf(slugDir, 'intro').poster, null);
+  fs.mkdirSync(dir);
+  for (const [f, b] of saved) if (f !== 'poster.jpg') fs.writeFileSync(path.join(dir, f), b);
+  await srv.state.watcher.pollNow();
+  await srv.state.posterIdle();
+  assert.equal(rowOf(slugDir, 'intro').status, 'ready');
+  assert.equal(g.calls.length, 2);
+  assert.equal(rowOf(slugDir, 'intro').poster, 'chapters/intro/poster.jpg');
+});
+
+test('I2: close() aborts a pending extraction, waits for it, writes nothing and broadcasts nothing afterwards, removes the temp file', async (t) => {
+  const slugDir = tempSlug(t);
+  const dir = makeChapter(slugDir, 'intro');
+  makeChapter(slugDir, 'second');
+  const g = gatedExec();
+  g.hold('intro');
+  const { srv, events } = await boot(t, slugDir, { deps: { exec: g.exec } });
+  await tick();
+  assert.equal(callsFor(g, 'intro'), 1);
+  assert.deepEqual(g.aborted, []);
+  await srv.close();
+  assert.deepEqual(g.aborted, ['intro']);
+  const manifestText = fs.readFileSync(path.join(slugDir, 'manifest.json'), 'utf8');
+  const seen = events.length;
+  await tick(); await tick();
+  assert.equal(fs.readFileSync(path.join(slugDir, 'manifest.json'), 'utf8'), manifestText);
+  assert.equal(events.length, seen);
+  assert.equal(callsFor(g, 'second'), 0, 'queued jobs never start after close');
+  assert.deepEqual(fs.readdirSync(dir).filter((f) => f.includes('.tmp-')), []);
+  assert.equal(rowOf(slugDir, 'intro').poster, null);
+});
+
+test('I2: an exec that ignores the abort and finishes late still writes no poster and no manifest change', async (t) => {
+  const slugDir = tempSlug(t);
+  const dir = makeChapter(slugDir, 'intro');
+  let release;
+  const held = new Promise((r) => { release = r; });
+  const exec = async (f, args) => { fs.writeFileSync(args[args.length - 1], 'LATE'); await held; };
+  const { srv } = await boot(t, slugDir, { deps: { exec } });
+  await tick();
+  const closing = srv.close();
+  await tick();
+  release();
+  await closing;
+  assert.equal(fs.existsSync(path.join(dir, 'poster.jpg')), false);
+  assert.equal(rowOf(slugDir, 'intro').poster, null);
+  assert.deepEqual(fs.readdirSync(dir).filter((f) => f.includes('.tmp-')), []);
+});
+
+test('I3a: a re-render (A -> B) during A\'s extraction discards A\'s frame; exactly one extraction runs for B and its frame is the poster', async (t) => {
+  const slugDir = tempSlug(t);
+  const dir = makeChapter(slugDir, 'intro');
+  const g = gatedExec();
+  g.hold('intro');
+  const gateA = g.gates.intro;
+  const { srv } = await boot(t, slugDir, { deps: { exec: g.exec } });
+  await tick();
+  fs.writeFileSync(path.join(dir, 'build.json'), BUILD2);
+  fs.writeFileSync(path.join(dir, 'render.json'), JSON.stringify({ build_sha256: sha256(BUILD2) }));
+  await srv.state.watcher.pollNow();
+  g.hold('intro');
+  const gateB = g.gates.intro;
+  gateA.release();
+  await tick(); await tick();
+  // A's frame is finished but the build moved on: it must not be published while B is still being taken
+  assert.equal(fs.existsSync(path.join(dir, 'poster.jpg')), false);
+  assert.equal(rowOf(slugDir, 'intro').poster, null);
+  gateB.release();
+  await srv.state.posterIdle();
+  assert.equal(callsFor(g, 'intro'), 2);
+  assert.equal(rowOf(slugDir, 'intro').poster, 'chapters/intro/poster.jpg');
+  assert.equal(fs.readFileSync(path.join(dir, 'poster.jpg'), 'utf8'), 'JPEG-2');
+  assert.deepEqual(fs.readdirSync(dir).filter((f) => f.includes('.tmp-')), []);
+});
+
+test('I3b: polls that report the same ready build while its extraction is pending queue exactly one extraction', async (t) => {
+  const slugDir = tempSlug(t);
+  const dir = makeChapter(slugDir, 'intro');
+  const g = gatedExec();
+  g.hold('intro');
+  const gateA = g.gates.intro;
+  const { srv } = await boot(t, slugDir, { deps: { exec: g.exec } });
+  await tick();
+  fs.renameSync(path.join(dir, 'chapter.mp4'), path.join(dir, 'away.mp4'));
+  await srv.state.watcher.pollNow();
+  fs.renameSync(path.join(dir, 'away.mp4'), path.join(dir, 'chapter.mp4'));
+  await srv.state.watcher.pollNow();
+  assert.equal(rowOf(slugDir, 'intro').status, 'ready');
+  gateA.release();
+  await srv.state.posterIdle();
+  assert.equal(callsFor(g, 'intro'), 1);
+  assert.equal(rowOf(slugDir, 'intro').poster, 'chapters/intro/poster.jpg');
+});
+
+test('I3c: an old job whose pre-check fails does not clear the marker of the newer build, so no duplicate extraction', async (t) => {
+  const slugDir = tempSlug(t);
+  makeChapter(slugDir, 'aaa');
+  makeChapter(slugDir, 'bbb');
+  const dirB = path.join(slugDir, 'chapters', 'bbb');
+  const g = gatedExec();
+  g.hold('aaa');
+  const gateFirst = g.gates.aaa;
+  const { srv } = await boot(t, slugDir, { deps: { exec: g.exec } });
+  await tick();
+  // aaa is in flight; bbb (build A) waits behind it. Rebuild bbb to B: its old job will fail its pre-check.
+  fs.writeFileSync(path.join(dirB, 'build.json'), BUILD2);
+  fs.writeFileSync(path.join(dirB, 'render.json'), JSON.stringify({ build_sha256: sha256(BUILD2) }));
+  await srv.state.watcher.pollNow();
+  g.hold('bbb');
+  const gateB = g.gates.bbb;
+  // aaa finishes: the old bbb job fails its pre-check, then the new one starts and is held in flight
+  gateFirst.release();
+  await tick(); await tick();
+  assert.equal(callsFor(g, 'bbb'), 1);
+  // flip away and back with the same build B while its extraction is running
+  fs.renameSync(path.join(dirB, 'chapter.mp4'), path.join(dirB, 'away.mp4'));
+  await srv.state.watcher.pollNow();
+  fs.renameSync(path.join(dirB, 'away.mp4'), path.join(dirB, 'chapter.mp4'));
+  await srv.state.watcher.pollNow();
+  gateB.release();
+  await srv.state.posterIdle();
+  assert.equal(callsFor(g, 'bbb'), 1);
+  assert.equal(rowOf(slugDir, 'bbb').poster, 'chapters/bbb/poster.jpg');
+});
+
+test('a row failed because its folder vanished recovers to the scan status when the folder returns', async (t) => {
+  for (const kind of ['ready', 'stale', 'rendering']) {
+    const slugDir = tempSlug(t);
+    const dir = makeChapter(slugDir, 'intro');
+    const { srv } = await boot(t, slugDir);
+    await srv.state.posterIdle();
+    fs.rmSync(dir, { recursive: true });
+    await srv.state.watcher.pollNow();
+    assert.equal(rowOf(slugDir, 'intro').status, 'failed');
+    if (kind === 'ready') makeChapter(slugDir, 'intro');
+    if (kind === 'stale') { makeChapter(slugDir, 'intro'); fs.writeFileSync(path.join(dir, 'build.json'), BUILD2); }
+    if (kind === 'rendering') { makeChapter(slugDir, 'intro', { withVideo: false }); fs.mkdirSync(path.join(dir, 'work-1')); }
+    await srv.state.watcher.pollNow();
+    await srv.state.posterIdle();
+    assert.equal(rowOf(slugDir, 'intro').status, kind);
+    await srv.close();
+  }
 });

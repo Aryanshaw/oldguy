@@ -29,7 +29,8 @@ test('extractPoster runs ffmpeg with an argv array and absolute paths, then move
   const calls = [];
   await extractPoster({ ffmpeg: 'ffmpeg', mp4, out, atS: 1, exec: fakeExec(calls) });
   assert.equal(calls.length, 1);
-  const tmp = path.join(dir, `poster.jpg.tmp-${process.pid}`);
+  const tmp = calls[0].args[calls[0].args.length - 1];
+  assert.match(path.relative(dir, tmp), new RegExp(`^poster\\.jpg\\.tmp-${process.pid}-\\d+$`));
   assert.deepEqual(calls[0], { file: 'ffmpeg', args: ['-nostdin', '-y', '-ss', '1', '-i', mp4, '-frames:v', '1', '-q:v', '3', '-f', 'image2', tmp] });
   assert.equal(fs.readFileSync(out, 'utf8'), 'JPEG');
   assert.equal(fs.existsSync(tmp), false);
@@ -52,8 +53,7 @@ test('a relative path is made absolute, so an id like --evil can never be read a
 
 test('a failing ffmpeg rejects, leaves no temp file and no poster', async (t) => {
   const dir = tempDir(t);
-  const tmp = path.join(dir, `poster.jpg.tmp-${process.pid}`);
-  const exec = async (file, args) => { fs.writeFileSync(tmp, 'half'); throw new Error('ffmpeg exploded'); };
+  const exec = async (file, args) => { fs.writeFileSync(args[args.length - 1], 'half'); throw new Error('ffmpeg exploded'); };
   await assert.rejects(extractPoster({ ffmpeg: 'ffmpeg', mp4: path.join(dir, 'chapter.mp4'), out: path.join(dir, 'poster.jpg'), atS: 1, exec }), /ffmpeg exploded/);
   assert.deepEqual(fs.readdirSync(dir), []);
 });
@@ -62,4 +62,31 @@ test('ffmpeg that exits fine but writes nothing is a failure, not a missing post
   const dir = tempDir(t);
   await assert.rejects(extractPoster({ ffmpeg: 'ffmpeg', mp4: path.join(dir, 'chapter.mp4'), out: path.join(dir, 'poster.jpg'), atS: 1, exec: fakeExec([], { writeNothing: true }) }));
   assert.deepEqual(fs.readdirSync(dir), []);
+});
+
+test('exec receives an abort signal; aborting rejects and leaves no temp file', async (t) => {
+  const dir = tempDir(t);
+  const ctl = new AbortController();
+  let seen;
+  const exec = (file, args, opts) => new Promise((resolve, reject) => {
+    seen = opts.signal;
+    fs.writeFileSync(args[args.length - 1], 'half');
+    opts.signal.addEventListener('abort', () => reject(new Error('aborted')));
+  });
+  const p = extractPoster({ ffmpeg: 'ffmpeg', mp4: path.join(dir, 'chapter.mp4'), out: path.join(dir, 'poster.jpg'), atS: 1, exec, signal: ctl.signal });
+  await new Promise((r) => setImmediate(r));
+  assert.equal(seen, ctl.signal);
+  ctl.abort();
+  await assert.rejects(p, /aborted/);
+  assert.deepEqual(fs.readdirSync(dir), []);
+});
+
+test('beforeCommit returning false discards the frame: no poster, no temp file, resolves false', async (t) => {
+  const dir = tempDir(t);
+  const out = path.join(dir, 'poster.jpg');
+  fs.writeFileSync(out, 'OLD');
+  const done = await extractPoster({ ffmpeg: 'ffmpeg', mp4: path.join(dir, 'chapter.mp4'), out, atS: 1, exec: fakeExec([]), beforeCommit: () => false });
+  assert.equal(done, false);
+  assert.deepEqual(fs.readdirSync(dir), ['poster.jpg']);
+  assert.equal(fs.readFileSync(out, 'utf8'), 'OLD');
 });

@@ -2,7 +2,7 @@
 // Keeps manifest.json in step with the chapter folders: the watcher's changes become manifest rows, and each ready
 // chapter gets a poster picture afterwards. Every manifest change goes through state.updateManifest.
 const path = require('node:path');
-const { insertChapter, reorderChapters, setChapterFields } = require('../lib/manifest.cjs');
+const { insertChapter, reorderChapters, setChapterFields, loadManifest } = require('../lib/manifest.cjs');
 const { readOrder, scanChapter } = require('../lib/chapter-scan.cjs');
 const { extractPoster, ffmpegPath, posterTime } = require('../lib/poster.cjs');
 
@@ -32,32 +32,37 @@ function placeRow(m, row, order, listed) {
   return reorderChapters(next, [row.id, ...m.chapters.map((c) => c.id)]);
 }
 
-// Builds the sync: onChange(diff) for the watcher, and posterIdle() that resolves when no poster work is waiting.
+// Builds the sync: onChange(diff) for the watcher, stop() to wind it down, and posterIdle() that resolves when no poster
+// work is waiting.
 function makeChapterSync(state) {
   const { slugDir, deps } = state;
-  // The build each poster picture was taken from (this run), so a rebuilt chapter gets a new picture.
-  const posterBuild = new Map();
-  // Builds already queued or taken, so one build never gets two extractions.
-  const attempted = new Map();
+  const manifestFile = path.join(slugDir, 'manifest.json');
+  // Poster jobs queued or running, keyed "<id>@<build>", so one build never gets two extractions at once.
+  const attempted = new Set();
   let posterTail = Promise.resolve();
+  let closed = false;
+  const abort = new AbortController();
 
   // Applies one diff to the manifest. Fills `jobs` with chapters that need a poster and `lost` with ids whose folder is gone.
+  // A chapter that stops being ready loses its poster in the same change, so a ready row without a poster always means
+  // "take one" and no memory of older builds is needed.
   function applyDiff(m, diff, jobs, lost) {
     const listed = new Set(readOrder(slugDir).ids || []);
     let next = m;
     for (const c of [...diff.added, ...diff.changed]) {
       const row = next.chapters.find((r) => r.id === c.id);
-      if (row && row.poster && !posterBuild.has(c.id)) posterBuild.set(c.id, row.build_sha256);
-      const basis = row ? (posterBuild.has(c.id) ? posterBuild.get(c.id) : row.build_sha256) : null;
-      if (c.status === 'ready' && (!row || !row.poster || basis !== c.buildSha256)) jobs.push(c);
+      if (c.status === 'ready' && (!row || !row.poster || row.build_sha256 !== c.buildSha256)) jobs.push(c);
       if (!row) { next = placeRow(next, newRow(c), diff.order, listed); continue; }
-      const patch = { status: mapStatus(c.status, row.status), duration_s: c.durationS, build_sha256: c.buildSha256, verified_against_commit: c.verifiedAgainstCommit };
+      const status = mapStatus(c.status, row.status);
+      const patch = { status, duration_s: c.durationS, build_sha256: c.buildSha256, verified_against_commit: c.verifiedAgainstCommit };
       if (!row.title) patch.title = c.title || c.id;
+      if (row.status === 'ready' && status !== 'ready') patch.poster = null;
       next = setChapterFields(next, c.id, patch);
     }
     for (const id of diff.removed) {
-      if (!next.chapters.some((r) => r.id === id)) continue;
-      next = setChapterFields(next, id, { status: 'failed' });
+      const row = next.chapters.find((r) => r.id === id);
+      if (!row) continue;
+      next = setChapterFields(next, id, row.status === 'ready' ? { status: 'failed', poster: null } : { status: 'failed' });
       lost.push(id);
     }
     return next;
@@ -68,28 +73,45 @@ function makeChapterSync(state) {
     try { state.hub.broadcast('chapter', { op: 'scan', ...data }); } catch (err) { state.logError(err); }
   }
 
-  // Takes one poster picture and records it in the manifest. Failures are logged and leave the chapter as it was.
-  async function takePoster(c) {
+  // True when the folder still shows this chapter ready with this exact build, and the manifest row says the same.
+  function stillCurrent(c) {
+    const now = scanChapter(path.join(slugDir, 'chapters', c.id));
+    if (now.status !== 'ready' || now.buildSha256 !== c.buildSha256) return false;
+    const row = loadManifest(manifestFile).chapters.find((r) => r.id === c.id);
+    return Boolean(row) && row.status === 'ready' && row.build_sha256 === c.buildSha256;
+  }
+
+  // Takes one poster picture and records it in the manifest. The frame is only put in place if, just before that, the
+  // chapter is still ready with the same build and the server is still open. Failures are logged and change nothing.
+  async function takePoster(c, key) {
     const dir = path.join(slugDir, 'chapters', c.id);
-    const now = scanChapter(dir);
-    if (now.status !== 'ready' || now.buildSha256 !== c.buildSha256) { attempted.delete(c.id); return; }
     try {
-      await extractPoster({ ffmpeg: deps.ffmpeg || ffmpegPath(), mp4: path.join(dir, 'chapter.mp4'), out: path.join(dir, 'poster.jpg'), atS: posterTime(c.durationS), exec: deps.exec });
-      const manifest = await state.updateManifest((m) => (m.chapters.some((r) => r.id === c.id) ? setChapterFields(m, c.id, { poster: `chapters/${c.id}/poster.jpg` }) : m));
-      posterBuild.set(c.id, c.buildSha256);
+      if (closed || !stillCurrent(c)) return;
+      const placed = await extractPoster({
+        ffmpeg: deps.ffmpeg || ffmpegPath(), mp4: path.join(dir, 'chapter.mp4'), out: path.join(dir, 'poster.jpg'), atS: posterTime(c.durationS),
+        exec: deps.exec, signal: abort.signal, beforeCommit: () => !closed && stillCurrent(c),
+      });
+      if (!placed || closed) return;
+      const manifest = await state.updateManifest((m) => {
+        const row = m.chapters.find((r) => r.id === c.id);
+        return row && row.status === 'ready' && row.build_sha256 === c.buildSha256 ? setChapterFields(m, c.id, { poster: `chapters/${c.id}/poster.jpg` }) : m;
+      });
       tell({ id: c.id, manifest });
     } catch (err) {
-      attempted.delete(c.id);
-      state.logError(err);
+      if (!closed) state.logError(err);
+    } finally {
+      attempted.delete(key);
     }
   }
 
-  // Queues poster pictures one at a time, skipping a build that was already queued or taken.
+  // Queues poster pictures one at a time, skipping a build that is already queued or running. Nothing is queued once closed.
   function queuePosters(jobs) {
+    if (closed) return;
     for (const c of jobs) {
-      if (attempted.get(c.id) === c.buildSha256) continue;
-      attempted.set(c.id, c.buildSha256);
-      posterTail = posterTail.then(() => takePoster(c));
+      const key = `${c.id}@${c.buildSha256}`;
+      if (attempted.has(key)) continue;
+      attempted.add(key);
+      posterTail = posterTail.then(() => takePoster(c, key));
     }
   }
 
@@ -97,13 +119,20 @@ function makeChapterSync(state) {
   async function onChange(diff) {
     const jobs = [];
     const lost = [];
+    // the job may run again, so it starts from empty lists each time
     const manifest = await state.updateManifest((m) => { jobs.length = 0; lost.length = 0; return applyDiff(m, diff, jobs, lost); });
     if (diff.added.length || diff.changed.length) tell({ manifest });
     for (const id of lost) tell({ id, reason: 'chapter folder is missing', manifest });
     queuePosters(jobs);
   }
 
-  return { onChange, posterIdle: () => posterTail };
+  // Closes the queue: no new job starts, a running ffmpeg is told to stop, and a frame that finishes later is thrown away.
+  function stop() {
+    closed = true;
+    abort.abort();
+  }
+
+  return { onChange, stop, posterIdle: () => posterTail };
 }
 
 module.exports = { makeChapterSync };

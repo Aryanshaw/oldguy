@@ -241,14 +241,20 @@ async function startServer({ slugDir, key = crypto.randomBytes(16).toString('hex
     setInterval: deps.setInterval, clearInterval: deps.clearInterval,
   });
   await state.watcher.pollNow();
-  // Stops the watcher first, then the server, drops open connections so the port is freed, and removes state/server.json.
-  const close = () => new Promise((resolve) => {
+  // Stops the watcher and the poster work (a running ffmpeg is told to stop, and both are waited for), then the server:
+  // drops open connections so the port is freed and removes state/server.json.
+  const close = async () => {
     state.watcher.stop();
-    fs.rmSync(infoFile, { force: true });
-    hub.close();
-    server.close(() => resolve());
-    server.closeAllConnections();
-  });
+    sync.stop();
+    await state.watcher.idle();
+    await sync.posterIdle();
+    await new Promise((resolve) => {
+      fs.rmSync(infoFile, { force: true });
+      hub.close();
+      server.close(() => resolve());
+      server.closeAllConnections();
+    });
+  };
   return { url, key, port: actualPort, address: bound.address, family: bound.family, server, state, close };
 }
 
