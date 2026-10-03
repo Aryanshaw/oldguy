@@ -94,7 +94,7 @@ milliseconds.
 | `1.server-json-fields` | PASS | keys url, key, port, pid, started_at; url is `http://127.0.0.1:<port>/?key=<key>` |
 | `1.pid-alive` | PASS | the pid is a running process |
 | `1.key-in-query-302-cookie` | PASS | `GET /?key=<key>`: 302, `Location: /`, `Set-Cookie: yap_key_<port>=<key>; HttpOnly; SameSite=Strict; Path=/` |
-| `1.cookie-get-page-200-lists-chapters` | PASS | `GET /` with that cookie: 200 `text/html; charset=utf-8`, all 4 titles in story order, 3 `<video>` elements (the stale chapter has none) |
+| `1.cookie-get-page-200-serves-player` | PASS | `GET /` with that cookie: 200 `text/html`, body is the built `player/dist/index.html`, its script asset returns 200 (Phase 3 replaced the Phase 2 placeholder chapter list) |
 
 ## Step 2: key guard, manifest, posters, media
 

@@ -379,14 +379,16 @@ async function step1(detach) {
     if (hit) ctx.cookie = want;
     return [r.status === 302 && Boolean(hit) && r.headers.location === '/', `${r.status}, Location ${r.headers.location}, Set-Cookie "${cookies.join(' | ').replace(ctx.key, '<key>')}"`];
   });
-  await check('1.cookie-get-page-200-lists-chapters', async () => {
-    const r = await httpRequest({ path: '/', headers: { cookie: ctx.cookie || `yap_key_${ctx.port}=${ctx.key}` } });
+  // Phase 3 replaced the Phase 2 placeholder chapter list with the built player page.
+  await check('1.cookie-get-page-200-serves-player', async () => {
+    const headers = { cookie: ctx.cookie || `yap_key_${ctx.port}=${ctx.key}` };
+    const r = await httpRequest({ path: '/', headers });
     const html = r.body.toString('utf8');
-    const at = CHAPTERS.map((c) => html.indexOf(`<h2>${c.title}</h2>`));
-    const inOrder = at.every((v, i) => v >= 0 && (i === 0 || v > at[i - 1]));
-    const videos = (html.match(/<video /g) || []).length;
-    return [r.status === 200 && /^text\/html/.test(r.headers['content-type']) && inOrder && videos === READY_IDS.length,
-      `${r.status} ${r.headers['content-type']}; all 4 titles in story order: ${inOrder}; ${videos} <video> elements`];
+    const built = fs.readFileSync(path.join(__dirname, '..', 'player', 'dist', 'index.html'), 'utf8');
+    const script = /<script[^>]+src="([^"]+)"/.exec(html);
+    const asset = script ? await httpRequest({ path: script[1], headers }) : { status: 0 };
+    return [r.status === 200 && /^text\/html/.test(r.headers['content-type']) && html === built && asset.status === 200,
+      `${r.status} ${r.headers['content-type']}; body is player/dist/index.html: ${html === built}; script ${script && script[1]} -> ${asset.status}`];
   });
 }
 
