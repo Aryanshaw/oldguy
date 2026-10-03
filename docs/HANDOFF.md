@@ -19,27 +19,26 @@ Updated 2026-10-03 (after Phase 3). Read this first, then the spec, `docs/phase-
   pad-wav, scaffold, render, narrate), `lib/`, `scene-kit/`, hooks, `skills/yap`, 304 tests
   (`npm test`), real runs (positive: first playable chapter in ~145 s; negative request creates
   nothing). Roll-up: `docs/phase-1/SUMMARY.md` (folder contract in 1.3, Phase 2 hand-over in 7).
-- **Phase 2 (manifest + local server) done**, on branch `phase-2-server` (31 commits above
-  `phase-1-generator` @ `46f59cd`; not merged, not pushed). Owner approved A1-A9 (now spec
-  section 14). Built: `lib/manifest.cjs`, chapter scan, events/thread files, the local server
-  (`server/`, key + Host + Origin checks, range requests, state/chat/chapters/heartbeat routes,
-  live stream, watcher + posters, export), `yap serve | reply | add-chapter | set-status | order`,
-  skill updates. 596 tests (`npm test`); acceptance against a real server and real ffmpeg 61/61
-  plus a hand check in Chrome. **Read `docs/phase-2/SUMMARY.md`, section 11 first**, then
-  `docs/phase-2/ACCEPTANCE.md`. Waiting on the owner for: (1) merge/push decision, (2) the
-  decisions listed in SUMMARY sections 7 and 11.3 (to overrule any), (3) spec amendments
-  proposed in SUMMARY section 9, (4) the open `yap order` wording/`yap reorder` choice
-  (11.3 item 5), (5) the unreviewed acceptance script (11.4), (6) three uncommitted files in
-  the working tree that are not part of Phase 2 (`package.json` change adding a `shadcn`
-  dev dependency, `.mcp.json`, `package-lock.json`).
-- **Phase 3 (browser player) done, pending the final whole-branch review**, on branch
-  `phase-3-player` (worktree `../yap-phase-3`; not merged, not pushed). Built: the React+Vite
+- **Phase 2 (manifest + local server) done and merged to `master`** (pushed to
+  `https://github.com/Aryanshaw/yap`, public). Built: manifest model, chapter scan, events/thread files, the local
+  server (key + Host + Origin checks, range requests, state/chat/chapters/heartbeat routes, live stream, watcher +
+  posters, export), `yap serve | reply | add-chapter | set-status | order` (`order` also moves chapters on a running
+  page). Read `docs/phase-2/SUMMARY.md` (section 11 first) and `docs/phase-2/ACCEPTANCE.md`. Still waiting on the
+  owner: the decisions in SUMMARY sections 7 and 11.3 (to overrule any) and the spec amendments in section 9.
+- **TypeScript and structure refactor** (branch `typescript-structure`, plan
+  `docs/superpowers/plans/2026-10-03-typescript-and-structure.md`; not pushed): all program code is typed ES modules
+  (`.mts`) that Node 22.18+ runs directly; commands live in `cli/`; `bin/yap.cjs` and `hooks/session-start.cjs` are
+  plain-JavaScript launchers that give old Node one clear sentence; shared data shapes are exported types; the rules
+  are tests (`tests/code-rules.test.cjs`). Read `docs/ARCHITECTURE.md`. Correction to the owner's earlier choice:
+  `.cts` was dropped for `.mts` because the type checker does not follow `require()` in `.cts` files.
+- **Phase 3 (browser player) done, final review done (in-session, see SUMMARY section 8), merged with `master` including the TypeScript refactor (server routes ported to `server/player-routes.mts`)**, on branch
+  `phase-3-player` (worktree `../yap-phase-3`). Built: the React+Vite
   player committed as `player/dist/` (two-video engine, live timeline, captions, Chat and
   Sources tabs, export dialog), two read-only server routes (`/assets/:file`,
   `/chapters/:id/sources`), a Playwright e2e, `check:dist` and a CI workflow (never run
-  remotely). Player tests 215, root 610, e2e 1 test. **Read `docs/phase-3/SUMMARY.md`**, section
+  remotely). Player tests 218, root suite green, e2e 1 test. **Read `docs/phase-3/SUMMARY.md`**, section
   5.1 first (the chapter join measures ~120-135 ms against the spec's 20-35 ms; owner must judge),
-  then section 4 (20 controller rulings to overrule from) and `docs/phase-3/ACCEPTANCE.md`.
+  then section 4 (21 controller rulings to overrule from) and `docs/phase-3/ACCEPTANCE.md`.
 - Next: Phase 4 chat bridge (`yap listen`; what the page already posts is in
   `docs/phase-3/SUMMARY.md` section 6), then Polish (README, demo video, `npx yap-setup`
   installer with consent checklist).

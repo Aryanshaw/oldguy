@@ -233,7 +233,7 @@ test('the hint finds the marker through a parent session.json, the same way the 
   const r = runHook(JSON.stringify({ ...sampleStdin(), cwd: sub }), { configDir });
   assert.equal(r.status, 0);
   assert.equal(r.stdout, '');
-  const { resolveDataDir } = require('../lib/data-dir.cjs');
+  const { resolveDataDir } = require('../lib/data-dir.mts');
   assert.equal(resolveDataDir({ env: { CLAUDE_CONFIG_DIR: configDir }, cwd: sub, fs }), dataDir);
 });
 

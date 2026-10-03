@@ -4,10 +4,10 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { narrateChapter } = require('../lib/narrate.cjs');
-const { scaffoldChapter } = require('../lib/chapter.cjs');
-const { parseWav } = require('../lib/wav.cjs');
-const { HYPERFRAMES_VERSION } = require('../lib/hyperframes.cjs');
+const { narrateChapter } = require('../lib/narrate.mts');
+const { scaffoldChapter } = require('../lib/chapter.mts');
+const { parseWav } = require('../lib/wav.mts');
+const { HYPERFRAMES_VERSION } = require('../lib/hyperframes.mts');
 const crypto = require('node:crypto');
 
 const FIXTURES = path.join(__dirname, 'fixtures');
@@ -334,7 +334,7 @@ test('narrate without a root asks git nothing and records null', async (t) => {
 });
 
 test('the narrate output line names the short commit, or says there is no git repo or no --root', () => {
-  const { narratedLine } = require('../lib/narrate-cli.cjs');
+  const { narratedLine } = require('../cli/narrate.mts');
   const r = { durationS: 31.2, beats: [1, 2, 3, 4], timing: 'words' };
   assert.equal(narratedLine('intro', { ...r, commit: SHA }, true), 'intro: narrated, 31.2 s, 4 beats, timing words, commit a1b2c3d');
   assert.equal(narratedLine('intro', { ...r, commit: null }, true), 'intro: narrated, 31.2 s, 4 beats, timing words, not a git repo');

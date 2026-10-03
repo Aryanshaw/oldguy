@@ -5,11 +5,11 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const kitDir = path.join(__dirname, "..", "scene-kit");
-const { esc } = require(path.join(kitDir, "escape.cjs"));
-const title = require(path.join(kitDir, "title.cjs"));
-const steps = require(path.join(kitDir, "steps.cjs"));
-const codeCard = require(path.join(kitDir, "code-card.cjs"));
-const callout = require(path.join(kitDir, "callout.cjs"));
+const { esc } = require(path.join(kitDir, "escape.mts"));
+const title = require(path.join(kitDir, "title.mts"));
+const steps = require(path.join(kitDir, "steps.mts"));
+const codeCard = require(path.join(kitDir, "code-card.mts"));
+const callout = require(path.join(kitDir, "callout.mts"));
 
 const EVIL1 = "</div><script>alert(1)</script>";
 const EVIL2 = '" onload="x';

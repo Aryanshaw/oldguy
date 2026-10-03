@@ -6,8 +6,8 @@ const os = require('node:os');
 const path = require('node:path');
 const http = require('node:http');
 const net = require('node:net');
-const { startServer } = require('../server/server.cjs');
-const { newManifest, insertChapter, saveManifest } = require('../lib/manifest.cjs');
+const { startServer } = require('../server/server.mts');
+const { newManifest, insertChapter, saveManifest } = require('../lib/manifest.mts');
 
 // Makes a temp slug folder (named "demo") and removes it when the test ends.
 function tempSlug(t) {
@@ -185,7 +185,7 @@ test('placeholder page lists chapters escaped, video only for ready ones, no scr
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, 'chapter.json'), JSON.stringify({ id: 'intro', title: '<script>alert(1)</script>' }));
   fs.writeFileSync(path.join(dir, 'build.json'), build);
-  fs.writeFileSync(path.join(dir, 'render.json'), JSON.stringify({ build_sha256: require('../lib/build-record.cjs').sha256(build) }));
+  fs.writeFileSync(path.join(dir, 'render.json'), JSON.stringify({ build_sha256: require('../lib/build-record.mts').sha256(build) }));
   fs.writeFileSync(path.join(dir, 'chapter.mp4'), 'MP4');
   const { srv } = await start(t, { slugDir });
   const page = await req(srv, { headers: withKey(srv) });

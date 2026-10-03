@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
-const { audit } = require('../lib/audit.cjs');
+const { audit } = require('../lib/audit.mts');
 
 const CLI = path.join(__dirname, '..', 'bin', 'yap.cjs');
 const FILE_TEXT = 'alpha one\nbeta two\ngamma three\ndelta four\nepsilon five\n';

@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { parseRange } = require('../lib/range.cjs');
+const { parseRange } = require('../lib/range.mts');
 
 // Shorthand: parse a header against a 100-byte file.
 const p = (h, size = 100) => parseRange(h, size);

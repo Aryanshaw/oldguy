@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const M = require('../lib/manifest.cjs');
+const M = require('../lib/manifest.mts');
 
 // Freezes an object and everything inside it, so any accidental edit throws.
 function deepFreeze(o) {

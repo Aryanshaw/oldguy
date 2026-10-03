@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const E = require('../lib/events.cjs');
+const E = require('../lib/events.mts');
 
 // Makes a temp folder, runs the test body with it, and removes it after.
 function withTmp(fn) {

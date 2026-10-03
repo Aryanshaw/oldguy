@@ -6,8 +6,8 @@ const os = require('node:os');
 const path = require('node:path');
 const http = require('node:http');
 const net = require('node:net');
-const { startServer } = require('../server/server.cjs');
-const { newManifest, insertChapter, saveManifest } = require('../lib/manifest.cjs');
+const { startServer } = require('../server/server.mts');
+const { newManifest, insertChapter, saveManifest } = require('../lib/manifest.mts');
 
 const INDEX = Buffer.from('<!doctype html><title>player</title><div id="root"></div>');
 

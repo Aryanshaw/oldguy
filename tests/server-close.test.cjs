@@ -6,9 +6,9 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const http = require('node:http');
-const { startServer } = require('../server/server.cjs');
-const { newManifest, insertChapter, saveManifest } = require('../lib/manifest.cjs');
-const { sha256 } = require('../lib/build-record.cjs');
+const { startServer } = require('../server/server.mts');
+const { newManifest, insertChapter, saveManifest } = require('../lib/manifest.mts');
+const { sha256 } = require('../lib/build-record.mts');
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 

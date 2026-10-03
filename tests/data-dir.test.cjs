@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { resolveDataDir } = require('../lib/data-dir.cjs');
+const { resolveDataDir } = require('../lib/data-dir.mts');
 
 // A pretend home folder; only data folders under <home>/.claude/plugins/data/ are trusted from a session file.
 const HOME = '/home/u';

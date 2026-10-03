@@ -4,8 +4,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { sha256 } = require('../lib/build-record.cjs');
-const S = require('../lib/chapter-scan.cjs');
+const { sha256 } = require('../lib/build-record.mts');
+const S = require('../lib/chapter-scan.mts');
 
 const COMMIT = 'a'.repeat(40);
 

@@ -6,8 +6,8 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { execFileSync, spawnSync } = require('node:child_process');
-const { buildRecord, sha256 } = require('../../lib/build-record.cjs');
-const { startServer } = require('../../server/server.cjs');
+const { buildRecord, sha256 } = require('../../lib/build-record.mts');
+const { startServer } = require('../../server/server.mts');
 
 const CHAPTERS = [
   { id: 'one-intro', title: 'One intro', hz: 330 },
@@ -102,7 +102,9 @@ module.exports = { startFixture, CHAPTERS, RENDERING_ID, SECONDS };
 
 if (require.main === module) {
   startFixture().then((f) => {
-    console.log(f.url);
+    // First line: everything a parent process needs, as JSON. The e2e test starts this file as a child because
+    // Playwright's module loader cannot load the server's .mts modules; plain node can.
+    console.log(JSON.stringify({ url: f.url, key: f.key, port: f.port, tmp: f.tmp, slugDir: f.slugDir }));
     console.log(`folder: ${f.tmp}`);
     const bye = () => f.stop().finally(() => process.exit(0));
     process.on('SIGINT', bye);

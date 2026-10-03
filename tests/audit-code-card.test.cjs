@@ -7,8 +7,8 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
-const { audit } = require('../lib/audit.cjs');
-const codeCard = require('../scene-kit/code-card.cjs');
+const { audit } = require('../lib/audit.mts');
+const codeCard = require('../scene-kit/code-card.mts');
 
 const CLI = path.join(__dirname, '..', 'bin', 'yap.cjs');
 const LONG = '  return a + b; // adds the two numbers together and returns the sum to the caller right away';

@@ -8,9 +8,9 @@ const http = require('node:http');
 const net = require('node:net');
 const { Readable } = require('node:stream');
 const { fork } = require('node:child_process');
-const { startServer } = require('../server/server.cjs');
-const { newManifest, insertChapter, saveManifest } = require('../lib/manifest.cjs');
-const { sha256 } = require('../lib/build-record.cjs');
+const { startServer } = require('../server/server.mts');
+const { newManifest, insertChapter, saveManifest } = require('../lib/manifest.mts');
+const { sha256 } = require('../lib/build-record.mts');
 
 const BYTES = Buffer.from('0123456789abcdefghijklmnopqrstuvwxyz'); // 36 bytes
 
@@ -322,7 +322,7 @@ async function hangUpStorm(t, count) {
   const script = path.join(path.dirname(slugDir), 'child.cjs');
   fs.writeFileSync(script, `
     const fs = require('node:fs');
-    const { startServer } = require(${JSON.stringify(path.join(__dirname, '..', 'server', 'server.cjs'))});
+    const { startServer } = require(${JSON.stringify(path.join(__dirname, '..', 'server', 'server.mts'))});
     startServer({ slugDir: ${JSON.stringify(slugDir)}, deps: { exec: async (f, a) => { fs.writeFileSync(a[a.length - 1], 'JPEGDATA'); } } }).then(async (srv) => {
       await srv.state.posterIdle();
       process.send({ ready: true, port: srv.port, key: srv.key });

@@ -1,13 +1,36 @@
-import { createRequire } from 'node:module';
+import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { expect, test, type Page } from '@playwright/test';
 
-const require = createRequire(import.meta.url);
-const { startFixture } = require('./make-fixture.cjs') as typeof import('./make-fixture.cjs');
+interface Fixture { url: string; key: string; port: number; tmp: string; slugDir: string; stop(): Promise<void> }
 
-type Fixture = Awaited<ReturnType<typeof startFixture>>;
+// Builds the project and runs the real server in a child `node` process (make-fixture.cjs): Playwright's module
+// loader cannot load the server's .mts modules, plain node can. stop() ends the child, which closes the server and
+// removes the folder.
+function startFixture(): Promise<Fixture> {
+  const script = join(dirname(fileURLToPath(import.meta.url)), 'make-fixture.cjs');
+  const child = spawn(process.execPath, [script], { stdio: ['ignore', 'pipe', 'pipe'] });
+  const exited = new Promise<void>((resolve) => child.once('exit', () => resolve()));
+  const stop = async () => {
+    if (child.exitCode === null && child.signalCode === null) child.kill('SIGTERM');
+    await exited;
+  };
+  return new Promise((resolve, reject) => {
+    let out = '';
+    let err = '';
+    child.stderr.on('data', (d) => { err += d; });
+    child.stdout.on('data', (d) => {
+      out += d;
+      const nl = out.indexOf('\n');
+      if (nl < 0) return;
+      try { resolve({ ...(JSON.parse(out.slice(0, nl)) as Omit<Fixture, 'stop'>), stop }); } catch (e) { void stop(); reject(e); }
+    });
+    child.once('exit', (code) => reject(new Error(`fixture exited (${code}): ${err.trim()}`)));
+  });
+}
 interface VideoEvt { kind: string; chapter: string; t: number; ct: number; played: [number, number][] }
 interface FrameEvt { chapter: string; shown: number; visible: boolean }
 

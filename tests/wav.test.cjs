@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
-const { parseWav, padWav } = require('../lib/wav.cjs');
+const { parseWav, padWav } = require('../lib/wav.mts');
 
 const CLI = path.join(__dirname, '..', 'bin', 'yap.cjs');
 const FIXTURE = path.join(__dirname, 'fixtures', 'narration.wav');

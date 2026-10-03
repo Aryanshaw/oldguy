@@ -6,7 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const http = require('node:http');
 const { spawnSync } = require('node:child_process');
-const { resolveSlugDir } = require('../lib/server-cli.cjs');
+const { resolveSlugDir } = require('../cli/server.mts');
 
 const YAP = path.join(__dirname, '..', 'bin', 'yap.cjs');
 
@@ -82,7 +82,7 @@ test('a stale server.json is replaced by --detach', async (t) => {
 
 const { spawn } = require('node:child_process');
 const net = require('node:net');
-const { startServer } = require('../server/server.cjs');
+const { startServer } = require('../server/server.mts');
 
 // Runs the yap CLI without blocking this process (so an in-process server can answer it); resolves {status, stdout, stderr}.
 function runYap(args) {
@@ -150,7 +150,7 @@ test('a live server.json is reused but its stored url is never printed: the url 
 });
 
 // ---- slow or hostile answers to the liveness ping (N-1, N-2) ----
-const { liveServer, runServe } = require('../lib/server-cli.cjs');
+const { liveServer, runServe } = require('../cli/server.mts');
 
 // Runs an async function while capturing what it writes to stdout and stderr; resolves {result, out, err}.
 async function captured(fn) {

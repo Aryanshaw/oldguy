@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { startWatcher } = require('../lib/watcher.cjs');
+const { startWatcher } = require('../lib/watcher.mts');
 
 // A scan result for one chapter with only the fields the watcher looks at.
 const ch = (id, status = 'ready', buildSha256 = 'aaa') => ({ id, title: id, durationS: 3, status, buildSha256, verifiedAgainstCommit: null, hasPoster: false, issues: [] });
@@ -114,9 +114,9 @@ test('the timer is unref-ed, uses the interval, ticks poll, and stop() clears it
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { startServer } = require('../server/server.cjs');
-const { newManifest, insertChapter, saveManifest, loadManifest } = require('../lib/manifest.cjs');
-const { sha256 } = require('../lib/build-record.cjs');
+const { startServer } = require('../server/server.mts');
+const { newManifest, insertChapter, saveManifest, loadManifest } = require('../lib/manifest.mts');
+const { sha256 } = require('../lib/build-record.mts');
 
 const BUILD = JSON.stringify({ version: 2, verified_against_commit: 'c'.repeat(40), sha256: {} });
 const BUILD2 = JSON.stringify({ version: 2, verified_against_commit: 'd'.repeat(40), sha256: {} });
@@ -719,7 +719,7 @@ test('R6: at start a ready, stale or rendering row with no folder becomes failed
 test('R6: the first diff broadcasts one chapter event per such row with the reason "chapter folder is missing"', async (t) => {
   const slugDir = tempSlug(t);
   seedManifest(slugDir, [['r', 'ready'], ['p', 'pending']]);
-  const { makeChapterSync } = require('../server/chapter-sync.cjs');
+  const { makeChapterSync } = require('../server/chapter-sync.mts');
   const sent = [];
   const file = path.join(slugDir, 'manifest.json');
   const state = {
