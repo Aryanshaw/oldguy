@@ -6,6 +6,9 @@ const http = require('node:http');
 const path = require('node:path');
 const { createGuard, readJsonBody } = require('../lib/http-guard.cjs');
 const { newManifest, saveManifest, loadManifest } = require('../lib/manifest.cjs');
+const { slugChapterId } = require('../lib/chapter.cjs');
+const { scanChapter } = require('../lib/chapter-scan.cjs');
+const { serveFile, safeChapterFile } = require('../lib/range.cjs');
 
 // Headers put on every response, whatever the route.
 const SECURITY_HEADERS = {
@@ -52,11 +55,43 @@ function handlePing({ res }) {
   sendJson(res, 200, { ok: true, pid: process.pid });
 }
 
+// Fixed file name and content type for each kind of chapter media.
+const MEDIA = {
+  video: { file: 'chapter.mp4', contentType: 'video/mp4' },
+  poster: { file: 'poster.jpg', contentType: 'image/jpeg' },
+  captions: { file: 'captions.vtt', contentType: 'text/vtt; charset=utf-8' },
+};
+
+// True when id is a plain valid chapter id (slug rule) listed in the manifest; the row is returned, else null.
+function findChapterRow(state, id) {
+  try { if (slugChapterId(id) !== id) return null; } catch { return null; }
+  const manifest = loadManifest(path.join(state.slugDir, 'manifest.json'));
+  return manifest.chapters.find((c) => c.id === id) || null;
+}
+
+// Makes a handler that sends one kind of chapter media. The path is built only from the slug folder, the checked id and
+// a fixed file name. The video also has to be ready right now (checked again on disk), not just in the manifest.
+function mediaHandler(kind) {
+  const { file, contentType } = MEDIA[kind];
+  return async ({ req, res, params, state }) => {
+    const row = findChapterRow(state, params.id);
+    const dir = row && path.join(state.slugDir, 'chapters', row.id);
+    const ok = row && (kind !== 'video' || (row.status === 'ready' && scanChapter(dir).status === 'ready'));
+    const real = ok && safeChapterFile(dir, file);
+    if (!real) return sendJson(res, 404, { error: 'not found' });
+    await serveFile(req, res, real, { contentType, createReadStream: state.deps.createReadStream });
+  };
+}
+
 // The route table. A row is { method, pattern, handler }. pattern is a path; a segment like ":id" matches any one
 // segment and arrives in params.id. handler gets { req, res, url, params, state, sendJson, readJsonBody }, may be async.
 const ROUTES = [
   { method: 'GET', pattern: '/', handler: handleHome },
   { method: 'GET', pattern: '/api/ping', handler: handlePing },
+  { method: 'GET', pattern: '/chapters/:id/video', handler: mediaHandler('video') },
+  { method: 'HEAD', pattern: '/chapters/:id/video', handler: mediaHandler('video') },
+  { method: 'GET', pattern: '/chapters/:id/poster', handler: mediaHandler('poster') },
+  { method: 'GET', pattern: '/chapters/:id/captions', handler: mediaHandler('captions') },
 ];
 
 // Tries to match a path against a pattern; returns the params object or null.
