@@ -370,4 +370,97 @@ describe('engine fix round 1', () => {
   });
 });
 
+describe('engine fix round 2', () => {
+  it('N1: a replayed chapter keeps playing when a later pending seek target errors', async () => {
+    e.setChapters([c1]);
+    await e.play();
+    a.fire('ended');
+    await e.play();
+    a.currentTime = 7;
+    e.setChapters([c1, c2]);
+    e.seek({ chapterId: 'c2', offset: 0 });
+    b.fire('error');
+    expect(e.position()).toEqual({ chapterId: 'c1', offset: 7 });
+    expect(e.state()).toBe('playing');
+    expect(a.paused).toBe(false);
+  });
+
+  it('N1b: a replayed chapter keeps playing when a pending seek target is removed', async () => {
+    e.setChapters([c1]);
+    await e.play();
+    a.fire('ended');
+    await e.play();
+    a.currentTime = 7;
+    e.setChapters([c1, c2, c3]);
+    e.seek({ chapterId: 'c3', offset: 0 });
+    e.setChapters([c1, c2]);
+    expect(e.position()).toEqual({ chapterId: 'c1', offset: 7 });
+    expect(e.state()).toBe('playing');
+    expect(a.paused).toBe(false);
+  });
+
+  async function endedViaFallback() {
+    e.setChapters([c1, c2]);
+    await e.play();
+    a.fire('ended'); // c2 on b
+    e.setChapters([c1]); // current removed, nothing after: ended on c1
+    expect(e.state()).toBe('ended');
+    e.setChapters([c1, c3]);
+    e.seek({ chapterId: 'c3', offset: 0 });
+    await e.play();
+    return e.visible() === 'a' ? b : a; // idle element holding c3
+  }
+
+  it('N2: ending via the setChapters fallback, play with a pending seek whose target errors returns to ended', async () => {
+    const idleEl = await endedViaFallback();
+    expect(e.state()).toBe('playing');
+    idleEl.fire('error');
+    expect(e.state()).toBe('ended');
+    expect(e.position()?.chapterId).toBe('c1');
+  });
+
+  it('N2b: ... whose target is removed by an update returns to ended', async () => {
+    await endedViaFallback();
+    e.setChapters([c1]);
+    expect(e.state()).toBe('ended');
+    expect(e.position()?.chapterId).toBe('c1');
+  });
+
+  it('N3: play() after the end does not reload an errored first chapter', async () => {
+    const onError = vi.fn();
+    e.setChapters([c1, c2]);
+    e.on('error', onError);
+    await e.play();
+    a.fire('error');
+    b.fire('ended');
+    expect(e.state()).toBe('ended');
+    await e.play();
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(a.src).toBe('');
+    expect(e.position()).toEqual({ chapterId: 'c2', offset: 0 });
+    expect(e.state()).toBe('playing');
+  });
+
+  it('N3: the setChapters ended fallback never picks an errored chapter', async () => {
+    e.setChapters([c1, c2, c3]);
+    await e.play();
+    a.fire('ended'); // c2 on b, a preloads c3
+    a.fire('error'); // c3 broken
+    e.setChapters([c1, c3]);
+    expect(e.state()).toBe('ended');
+    expect(e.position()?.chapterId).toBe('c1');
+    expect(a.src).not.toBe(url('c3'));
+    expect(b.src).not.toBe(url('c3'));
+  });
+
+  it('N3: when every chapter has errored the engine is idle with no position', async () => {
+    e.setChapters([c1]);
+    await e.play();
+    a.fire('error');
+    e.setChapters([c1]);
+    expect(e.state()).toBe('idle');
+    expect(e.position()).toBeNull();
+  });
+});
+
 void flush;

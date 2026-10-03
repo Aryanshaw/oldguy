@@ -67,7 +67,9 @@ export function createEngine(o: { a: HTMLVideoElement; b: HTMLVideoElement; urlF
   }
 
   const chapterOf = (id: string | null) => chapters.find((c) => c.id === id) ?? null;
-  const isPlayable = (id: string) => !errored.has(id) && playable(chapters).some((c) => c.id === id);
+  /** Playable chapters minus the ones that failed to load: the only list chapter-picking paths may use. */
+  const usable = (list: Chapter[]) => playable(list).filter((c) => !errored.has(c.id));
+  const isPlayable = (id: string) => usable(chapters).some((c) => c.id === id);
 
   function nextOf(id: string): Chapter | null {
     let n = neighbour(chapters, id, 1);
@@ -141,6 +143,7 @@ export function createEngine(o: { a: HTMLVideoElement; b: HTMLVideoElement; urlF
       ++playGen;
       vis.pause();
       atEnd = true;
+      visEnded = false;
       setState('ended');
       emitTime();
       return;
@@ -161,6 +164,12 @@ export function createEngine(o: { a: HTMLVideoElement; b: HTMLVideoElement; urlF
   function recover() {
     if (pending || !cur) return;
     if (visEnded || errored.has(cur)) advance();
+    else if (atEnd && st === 'playing') {
+      // play() promised playback to a seek that is gone and the last chapter had finished.
+      ++playGen;
+      setState('ended');
+      emitTime();
+    }
   }
 
   function commitPending() {
@@ -231,7 +240,7 @@ export function createEngine(o: { a: HTMLVideoElement; b: HTMLVideoElement; urlF
     const old = chapters;
     chapters = next;
     for (const c of next) if (c.status !== 'ready') errored.delete(c.id);
-    const list = playable(next);
+    const list = usable(next);
 
     if (list.length === 0) {
       ++playGen;
@@ -256,7 +265,7 @@ export function createEngine(o: { a: HTMLVideoElement; b: HTMLVideoElement; urlF
     }
 
     if (cur === null) {
-      cur = (list.find((c) => !errored.has(c.id)) ?? list[0]).id;
+      cur = list[0].id;
       setSrc(vis, cur);
       ensureIdle();
       emit('chapter', cur);
@@ -297,10 +306,11 @@ export function createEngine(o: { a: HTMLVideoElement; b: HTMLVideoElement; urlF
       return Promise.resolve();
     }
     if (st === 'ended') {
-      const first = playable(chapters)[0];
+      const first = usable(chapters)[0];
       if (!first) return Promise.resolve();
       if (cur === first.id) {
         atEnd = false;
+        visEnded = false;
         vis.currentTime = 0;
         emitTime();
       } else {
