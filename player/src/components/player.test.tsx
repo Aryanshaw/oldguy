@@ -55,6 +55,9 @@ function fakeEngine() {
         fns.time.forEach((f) => f(p));
       });
     },
+    fail(id: string) {
+      act(() => fns.error.forEach((f) => f(id)));
+    },
     tick(offset: number) {
       pos = { chapterId: pos!.chapterId, offset };
       act(() => fns.time.forEach((f) => f(pos)));
@@ -67,8 +70,10 @@ function fakeEngine() {
 let eng: ReturnType<typeof fakeEngine>;
 const create: CreateEngine = () => eng as unknown as Engine;
 
+let lastBroken: string[] = [];
 function Harness({ chapters }: { chapters: Chapter[] }) {
   const player = usePlayer(chapters, create);
+  lastBroken = player.broken;
   const [on, toggle] = useCaptionsPref();
   return (
     <>
@@ -113,6 +118,19 @@ describe('usePlayer lifecycle', () => {
     expect(eng.setChapters.mock.calls.length).toBe(n + 1);
     unmount();
     expect(eng.destroy).toHaveBeenCalledTimes(1);
+    expect(eng.listeners()).toBe(0);
+  });
+});
+
+describe('broken chapters', () => {
+  it('collects engine error ids without duplicates and clears the listener on unmount', () => {
+    const { unmount } = render(<Harness chapters={[ch('a'), ch('b')]} />);
+    expect(lastBroken).toEqual([]);
+    eng.fail('b');
+    eng.fail('b');
+    eng.fail('a');
+    expect(lastBroken).toEqual(['b', 'a']);
+    unmount();
     expect(eng.listeners()).toBe(0);
   });
 });

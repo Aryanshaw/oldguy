@@ -20,6 +20,7 @@ export function usePlayer(chapters: Chapter[], create: CreateEngine = createEngi
   const [visible, setVisible] = useState<'a' | 'b'>('a');
   const [state, setState] = useState<EngineState>('idle');
   const [position, setPosition] = useState<Position | null>(null);
+  const [broken, setBroken] = useState<string[]>([]);
 
   useEffect(() => {
     const a = refA.current;
@@ -27,6 +28,7 @@ export function usePlayer(chapters: Chapter[], create: CreateEngine = createEngi
     if (!a || !b) return;
     const engine = createRef.current({ a, b, urlFor: videoUrl });
     engineRef.current = engine;
+    setBroken([]);
     const sync = () => {
       setVisible(engine.visible());
       setState(engine.state());
@@ -36,6 +38,9 @@ export function usePlayer(chapters: Chapter[], create: CreateEngine = createEngi
       engine.on('time', () => setPosition(engine.position())),
       engine.on('chapter', sync),
       engine.on('state', () => setState(engine.state())),
+      engine.on('error', (id) => {
+        if (typeof id === 'string') setBroken((prev) => (prev.includes(id) ? prev : [...prev, id]));
+      }),
     ];
     engine.setChapters(chaptersRef.current);
     sync();
@@ -96,7 +101,7 @@ export function usePlayer(chapters: Chapter[], create: CreateEngine = createEngi
     if (n) e.seek({ chapterId: n.id, offset: 0 });
   }, []);
 
-  return { refA, refB, visible, state, position, play, pause, toggle, seek, step, jump };
+  return { refA, refB, visible, state, position, broken, play, pause, toggle, seek, step, jump };
 }
 
 export type Player = ReturnType<typeof usePlayer>;

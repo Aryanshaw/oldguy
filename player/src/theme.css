@@ -29,3 +29,19 @@ body {
   color: var(--color-yk-black);
   font-family: var(--font-sans);
 }
+
+@keyframes yk-stripe-move {
+  to {
+    background-position: -22.6px 0;
+  }
+}
+.yk-stripes {
+  background: repeating-linear-gradient(-45deg, #ff8a1f 0 8px, #fff1cc 8px 16px);
+  background-size: 200% 100%;
+  animation: yk-stripe-move 1.2s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .yk-stripes {
+    animation: none;
+  }
+}
