@@ -3,3 +3,4 @@ spikes/.tools/
 node_modules/
 spikes/*/out/
 *.mp4
+player/node_modules

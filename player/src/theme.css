@@ -1,0 +1,31 @@
+@import "tailwindcss";
+@import "@fontsource/archivo/500.css";
+@import "@fontsource/archivo/700.css";
+@import "@fontsource/archivo/900.css";
+
+@theme {
+  --color-yk-yellow: #F6C945;
+  --color-yk-orange: #FF8A1F;
+  --color-yk-black: #14110A;
+  --color-yk-cream: #FFF1CC;
+  --color-yk-white: #FFFFFF;
+  --color-yk-red: #FF6B57;
+  --font-sans: "Archivo", system-ui, sans-serif;
+}
+
+@utility bd {
+  border: 3px solid var(--color-yk-black);
+}
+@utility sh {
+  box-shadow: 4px 4px 0 var(--color-yk-black);
+}
+@utility sh-lg {
+  box-shadow: 8px 8px 0 var(--color-yk-black);
+}
+
+body {
+  margin: 0;
+  background: var(--color-yk-cream);
+  color: var(--color-yk-black);
+  font-family: var(--font-sans);
+}

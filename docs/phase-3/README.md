@@ -27,16 +27,16 @@ You need two terminals.
 
    It prints a keyed URL such as `http://127.0.0.1:51234/?key=...`. The port is chosen at each start, so it changes every time.
 
-2. In the second, start Vite in `player/`, giving it that port:
+2. Open the keyed URL it printed, in a browser. This sets the key cookie for `127.0.0.1`. Cookies ignore the port, so the cookie also covers the Vite address.
+
+3. In the second terminal, start Vite in `player/`, giving it the server's port:
 
    ```
    cd player
    YAP_DEV_PORT=51234 npm run dev
    ```
 
-   Vite proxies `/api` and `/chapters` to the server on that port.
-
-3. Open the keyed URL once on the Vite address. Take the path and query from the server's URL (`/?key=...`) and put them on the Vite address, so the cookie is set for the Vite origin. After that, open the Vite address without the key.
+   Vite proxies `/api` and `/chapters` to the server on that port. Open http://127.0.0.1:5173 (not `localhost`; the server refuses a foreign Host).
 
 If the server is restarted, it has a new port and a new key. Repeat steps 2 and 3.
 
