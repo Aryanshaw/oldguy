@@ -291,4 +291,83 @@ describe('engine', () => {
   });
 });
 
+describe('engine fix round 1', () => {
+  it('F1a: visible errors during a pending seek, playback continues at the seek target', async () => {
+    e.setChapters([c1, c2, c3]);
+    await e.play();
+    e.seek({ chapterId: 'c3', offset: 5 });
+    a.fire('error');
+    expect(b.src).toBe(url('c3'));
+    b.fire('canplay');
+    expect(e.position()).toEqual({ chapterId: 'c3', offset: 5 });
+    expect(e.visible()).toBe('b');
+    expect(e.state()).toBe('playing');
+    expect(b.paused).toBe(false);
+    b.fire('ended');
+    expect(e.state()).toBe('ended');
+  });
+
+  it('F1b: pending target errors after the visible chapter ended, engine advances', async () => {
+    e.setChapters([c1, c2, c3]);
+    await e.play();
+    e.seek({ chapterId: 'c3', offset: 5 });
+    a.fire('ended');
+    b.fire('error');
+    expect(e.position()?.chapterId).toBe('c2');
+    expect(e.visible()).toBe('b');
+    expect(e.state()).toBe('playing');
+    expect(b.paused).toBe(false);
+  });
+
+  it('F1c: pending target made unplayable by setChapters after the visible ended, engine advances', async () => {
+    e.setChapters([c1, c2, c3]);
+    await e.play();
+    e.seek({ chapterId: 'c3', offset: 5 });
+    a.fire('ended');
+    e.setChapters([c1, c2]);
+    expect(e.position()?.chapterId).toBe('c2');
+    expect(e.state()).toBe('playing');
+    expect((e.visible() === 'a' ? a : b).paused).toBe(false);
+  });
+
+  it('F2: seek then play after the last chapter ended starts at the seek target', async () => {
+    e.setChapters([c1, c2, c3]);
+    await e.play();
+    a.fire('ended');
+    b.fire('ended');
+    a.fire('ended');
+    expect(e.state()).toBe('ended');
+    e.seek({ chapterId: 'c2', offset: 4 });
+    await e.play();
+    const idleEl = e.visible() === 'a' ? b : a;
+    idleEl.fire('canplay');
+    expect(e.position()).toEqual({ chapterId: 'c2', offset: 4 });
+    expect(e.state()).toBe('playing');
+    expect((e.visible() === 'a' ? a : b).paused).toBe(false);
+  });
+
+  it('F3: an errored chapter stays skipped across unrelated setChapters, with no second error', async () => {
+    const onError = vi.fn();
+    e.setChapters([c1, c2, c3]);
+    e.on('error', onError);
+    await e.play();
+    b.fire('error');
+    expect(b.src).toBe(url('c3'));
+    e.setChapters([c1, { ...c2 }, c3, ch('c4')]);
+    expect(b.src).toBe(url('c3'));
+    expect(onError).toHaveBeenCalledTimes(1);
+    e.seek({ chapterId: 'c2', offset: 1 });
+    expect(b.src).toBe(url('c3'));
+  });
+
+  it('F3: an errored chapter is playable again after an update shows it not ready, then ready', async () => {
+    e.setChapters([c1, c2, c3]);
+    await e.play();
+    b.fire('error');
+    e.setChapters([c1, ch('c2', { status: 'rendering' }), c3]);
+    e.setChapters([c1, c2, c3]);
+    expect(b.src).toBe(url('c2'));
+  });
+});
+
 void flush;

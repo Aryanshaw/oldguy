@@ -32,7 +32,8 @@ export function createEngine(o: { a: HTMLVideoElement; b: HTMLVideoElement; urlF
   let playGen = 0; // invalidates play() promises that settle late
   let seekGen = 0; // invalidates pending seeks
   let pending: { id: string; offset: number; gen: number } | null = null;
-  let errored = new Set<string>(); // chapters whose element failed; skipped when picking the next one
+  let visEnded = false; // the visible chapter finished while a seek was pending
+  const errored = new Set<string>(); // broken chapters: unplayable until an update shows them not ready
 
   const assigned = new Map<HTMLVideoElement, string | null>([[o.a, null], [o.b, null]]);
   const listeners: Record<Ev, Set<(d?: unknown) => void>> = {
@@ -66,7 +67,7 @@ export function createEngine(o: { a: HTMLVideoElement; b: HTMLVideoElement; urlF
   }
 
   const chapterOf = (id: string | null) => chapters.find((c) => c.id === id) ?? null;
-  const isPlayable = (id: string) => playable(chapters).some((c) => c.id === id);
+  const isPlayable = (id: string) => !errored.has(id) && playable(chapters).some((c) => c.id === id);
 
   function nextOf(id: string): Chapter | null {
     let n = neighbour(chapters, id, 1);
@@ -117,6 +118,7 @@ export function createEngine(o: { a: HTMLVideoElement; b: HTMLVideoElement; urlF
   function loadVisible(id: string, offset: number) {
     ++seekGen;
     pending = null;
+    visEnded = false;
     if (assigned.get(idle) === id) {
       swap();
     } else {
@@ -133,7 +135,7 @@ export function createEngine(o: { a: HTMLVideoElement; b: HTMLVideoElement; urlF
 
   /** The current chapter finished or failed: move on, or end if it was the last. */
   function advance() {
-    if (!cur) return;
+    if (!cur || pending) return; // a pending seek owns the idle element and will take over
     const next = nextOf(cur);
     if (!next) {
       ++playGen;
@@ -143,6 +145,7 @@ export function createEngine(o: { a: HTMLVideoElement; b: HTMLVideoElement; urlF
       emitTime();
       return;
     }
+    visEnded = false;
     const wasPlaying = st === 'playing';
     setSrc(idle, next.id);
     swap();
@@ -154,8 +157,15 @@ export function createEngine(o: { a: HTMLVideoElement; b: HTMLVideoElement; urlF
     emitTime();
   }
 
+  /** A pending seek was dropped without committing: if the visible chapter already finished or broke, move on. */
+  function recover() {
+    if (pending || !cur) return;
+    if (visEnded || errored.has(cur)) advance();
+  }
+
   function commitPending() {
     if (!pending) return;
+    visEnded = false;
     const { id, offset } = pending;
     const wasPlaying = st === 'playing';
     pending = null;
@@ -177,8 +187,9 @@ export function createEngine(o: { a: HTMLVideoElement; b: HTMLVideoElement; urlF
     commitPending();
   };
   const onEnded = (el: HTMLVideoElement) => () => {
-    if (destroyed || el !== vis || pending) return; // a pending seek will take over
-    advance();
+    if (destroyed || el !== vis) return;
+    visEnded = true;
+    advance(); // no-op while a seek is pending; recover() picks it up if the seek is dropped
   };
   const onTimeUpdate = (el: HTMLVideoElement) => () => {
     if (destroyed || el !== vis) return;
@@ -193,12 +204,14 @@ export function createEngine(o: { a: HTMLVideoElement; b: HTMLVideoElement; urlF
     if (el === vis) {
       advance();
     } else {
-      if (pending && pending.id === id) {
+      const hadPending = pending?.id === id;
+      if (hadPending) {
         ++seekGen;
         pending = null;
       }
       setSrc(idle, null);
       ensureIdle();
+      if (hadPending) recover();
     }
   };
 
@@ -217,7 +230,7 @@ export function createEngine(o: { a: HTMLVideoElement; b: HTMLVideoElement; urlF
     if (destroyed) return;
     const old = chapters;
     chapters = next;
-    errored = new Set();
+    for (const c of next) if (c.status !== 'ready') errored.delete(c.id);
     const list = playable(next);
 
     if (list.length === 0) {
@@ -226,6 +239,7 @@ export function createEngine(o: { a: HTMLVideoElement; b: HTMLVideoElement; urlF
       pending = null;
       cur = null;
       atEnd = false;
+      visEnded = false;
       vis.pause();
       idle.pause();
       setSrc(vis, null);
@@ -234,13 +248,15 @@ export function createEngine(o: { a: HTMLVideoElement; b: HTMLVideoElement; urlF
       return;
     }
 
+    let dropped = false;
     if (pending && !isPlayable(pending.id)) {
       ++seekGen;
       pending = null;
+      dropped = true;
     }
 
     if (cur === null) {
-      cur = list[0].id;
+      cur = (list.find((c) => !errored.has(c.id)) ?? list[0]).id;
       setSrc(vis, cur);
       ensureIdle();
       emit('chapter', cur);
@@ -248,8 +264,9 @@ export function createEngine(o: { a: HTMLVideoElement; b: HTMLVideoElement; urlF
       return;
     }
 
-    if (isPlayable(cur)) {
+    if (playable(next).some((c) => c.id === cur)) {
       ensureIdle();
+      if (dropped) recover();
       return;
     }
 
@@ -273,6 +290,12 @@ export function createEngine(o: { a: HTMLVideoElement; b: HTMLVideoElement; urlF
 
   function play(): Promise<void> {
     if (destroyed || !cur) return Promise.resolve();
+    if (st === 'ended' && pending) {
+      // A seek is waiting on canplay: let commitPending start playback at its target.
+      ++playGen;
+      setState('playing');
+      return Promise.resolve();
+    }
     if (st === 'ended') {
       const first = playable(chapters)[0];
       if (!first) return Promise.resolve();
@@ -301,6 +324,10 @@ export function createEngine(o: { a: HTMLVideoElement; b: HTMLVideoElement; urlF
       ++seekGen;
       pending = null;
       vis.currentTime = offset;
+      if (visEnded) {
+        visEnded = false;
+        if (st === 'playing') void startPlay();
+      }
       if (atEnd) {
         atEnd = false;
         setState('paused');
