@@ -153,3 +153,44 @@ test('loadManifest gives a plain Error for a missing file, garbage, and an inval
   fs.writeFileSync(file, '{"version":2}');
   assert.throws(() => M.loadManifest(file), (e) => e.constructor === Error && /invalid/.test(e.message));
 }));
+
+test('saveManifest puts its temp file in the same folder as the manifest', () => withTmp((dir) => {
+  const file = path.join(dir, 'manifest.json');
+  const seen = [];
+  const spy = { ...fs, writeFileSync(p, d) { seen.push(p); return fs.writeFileSync(p, d); }, renameSync(a, b) { seen.push(a, b); return fs.renameSync(a, b); } };
+  M.saveManifest(file, sample(), { fs: spy });
+  assert.equal(seen.length, 3);
+  for (const p of seen) assert.equal(path.dirname(p), dir);
+}));
+
+test('validateManifest rejects negative, NaN, infinite and non-number durations', () => {
+  for (const bad of [-1, NaN, Infinity, '5', {}]) {
+    const m = { ...M.newManifest({ title: 'T', slug: 't', audience: 'a' }), chapters: [{ ...row('a'), duration_s: bad }] };
+    const r = M.validateManifest(m);
+    assert.equal(r.ok, false, `duration ${String(bad)} should be rejected`);
+    assert.match(r.errors.join('\n'), /duration_s/);
+  }
+});
+
+test('validateManifest reports a self-parent and a parent cycle', () => {
+  const base = M.newManifest({ title: 'T', slug: 't', audience: 'a' });
+  const self = M.validateManifest({ ...base, chapters: [{ ...row('a'), parent_id: 'a' }] });
+  assert.equal(self.ok, false);
+  assert.match(self.errors.join('\n'), /parent/);
+  const cyc = M.validateManifest({ ...base, chapters: [{ ...row('a'), parent_id: 'b' }, { ...row('b'), parent_id: 'a' }] });
+  assert.equal(cyc.ok, false);
+  assert.match(cyc.errors.join('\n'), /cycle/);
+});
+
+test('every error message stays on one line even when an id holds a newline', () => withTmp((dir) => {
+  const base = M.newManifest({ title: 'T', slug: 't', audience: 'a' });
+  const bad = { ...base, chapters: [{ ...row('a'), id: 'x\ny', parent_id: 'p\nq' }] };
+  const { errors } = M.validateManifest(bad);
+  assert.ok(errors.length > 0);
+  for (const e of errors) assert.ok(!/[\r\n]/.test(e), `multi-line error: ${JSON.stringify(e)}`);
+  assert.throws(() => M.insertChapter(base, { id: 'x\ny', title: 't' }), (e) => !/[\r\n]/.test(e.message));
+  assert.throws(() => M.insertChapter(base, { id: 'k', title: 't' }, { after: 'a\nb' }), (e) => !/[\r\n]/.test(e.message));
+  const file = path.join(dir, 'manifest.json');
+  fs.writeFileSync(file, JSON.stringify(bad));
+  assert.throws(() => M.loadManifest(file), (e) => !/[\r\n]/.test(e.message));
+}));
