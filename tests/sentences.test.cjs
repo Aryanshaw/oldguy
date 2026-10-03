@@ -3,7 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { splitSentences } = require('../lib/sentences.cjs');
+const { splitSentences } = require('../lib/sentences.mts');
 
 // shorthand: how many sentences a text splits into
 const count = (t) => splitSentences(t).length;

@@ -4,9 +4,9 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
-const { splitSentences } = require('../lib/sentences.cjs');
-const { beatsFromWords } = require('../lib/beats.cjs');
-const { buildCaptions } = require('../lib/captions.cjs');
+const { splitSentences } = require('../lib/sentences.mts');
+const { beatsFromWords } = require('../lib/beats.mts');
+const { buildCaptions } = require('../lib/captions.mts');
 
 const FIX = path.join(__dirname, 'fixtures');
 const CLI = path.join(__dirname, '..', 'bin', 'yap.cjs');

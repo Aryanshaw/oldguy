@@ -6,8 +6,8 @@ const os = require('node:os');
 const path = require('node:path');
 const { narrateChapter } = require('../lib/narrate.cjs');
 const { scaffoldChapter } = require('../lib/chapter.cjs');
-const { parseWav } = require('../lib/wav.cjs');
-const { HYPERFRAMES_VERSION } = require('../lib/hyperframes.cjs');
+const { parseWav } = require('../lib/wav.mts');
+const { HYPERFRAMES_VERSION } = require('../lib/hyperframes.mts');
 const crypto = require('node:crypto');
 
 const FIXTURES = path.join(__dirname, 'fixtures');

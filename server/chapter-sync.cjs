@@ -4,7 +4,7 @@
 const path = require('node:path');
 const { insertChapter, reorderChapters, setChapterFields, loadManifest } = require('../lib/manifest.cjs');
 const { readOrder, scanChapter } = require('../lib/chapter-scan.cjs');
-const { extractPoster, ffmpegPath, posterTime } = require('../lib/poster.cjs');
+const { extractPoster, ffmpegPath, posterTime } = require('../lib/poster.mts');
 
 // Turns the folder's status into the row's status. An idle folder never wipes a failure that was reported earlier.
 function mapStatus(scanStatus, rowStatus) {

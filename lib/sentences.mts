@@ -1,5 +1,3 @@
-'use strict';
-
 // Words whose trailing full stop is not the end of a sentence.
 const ABBREVIATION_BEFORE_DOT = /(?:^|[\s(])(?:e\.g|i\.e|vs|etc)$/i;
 // Characters that may sit between the end mark and the space (closing quote or bracket).
@@ -8,34 +6,35 @@ const CLOSERS = new Set(['"', "'", '”', '’', ')', ']', '»']);
 const SENTENCE_START = /^[\p{Lu}\d"'“‘(\[]/u;
 
 // Tells whether the text at `pos` looks like the start of a new sentence.
-function startsSentence(text, pos) {
-  const ch = String.fromCodePoint(text.codePointAt(pos));
+function startsSentence(text: string, pos: number): boolean {
+  // the caller checks pos is inside the text, so a code point is always there
+  const ch = String.fromCodePoint(text.codePointAt(pos) as number);
   return SENTENCE_START.test(ch);
 }
 
 // Finds where a run of . ! ? marks ends, starting at `i`.
-function endOfMarkRun(text, i) {
+function endOfMarkRun(text: string, i: number): number {
   let k = i;
   while (k < text.length && '.!?'.includes(text[k])) k++;
   return k;
 }
 
 // A single full stop after e.g / i.e / vs / etc is not a sentence end.
-function isAbbreviation(text, i, runEnd) {
+function isAbbreviation(text: string, i: number, runEnd: number): boolean {
   if (text[i] !== '.' || runEnd - i !== 1) return false;
   return ABBREVIATION_BEFORE_DOT.test(text.slice(Math.max(0, i - 4), i));
 }
 
 // A run like "..." is an ellipsis and stays inside its sentence.
-function isEllipsis(text, i, runEnd) {
+function isEllipsis(text: string, i: number, runEnd: number): boolean {
   return text[i] === '.' && runEnd - i > 1;
 }
 
 // Splits narration into sentences; never throws, same input gives same output.
-function splitSentences(input) {
+function splitSentences(input: unknown): string[] {
   // newlines and runs of spaces become one space so a sentence is one line
   const text = String(input ?? '').replace(/\s+/g, ' ').trim();
-  const out = [];
+  const out: string[] = [];
   let start = 0;
   let i = 0;
   while (i < text.length) {
@@ -63,4 +62,4 @@ function splitSentences(input) {
   return out.map((s) => s.trim()).filter(Boolean);
 }
 
-module.exports = { splitSentences };
+export { splitSentences };

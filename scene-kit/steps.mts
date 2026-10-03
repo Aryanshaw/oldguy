@@ -1,14 +1,16 @@
-"use strict";
-const k = require("./shared.cjs");
+import * as k from "./shared.mts";
+import type { Rendered } from "./shared.mts";
 
 // Check one step and return its label and detail as plain text.
-function readItem(item, i) {
+function readItem(item: unknown, i: number): { label: string; detail: string } {
   if (item === null || typeof item !== "object") throw new Error(`steps: items[${i}] must be an object`);
-  return { label: k.requireText(item.label, `items[${i}].label`, "steps"), detail: k.optionalText(item.detail) };
+  // item was just proved to be a non-null object; each field is checked by requireText or optionalText
+  const it = item as { label?: unknown; detail?: unknown };
+  return { label: k.requireText(it.label, `items[${i}].label`, "steps"), detail: k.optionalText(it.detail) };
 }
 
 // Numbered steps that appear one after another; no items gives an empty fragment.
-function render(params, opts) {
+function render(params: unknown, opts: unknown): Rendered {
   const p = k.requireParams(params, "steps");
   if (!Array.isArray(p.items)) throw new Error('steps: "items" is required and must be an array');
   const items = p.items.map(readItem);
@@ -34,4 +36,4 @@ function render(params, opts) {
   return { html, ...k.finish(lines, t.endMs) };
 }
 
-module.exports = { render };
+export { render };

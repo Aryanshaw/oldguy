@@ -1,35 +1,40 @@
-"use strict";
-const k = require("./shared.cjs");
+import * as k from "./shared.mts";
+import type { Rendered } from "./shared.mts";
 
 // The widest code line the card shows on one row at 1080p; a longer line would wrap or be cut off on screen.
 const MAX_CODE_COLUMNS = 68;
 const TAB_COLUMNS = 4;
 
 // How many columns a line takes on the card: one per character, four per tab.
-function columns(text) {
+function columns(text: string): number {
   return [...text].reduce((n, ch) => n + (ch === "\t" ? TAB_COLUMNS : 1), 0);
 }
 
+// One checked code line: its number label, its text and whether it is highlighted.
+type CodeLine = { no: string; text: string; highlight: boolean };
+
 // Check one code line; its text keeps every space and tab but can never add a second line or run past the card.
-function readLine(line, i) {
+function readLine(line: unknown, i: number): CodeLine {
   if (line === null || typeof line !== "object") throw new Error(`code-card: lines[${i}] must be an object`);
-  const text = k.requireText(line.text === "" ? " " : line.text, `lines[${i}].text`, "code-card").replace(/\r\n|\r|\n/g, " ");
+  // line was just proved to be a non-null object; each field is checked by requireText or compared below
+  const l = line as { text?: unknown; no?: unknown; highlight?: unknown };
+  const text = k.requireText(l.text === "" ? " " : l.text, `lines[${i}].text`, "code-card").replace(/\r\n|\r|\n/g, " ");
   const width = columns(text);
   if (width > MAX_CODE_COLUMNS) {
     throw new Error(`code-card: lines[${i}] is ${width} columns wide, over the ${MAX_CODE_COLUMNS} that fit (a tab counts as ${TAB_COLUMNS}); `
       + "quote a shorter part of the line or pick other lines, never wrap");
   }
-  return { no: k.optionalText(line.no), text, highlight: line.highlight === true };
+  return { no: k.optionalText(l.no), text, highlight: l.highlight === true };
 }
 
 // Write one line row; highlighted rows carry both a class and a data attribute.
-function lineHtml(l) {
+function lineHtml(l: CodeLine): string {
   const mark = l.highlight ? ' yk-hl" data-highlight="true' : "";
   return `<div class="yk-line${mark}"><span class="yk-no">${k.esc(l.no)}</span><span class="yk-code">${k.esc(l.text)}</span></div>`;
 }
 
 // A file name header over code lines that appear in order, then the highlighted ones pop.
-function render(params, opts) {
+function render(params: unknown, opts: unknown): Rendered {
   const p = k.requireParams(params, "code-card");
   const file = k.requireText(p.file, "file", "code-card");
   if (!Array.isArray(p.lines)) throw new Error('code-card: "lines" is required and must be an array');
@@ -54,4 +59,4 @@ function render(params, opts) {
   return { html, ...k.finish(tl, t.endMs) };
 }
 
-module.exports = { render, MAX_CODE_COLUMNS };
+export { render, MAX_CODE_COLUMNS };

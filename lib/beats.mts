@@ -1,20 +1,27 @@
-'use strict';
+// One spoken word with its start and end time in seconds.
+type Word = { text: string; start: number; end: number };
+
+// One sentence with its start and end time in seconds.
+type Beat = { text: string; start: number; end: number };
+
+// Options for timing beats: how many seconds of lead-in silence come before the first one.
+type BeatOptions = { leadS?: number };
 
 // How far (in words) the end of a sentence may drift from where we expect it.
 const RESYNC_WINDOW = 4;
 
 // Lower-cases a word and drops punctuation so spoken and written forms compare equal.
-function normalise(text) {
+function normalise(text: unknown): string {
   return String(text).toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
 }
 
 // Splits a sentence into its words (code spans and such stay as written).
-function wordsOf(sentence) {
+function wordsOf(sentence: string): string[] {
   return sentence.split(/\s+/).filter(Boolean);
 }
 
 // Guesses sentence times from length alone: each sentence gets a share of the audio equal to its share of the characters.
-function beatsFromDuration(sentences, durationS, { leadS = 0 } = {}) {
+function beatsFromDuration(sentences: string[], durationS: number, { leadS = 0 }: BeatOptions = {}): Beat[] {
   // refuse a length we cannot divide up, and sentences with nothing to measure
   if (!Number.isFinite(durationS) || durationS <= 0) throw new Error('duration must be a finite number greater than 0');
   sentences.forEach((s, i) => {
@@ -30,15 +37,15 @@ function beatsFromDuration(sentences, durationS, { leadS = 0 } = {}) {
 }
 
 // True when a heard word can be the last word of a sentence: same word, a merge ending in it, or the tail piece of a split that carries the full stop.
-function closesSentence(heard, lastToken) {
+function closesSentence(heard: string, lastToken: string): boolean {
   const n = normalise(heard);
   if (!n) return false;
   return n.endsWith(lastToken) || (lastToken.endsWith(n) && /[.!?]\W*$/.test(heard));
 }
 
 // Finds the word that really ends a sentence: the expected spot if it matches, else the nearest match within a few words.
-function findSentenceEnd(words, expected, lastToken, lo, hi) {
-  const matches = (i) => i >= lo && i <= hi && closesSentence(words[i].text, lastToken);
+function findSentenceEnd(words: Word[], expected: number, lastToken: string, lo: number, hi: number): number {
+  const matches = (i: number) => i >= lo && i <= hi && closesSentence(words[i].text, lastToken);
   for (let d = 0; d <= RESYNC_WINDOW; d++) {
     if (matches(expected - d)) return expected - d;
     if (matches(expected + d)) return expected + d;
@@ -47,8 +54,8 @@ function findSentenceEnd(words, expected, lastToken, lo, hi) {
 }
 
 // Works out, for each sentence, which transcript words belong to it, as [firstIndex, lastIndex] pairs.
-function assignWords(sentences, words) {
-  const ranges = [];
+function assignWords(sentences: string[], words: Word[]): [number, number][] {
+  const ranges: [number, number][] = [];
   let next = 0;
   sentences.forEach((sentence, i) => {
     const parts = wordsOf(sentence);
@@ -65,7 +72,7 @@ function assignWords(sentences, words) {
 }
 
 // Times each sentence from the words a speech recogniser heard, re-syncing on sentence-final words if counts drift.
-function beatsFromWords(sentences, words, { leadS = 0 } = {}) {
+function beatsFromWords(sentences: string[], words: Word[], { leadS = 0 }: BeatOptions = {}): Beat[] {
   if (!words.length) throw new Error('no words to time the beats from');
   if (words.length < sentences.length) throw new Error('fewer words than sentences in the transcript');
   let previousEnd = 0;
@@ -78,4 +85,5 @@ function beatsFromWords(sentences, words, { leadS = 0 } = {}) {
   });
 }
 
-module.exports = { beatsFromDuration, beatsFromWords };
+export { beatsFromDuration, beatsFromWords };
+export type { Word, Beat, BeatOptions };

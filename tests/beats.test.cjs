@@ -2,8 +2,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { splitSentences } = require('../lib/sentences.cjs');
-const { beatsFromDuration, beatsFromWords } = require('../lib/beats.cjs');
+const { splitSentences } = require('../lib/sentences.mts');
+const { beatsFromDuration, beatsFromWords } = require('../lib/beats.mts');
 
 const FIX = path.join(__dirname, 'fixtures');
 const narration = fs.readFileSync(path.join(FIX, 'narration.txt'), 'utf8');

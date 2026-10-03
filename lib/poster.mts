@@ -1,16 +1,30 @@
-'use strict';
 // Takes one still frame out of a chapter video to use as its poster picture.
-const fs = require('node:fs');
-const path = require('node:path');
-const { execFile } = require('node:child_process');
-const { promisify } = require('node:util');
+import fs from 'node:fs';
+import path from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+
+// A command runner: runs a program with an argument list and can be aborted (tests hand in a fake one).
+type Exec = (file: string, args: string[], opts?: { signal?: AbortSignal }) => Promise<unknown>;
+
+// What extractPoster takes: which ffmpeg, the video, the picture to write, the second to grab, and the optional
+// runner, abort signal and "is the frame still wanted" check.
+type PosterOptions = {
+  ffmpeg?: string;
+  mp4: string;
+  out: string;
+  atS: number;
+  exec?: Exec;
+  signal?: AbortSignal;
+  beforeCommit?: () => boolean | Promise<boolean>;
+};
 
 const EXTRACT_TIMEOUT_MS = 20000;
 const execFileAsync = promisify(execFile);
 
 // The real command runner: runs a program with an argument list (no shell), gives up after 20 seconds, and is killed
 // when the caller's abort signal fires.
-function defaultExec(file, args, opts = {}) {
+function defaultExec(file: string, args: string[], opts: { signal?: AbortSignal } = {}): Promise<unknown> {
   return execFileAsync(file, args, { timeout: EXTRACT_TIMEOUT_MS, signal: opts.signal });
 }
 
@@ -18,12 +32,12 @@ function defaultExec(file, args, opts = {}) {
 let tempCounter = 0;
 
 // Which ffmpeg to run: the one the user pointed at, else the one on the path (the same rule the doctor uses).
-function ffmpegPath(env = process.env) {
+function ffmpegPath(env: Record<string, string | undefined> = process.env): string {
   return env.HYPERFRAMES_FFMPEG_PATH || 'ffmpeg';
 }
 
 // The second to grab: 1 s in, or the middle when the video is shorter than 2 s.
-function posterTime(durationS) {
+function posterTime(durationS: unknown): number {
   return typeof durationS === 'number' && durationS < 2 ? durationS / 2 : 1;
 }
 
@@ -32,7 +46,7 @@ function posterTime(durationS) {
 // Both paths are made absolute and passed as separate arguments, so a folder name can never act as an option.
 // Resolves true when the poster was written, false when the frame was thrown away; rejects when ffmpeg fails or is
 // aborted. The temp file is removed in every case but success.
-async function extractPoster({ ffmpeg = 'ffmpeg', mp4, out, atS, exec = defaultExec, signal, beforeCommit }) {
+async function extractPoster({ ffmpeg = 'ffmpeg', mp4, out, atS, exec = defaultExec, signal, beforeCommit }: PosterOptions): Promise<boolean> {
   const input = path.resolve(mp4);
   const target = path.resolve(out);
   const tmp = path.join(path.dirname(target), `${path.basename(target)}.tmp-${process.pid}-${tempCounter++}`);
@@ -47,4 +61,5 @@ async function extractPoster({ ffmpeg = 'ffmpeg', mp4, out, atS, exec = defaultE
   }
 }
 
-module.exports = { extractPoster, ffmpegPath, posterTime };
+export { extractPoster, ffmpegPath, posterTime };
+export type { Exec, PosterOptions };

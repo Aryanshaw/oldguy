@@ -1,6 +1,6 @@
 // The `yap audit <chapter.json> --root <repo>` command: reads a chapter file and prints each failure.
 const fs = require('node:fs');
-const { audit } = require('../lib/audit.cjs');
+const { audit } = require('../lib/audit.mts');
 
 // Pulls the chapter path and --root value out of the arguments; returns null if either is missing.
 function parseArgs(args) {

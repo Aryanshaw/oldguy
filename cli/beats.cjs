@@ -1,7 +1,7 @@
 // The `yap beats <narration.txt> --duration <s> [--words <transcript.json>] [--lead <s>]` command.
 const fs = require('node:fs');
-const { splitSentences } = require('../lib/sentences.cjs');
-const { beatsFromDuration, beatsFromWords } = require('../lib/beats.cjs');
+const { splitSentences } = require('../lib/sentences.mts');
+const { beatsFromDuration, beatsFromWords } = require('../lib/beats.mts');
 const { parseFlags, secondsFlag, guarded } = require('./args.cjs');
 
 const USAGE = 'usage: yap beats <narration.txt> --duration <seconds> [--words <transcript.json>] [--lead <seconds>]';

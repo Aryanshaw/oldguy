@@ -1,6 +1,6 @@
 // The `yap captions <beats-or-words.json> [--vtt <out.vtt>] [--json <out.json>]` command.
 const fs = require('node:fs');
-const { buildCaptions } = require('../lib/captions.cjs');
+const { buildCaptions } = require('../lib/captions.mts');
 const { parseFlags, guarded } = require('./args.cjs');
 
 const USAGE = 'usage: yap captions <beats-or-words.json> [--vtt <out.vtt>] [--json <out.json>]';

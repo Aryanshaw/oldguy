@@ -5,8 +5,8 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { renderChapters, renderArgs, checkArgs } = require('../lib/render-chapters.cjs');
-const { HYPERFRAMES_VERSION } = require('../lib/hyperframes.cjs');
-const { buildRecord } = require('../lib/build-record.cjs');
+const { HYPERFRAMES_VERSION } = require('../lib/hyperframes.mts');
+const { buildRecord } = require('../lib/build-record.mts');
 const { scaffoldChapter } = require('../lib/chapter.cjs');
 const { narrateChapter } = require('../lib/narrate.cjs');
 

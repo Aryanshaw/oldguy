@@ -4,7 +4,7 @@ const { spawnSync } = require('node:child_process');
 const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
-const { buildRecord } = require('../lib/build-record.cjs');
+const { buildRecord } = require('../lib/build-record.mts');
 
 const CLI = path.join(__dirname, '..', 'bin', 'yap.cjs');
 const NAMES = ['doctor', 'audit', 'beats', 'captions', 'pad-wav', 'scaffold', 'render', 'narrate'];

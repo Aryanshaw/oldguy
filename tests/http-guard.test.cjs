@@ -3,7 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
 const { PassThrough } = require('node:stream');
-const { createGuard, readJsonBody } = require('../lib/http-guard.cjs');
+const { createGuard, readJsonBody } = require('../lib/http-guard.mts');
 
 const KEY = 'a'.repeat(32);
 const PORT = 4321;

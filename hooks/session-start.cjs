@@ -37,7 +37,7 @@ function parseInput(text) {
 // Writes the session file through a temp file and a rename, so a reader never sees half a file.
 function writeSessionFile(cwd, input) {
   // loaded here, not at the top, so even a missing library file ends in the quiet exit 0
-  const { trustedDataDir } = require('../lib/data-dir.cjs');
+  const { trustedDataDir } = require('../lib/data-dir.mts');
   const dir = path.join(cwd, '.yap');
   fs.mkdirSync(dir, { recursive: true });
   const record = {
@@ -83,7 +83,7 @@ async function main() {
   const input = parseInput(await readStdin());
   if (input) recordSession(input);
   // loaded here, not at the top, so even a missing library file ends in the quiet exit 0 below
-  const { resolveDataDir } = require('../lib/data-dir.cjs');
+  const { resolveDataDir } = require('../lib/data-dir.mts');
   // the marker is looked for exactly where the doctor writes it; null when no folder can be trusted
   hintIfDoctorNotRun(resolveDataDir({ env: process.env, cwd: input && input.cwd, fs }));
 }

@@ -1,6 +1,6 @@
 // The `yap pad-wav <in> <out> [--lead <ms>] [--tail <ms>]` command.
 const fs = require('node:fs');
-const { padWav } = require('../lib/wav.cjs');
+const { padWav } = require('../lib/wav.mts');
 
 const MAX_BYTES = 200 * 1024 * 1024;
 const USAGE = 'usage: yap pad-wav <in> <out> [--lead <ms>] [--tail <ms>]';

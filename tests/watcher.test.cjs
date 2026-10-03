@@ -116,7 +116,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { startServer } = require('../server/server.cjs');
 const { newManifest, insertChapter, saveManifest, loadManifest } = require('../lib/manifest.cjs');
-const { sha256 } = require('../lib/build-record.cjs');
+const { sha256 } = require('../lib/build-record.mts');
 
 const BUILD = JSON.stringify({ version: 2, verified_against_commit: 'c'.repeat(40), sha256: {} });
 const BUILD2 = JSON.stringify({ version: 2, verified_against_commit: 'd'.repeat(40), sha256: {} });

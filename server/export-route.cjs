@@ -3,7 +3,7 @@
 const path = require('node:path');
 const { loadManifest } = require('../lib/manifest.cjs');
 const { exportVideo, checkDest } = require('../lib/export.cjs');
-const { ffmpegPath } = require('../lib/poster.cjs');
+const { ffmpegPath } = require('../lib/poster.mts');
 
 // Answers {file, files, skipped} on success. The body is checked first (dest, mode); only one export runs at a time.
 async function handleExport({ req, res, state, sendJson, readJsonBody }) {

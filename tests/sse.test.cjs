@@ -7,7 +7,7 @@ const path = require('node:path');
 const http = require('node:http');
 const net = require('node:net');
 const { EventEmitter } = require('node:events');
-const { createHub } = require('../lib/sse.cjs');
+const { createHub } = require('../lib/sse.mts');
 const { startServer } = require('../server/server.cjs');
 
 // A stand-in for an HTTP response: records the head and every write; `broken` makes write throw.

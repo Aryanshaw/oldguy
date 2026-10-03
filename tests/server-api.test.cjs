@@ -7,7 +7,7 @@ const path = require('node:path');
 const http = require('node:http');
 const { startServer } = require('../server/server.cjs');
 const { newManifest, insertChapter, saveManifest, loadManifest, validateManifest } = require('../lib/manifest.cjs');
-const { sha256 } = require('../lib/build-record.cjs');
+const { sha256 } = require('../lib/build-record.mts');
 
 // Makes a temp slug folder (named "demo"), writes a manifest with the given [id, status] rows, starts a server.
 async function setup(t, rows = [], deps = {}) {

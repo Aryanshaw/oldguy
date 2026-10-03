@@ -2,8 +2,17 @@
 
 const BYTES_PER_SAMPLE = 2;
 
+// The audio layout a WAV file declares in its "fmt " chunk.
+type WavFormat = { channels: number; sampleRate: number; bitsPerSample: number };
+
+// What parseWav finds: the format, where the audio bytes start and how long they are, and the length in seconds.
+type WavInfo = { format: WavFormat; dataOffset: number; dataLength: number; durationS: number };
+
+// How much silence to add before and after the audio, in milliseconds.
+type PadOptions = { leadMs?: number; tailMs?: number };
+
 // Reads the "fmt " chunk body and refuses anything that is not plain 16-bit PCM.
-function readFormat(buf, at, size) {
+function readFormat(buf: Buffer, at: number, size: number): WavFormat {
   if (size < 16 || at + 16 > buf.length) throw new Error('wav: "fmt " chunk is too short');
   const tag = buf.readUInt16LE(at);
   const channels = buf.readUInt16LE(at + 2);
@@ -17,11 +26,11 @@ function readFormat(buf, at, size) {
 }
 
 // Walks the chunks by id and size (skipping LIST and unknown ones) to find the format and the audio data.
-function parseWav(buf) {
+function parseWav(buf: Buffer): WavInfo {
   if (buf.length < 12 || buf.toString('latin1', 0, 4) !== 'RIFF' || buf.toString('latin1', 8, 12) !== 'WAVE') {
     throw new Error('wav: not a RIFF/WAVE file (missing or truncated header)');
   }
-  let format = null;
+  let format: WavFormat | null = null;
   let pos = 12;
   while (pos + 8 <= buf.length) {
     const id = buf.toString('latin1', pos, pos + 4);
@@ -40,7 +49,7 @@ function parseWav(buf) {
 }
 
 // Checks the data chunk fits in the file and works out its length in seconds.
-function describeData(buf, format, dataOffset, dataLength) {
+function describeData(buf: Buffer, format: WavFormat, dataOffset: number, dataLength: number): WavInfo {
   if (dataOffset + dataLength > buf.length) throw new Error('wav: data chunk claims more audio than the file holds');
   const frameBytes = format.channels * BYTES_PER_SAMPLE;
   if (dataLength % frameBytes !== 0) throw new Error('wav: data chunk is not a whole number of sample frames');
@@ -48,10 +57,10 @@ function describeData(buf, format, dataOffset, dataLength) {
 }
 
 // Returns a copy of the WAV with leadMs of silence before the audio and tailMs after it, with sizes rewritten.
-function padWav(buf, { leadMs = 0, tailMs = 0 } = {}) {
+function padWav(buf: Buffer, { leadMs = 0, tailMs = 0 }: PadOptions = {}): Buffer {
   const { format, dataOffset, dataLength } = parseWav(buf);
   const frameBytes = format.channels * BYTES_PER_SAMPLE;
-  const silence = (ms) => Buffer.alloc(Math.round((format.sampleRate * ms) / 1000) * frameBytes);
+  const silence = (ms: number) => Buffer.alloc(Math.round((format.sampleRate * ms) / 1000) * frameBytes);
   const lead = silence(leadMs);
   const tail = silence(tailMs);
   const newDataLength = lead.length + dataLength + tail.length;
@@ -68,4 +77,5 @@ function padWav(buf, { leadMs = 0, tailMs = 0 } = {}) {
   return out;
 }
 
-module.exports = { parseWav, padWav };
+export { parseWav, padWav };
+export type { WavFormat, WavInfo, PadOptions };

@@ -6,7 +6,7 @@ const path = require('node:path');
 const { runDoctor, writeMarker, checkWhisper } = require('../lib/doctor.cjs');
 const { runDoctorCli, realExec } = require('../cli/doctor.cjs');
 const { nodeProblem } = require('../lib/node-floor.cjs');
-const { HYPERFRAMES_VERSION } = require('../lib/hyperframes.cjs');
+const { HYPERFRAMES_VERSION } = require('../lib/hyperframes.mts');
 
 const GB = 1024 ** 3;
 const DATA = '/data';

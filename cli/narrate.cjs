@@ -7,7 +7,7 @@ const { parseFlags } = require('./args.cjs');
 const { narrateChapter } = require('../lib/narrate.cjs');
 const { venvPython, checkWhisper } = require('../lib/doctor.cjs');
 const { realExec } = require('./doctor.cjs');
-const { resolveDataDir } = require('../lib/data-dir.cjs');
+const { resolveDataDir } = require('../lib/data-dir.mts');
 
 const USAGE = 'usage: yap narrate <chapter-dir> [--root <repo>] [--data-dir <dir>]';
 const STEP_TIMEOUT_MS = 10 * 60 * 1000;

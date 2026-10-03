@@ -1,8 +1,8 @@
-"use strict";
-const k = require("./shared.cjs");
+import * as k from "./shared.mts";
+import type { Rendered } from "./shared.mts";
 
 // Title card: a big heading with an optional smaller line under it.
-function render(params, opts) {
+function render(params: unknown, opts: unknown): Rendered {
   const p = k.requireParams(params, "title");
   const heading = k.requireText(p.heading, "heading", "title");
   const sub = k.optionalText(p.sub);
@@ -24,4 +24,4 @@ function render(params, opts) {
   return { html, ...k.finish(lines, t.endMs) };
 }
 
-module.exports = { render };
+export { render };

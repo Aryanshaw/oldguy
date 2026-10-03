@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const { parseFlags } = require('./args.cjs');
 const { renderChapters, renderArgs, checkArgs } = require('../lib/render-chapters.cjs');
-const { renderCap } = require('../lib/render-schedule.cjs');
+const { renderCap } = require('../lib/render-schedule.mts');
 const { freeRamGb } = require('../lib/doctor.cjs');
 const { realExec } = require('./doctor.cjs');
 

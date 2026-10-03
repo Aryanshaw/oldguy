@@ -4,7 +4,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { parseFlags, guarded } = require('./args.cjs');
-const { askServer, pidAlive } = require('../lib/ask-server.cjs');
+const { askServer, pidAlive } = require('../lib/ask-server.mts');
 const { resolveSlugDir, readInfo } = require('./server.cjs');
 const { slugChapterId } = require('../lib/chapter.cjs');
 const { STATUSES } = require('../lib/manifest.cjs');

@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { renderCap, runRenders } = require('../lib/render-schedule.cjs');
+const { renderCap, runRenders } = require('../lib/render-schedule.mts');
 
 // Waits a few milliseconds so fake renders overlap the way real ones would.
 const pause = (ms = 5) => new Promise((r) => setTimeout(r, ms));

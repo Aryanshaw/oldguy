@@ -12,7 +12,7 @@ const path = require('node:path');
 const http = require('node:http');
 const net = require('node:net');
 const { spawnSync, execFileSync } = require('node:child_process');
-const { buildRecord, sha256 } = require('../lib/build-record.cjs');
+const { buildRecord, sha256 } = require('../lib/build-record.mts');
 
 const REPO = path.join(__dirname, '..');
 const BIN = path.join(REPO, 'bin', 'yap.cjs');
@@ -281,7 +281,7 @@ function vttTime(s) {
 }
 
 // Writes one chapter folder that satisfies the Phase 1 contract: the clip, the text files, build.json from
-// lib/build-record.cjs and render.json naming it. A stale chapter's build.json is rebuilt after render.json is written.
+// lib/build-record.mts and render.json naming it. A stale chapter's build.json is rebuilt after render.json is written.
 function writeChapter(slugDir, spec) {
   const dir = path.join(slugDir, 'chapters', spec.id);
   fs.mkdirSync(dir, { recursive: true });

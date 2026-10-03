@@ -5,7 +5,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { execFileSync, spawnSync } = require('node:child_process');
-const { parseWav } = require('../lib/wav.cjs');
+const { parseWav } = require('../lib/wav.mts');
 
 const YAP = path.join(__dirname, '..', 'bin', 'yap.cjs');
 const FFPROBE = process.env.FFPROBE || 'ffprobe';

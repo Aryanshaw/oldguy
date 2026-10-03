@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { extractPoster } = require('../lib/poster.cjs');
+const { extractPoster } = require('../lib/poster.mts');
 
 // Makes a temp chapter folder and removes it when the test ends.
 function tempDir(t) {

@@ -1,11 +1,11 @@
-"use strict";
-const k = require("./shared.cjs");
+import * as k from "./shared.mts";
+import type { Rendered } from "./shared.mts";
 
-// The only arrow directions a callout may point; anything else is rejected.
-const DIRECTIONS = ["up", "down", "left", "right"];
+// The only arrow directions a callout may point; anything else is rejected. (typed unknown[] so the unchecked pointTo can be tested against it)
+const DIRECTIONS: unknown[] = ["up", "down", "left", "right"];
 
 // A short note in a bubble whose arrow points the given way (default: down).
-function render(params, opts) {
+function render(params: unknown, opts: unknown): Rendered {
   const p = k.requireParams(params, "callout");
   const text = k.requireText(p.text, "text", "callout");
   const pointTo = p.pointTo === undefined ? "down" : p.pointTo;
@@ -25,4 +25,4 @@ function render(params, opts) {
   return { html, ...k.finish(lines, t.endMs) };
 }
 
-module.exports = { render };
+export { render };

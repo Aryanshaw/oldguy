@@ -182,7 +182,7 @@ test('placeholder page lists chapters escaped, video only for ready ones, no scr
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, 'chapter.json'), JSON.stringify({ id: 'intro', title: '<script>alert(1)</script>' }));
   fs.writeFileSync(path.join(dir, 'build.json'), build);
-  fs.writeFileSync(path.join(dir, 'render.json'), JSON.stringify({ build_sha256: require('../lib/build-record.cjs').sha256(build) }));
+  fs.writeFileSync(path.join(dir, 'render.json'), JSON.stringify({ build_sha256: require('../lib/build-record.mts').sha256(build) }));
   fs.writeFileSync(path.join(dir, 'chapter.mp4'), 'MP4');
   const { srv } = await start(t, { slugDir });
   const page = await req(srv, { headers: withKey(srv) });
