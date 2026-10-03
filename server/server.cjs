@@ -81,7 +81,9 @@ function mediaHandler(kind) {
     const ok = row && (kind !== 'video' || (row.status === 'ready' && scanChapter(dir).status === 'ready'));
     const real = ok && safeChapterFile(dir, file);
     if (!real) return sendJson(res, 404, { error: 'not found' });
-    await serveFile(req, res, real, { contentType, createReadStream: state.deps.createReadStream });
+    // Test hook: lets a test change the file after the check and before the open.
+    if (state.deps.afterCheck) await state.deps.afterCheck();
+    await serveFile(req, res, real.path, { contentType, identity: real, createReadStream: state.deps.createReadStream });
   };
 }
 
