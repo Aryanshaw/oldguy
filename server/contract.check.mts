@@ -1,11 +1,11 @@
 // Type-only checks (never run, never imported): `npm run check` fails if a shared data shape drifts from what the
 // server sends and the player will read. Each line below must stay true.
-import type { ChapterStatus, Manifest, ManifestRow, insertChapter } from './manifest.mts';
-import type { ScanStatus, ScannedChapter } from './chapter-scan.mts';
-import type { ThreadEntry, ViewerEvent, Reply } from './events.mts';
-import type { StreamEvent } from './sse.mts';
-import type { ChaptersBody, StateResponse } from '../server/api.mts';
-import type { RunningServer } from '../server/types.mts';
+import type { ChapterStatus, Manifest, ManifestRow, insertChapter } from '../lib/manifest.mts';
+import type { ScanStatus, ScannedChapter } from '../lib/chapter-scan.mts';
+import type { ThreadEntry, ViewerEvent, Reply } from '../lib/events.mts';
+import type { StreamEvent } from '../lib/sse.mts';
+import type { ChaptersBody, StateResponse } from './api.mts';
+import type { RunningServer } from './types.mts';
 
 // True only when A and B are exactly the same type.
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false;
