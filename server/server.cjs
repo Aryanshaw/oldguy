@@ -262,6 +262,7 @@ async function startServer({ slugDir, key = crypto.randomBytes(16).toString('hex
   // Stops the watcher and the poster work (a running ffmpeg is told to stop, and both are waited for), then the server:
   // drops open connections so the port is freed and removes state/server.json.
   const close = async () => {
+    state.closing = true;
     if (state.stopExport) await state.stopExport();
     state.watcher.stop();
     sync.stop();

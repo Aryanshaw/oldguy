@@ -7,6 +7,7 @@ const { ffmpegPath } = require('../lib/poster.cjs');
 
 // Answers {file, files, skipped} on success. The body is checked first (dest, mode); only one export runs at a time.
 async function handleExport({ req, res, state, sendJson, readJsonBody }) {
+  if (state.closing) return sendJson(res, 503, { error: 'the server is closing' });
   const body = await readJsonBody(req);
   const extra = Object.keys(body).find((k) => k !== 'dest' && k !== 'mode');
   if (extra !== undefined) return sendJson(res, 400, { error: `unknown field "${extra.replace(/\s+/g, ' ').slice(0, 40)}"` });

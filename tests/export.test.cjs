@@ -332,7 +332,7 @@ test('route: needs the key', async (t) => {
 // ---- fix round 1 ----
 
 test('I-1: an unsafe manifest slug is refused (409): nothing written anywhere, ffmpeg not run', async (t) => {
-  for (const slug of ['../escaped', 'a/b', '-rf', '..', '', 'a\nb']) {
+  for (const slug of ['../escaped', 'a/b', '-rf', '..', '', 'a\nb', '.hidden', 'a..b', 'x'.repeat(81), 'a b', 'a\0b']) {
     const p = project(t, [['a', 'ready']]);
     const f = fakeExec();
     await assert.rejects(run(p, { manifest: { ...p.manifest, slug }, exec: f.exec }), (e) => e.status === 409 && /slug/.test(e.message) && !e.message.includes(p.root), JSON.stringify(slug));
@@ -477,4 +477,115 @@ test('8: mode and other fields are type-checked before dest touches the disk', a
     assert.equal(r.status, 400);
     assert.match(r.json.error, /mode|field/);
   }
+});
+
+// ---- fix round 2 ----
+
+test('names: 2024-recap, Demo, my_video and a.b are accepted as the output name', async (t) => {
+  for (const slug of ['2024-recap', 'Demo', 'my_video', 'a.b', 'x'.repeat(80)]) {
+    const p = project(t, [['a', 'ready']]);
+    const r = await run(p, { manifest: { ...p.manifest, slug }, exec: fakeExec().exec });
+    assert.equal(r.file, `${slug}.mp4`);
+  }
+});
+
+// A copy of node's fs with some functions replaced, injected into the export.
+const withFs = (over) => ({ ...fs, ...over });
+const codeError = (code) => Object.assign(new Error(code), { code });
+
+test('N-1: when hard links are not supported the export copies instead, byte for byte', async (t) => {
+  for (const code of ['ENOTSUP', 'EPERM', 'EOPNOTSUPP', 'ENOSYS', 'EMLINK']) {
+    const p = project(t, [['a', 'ready']]);
+    const f = withFs({ linkSync: () => { throw codeError(code); } });
+    const r = await run(p, { exec: fakeExec().exec, fs: f });
+    assert.deepEqual(r.files, ['demo.mp4', 'script.md', 'sources.json'], code);
+    assert.equal(fs.readFileSync(path.join(p.destDir, 'demo.mp4'), 'utf8'), 'JOINED');
+    assert.deepEqual(fs.readdirSync(p.destDir).sort(), ['demo.mp4', 'script.md', 'sources.json']);
+  }
+});
+
+test('N-1: the copy fallback never replaces a file that appeared meanwhile', async (t) => {
+  const p = project(t, [['a', 'ready']]);
+  let first = true;
+  const f = withFs({});
+  f.linkSync = (a, b) => { if (first) { first = false; fs.writeFileSync(path.join(p.destDir, 'demo.mp4'), 'MINE'); } throw codeError('ENOTSUP'); };
+  const r = await run(p, { exec: fakeExec().exec, fs: f });
+  assert.deepEqual(r.files, ['demo-2.mp4', 'script-2.md', 'sources-2.json']);
+  assert.equal(fs.readFileSync(path.join(p.destDir, 'demo.mp4'), 'utf8'), 'MINE');
+  assert.deepEqual(fs.readdirSync(p.destDir).sort(), ['demo-2.mp4', 'demo.mp4', 'script-2.md', 'sources-2.json']);
+});
+
+test('N-1: a copy that fails half-way leaves nothing behind under the final names', async (t) => {
+  const p = project(t, [['a', 'ready']]);
+  const f = withFs({
+    linkSync: () => { throw codeError('ENOTSUP'); },
+    copyFileSync: (src, dst, flags) => {
+      if (String(dst).endsWith('.mp4')) { fs.writeFileSync(dst, 'HALF'); throw codeError('EIO'); }
+      return fs.copyFileSync(src, dst, flags);
+    },
+  });
+  await assert.rejects(run(p, { exec: fakeExec().exec, fs: f }), (e) => e.status === 500 && !e.message.includes(p.root));
+  assert.deepEqual(fs.readdirSync(p.destDir), []);
+});
+
+test('rollback: a clash on the second text file ends with a complete set on the next suffix and no stray file', async (t) => {
+  const p = project(t, [['a', 'ready']]);
+  let planted = false;
+  const f = withFs({
+    copyFileSync: (src, dst, flags) => {
+      if (!planted && String(dst).endsWith('sources.json')) { planted = true; fs.writeFileSync(dst, 'MINE'); }
+      return fs.copyFileSync(src, dst, flags);
+    },
+  });
+  const r = await run(p, { exec: fakeExec().exec, fs: f });
+  assert.deepEqual(r.files, ['demo-2.mp4', 'script-2.md', 'sources-2.json']);
+  assert.deepEqual(fs.readdirSync(p.destDir).sort(), ['demo-2.mp4', 'script-2.md', 'sources-2.json', 'sources.json']);
+  assert.equal(fs.readFileSync(path.join(p.destDir, 'sources.json'), 'utf8'), 'MINE');
+});
+
+test('rollback: a clash at the link step ends with a complete set on the next suffix and no stray file', async (t) => {
+  const p = project(t, [['a', 'ready']]);
+  let planted = false;
+  const f = withFs({
+    linkSync: (a, b) => {
+      if (!planted) { planted = true; fs.writeFileSync(path.join(p.destDir, 'demo.mp4'), 'MINE'); }
+      return fs.linkSync(a, b);
+    },
+  });
+  const r = await run(p, { exec: fakeExec().exec, fs: f });
+  assert.deepEqual(r.files, ['demo-2.mp4', 'script-2.md', 'sources-2.json']);
+  assert.deepEqual(fs.readdirSync(p.destDir).sort(), ['demo-2.mp4', 'demo.mp4', 'script-2.md', 'sources-2.json']);
+  assert.equal(fs.readFileSync(path.join(p.destDir, 'demo.mp4'), 'utf8'), 'MINE');
+});
+
+test('N-4: a folder that cannot be written into gives a 409 with a short message', { skip: process.getuid && process.getuid() === 0 }, async (t) => {
+  const p = project(t, [['a', 'ready']]);
+  const { post } = await serve(t, p, { exec: fakeExec().exec });
+  fs.chmodSync(p.destDir, 0o500);
+  try {
+    await assert.rejects(run(p, { exec: fakeExec().exec }), (e) => e.status === 409 && e.message === 'cannot write into that folder');
+    const r = await post({ dest: p.destDir, mode: 'drafts' });
+    assert.equal(r.status, 409);
+    assert.deepEqual(r.json, { error: 'cannot write into that folder' });
+  } finally {
+    fs.chmodSync(p.destDir, 0o700);
+  }
+});
+
+test('N-2: an export started while close() waits on poster work is answered 503 and writes nothing', async (t) => {
+  const p = project(t, [['a', 'ready']]);
+  let release;
+  const gate = new Promise((res) => { release = res; });
+  const exec = async (file, args) => {
+    if (!args.includes('concat')) { await gate; fs.writeFileSync(args[args.length - 1], 'POSTER'); return; }
+    fs.writeFileSync(args[args.length - 1], 'JOINED');
+  };
+  const { srv, post } = await serve(t, p, { exec, posterWaitMs: 2000 });
+  const closing = srv.close();
+  const r = await post({ dest: p.destDir, mode: 'drafts' });
+  assert.equal(r.status, 503);
+  assert.deepEqual(r.json, { error: 'the server is closing' });
+  release();
+  await closing;
+  assert.deepEqual(fs.readdirSync(p.destDir), []);
 });
