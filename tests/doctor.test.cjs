@@ -5,6 +5,7 @@ const osReal = require('node:os');
 const path = require('node:path');
 const { runDoctor, writeMarker, checkWhisper } = require('../lib/doctor.cjs');
 const { runDoctorCli, realExec } = require('../lib/doctor-cli.cjs');
+const { nodeProblem } = require('../lib/node-floor.cjs');
 const { HYPERFRAMES_VERSION } = require('../lib/hyperframes.cjs');
 
 const GB = 1024 ** 3;
@@ -45,7 +46,7 @@ function machine(over = {}) {
       },
       env: { CLAUDE_PLUGIN_DATA: DATA, ...(over.env || {}) },
       os: { homedir: () => HOME, freemem: () => (over.freeRamGb ?? 8) * GB },
-      nodeVersion: over.nodeVersion ?? 'v22.3.0',
+      nodeVersion: over.nodeVersion ?? 'v22.18.0',
       dataDir: DATA,
     },
   };
@@ -86,6 +87,17 @@ test('Node 20 fails and names the version', async () => {
   assert.equal(c.ok, false);
   assert.match(c.detail, /20\.11\.1/);
   assert.match(c.fix, /22/);
+});
+
+test('Node 22.17.0 fails with the floor sentence as its fix and 22.18.0 passes', async () => {
+  const old = byName(await runDoctor(machine({ nodeVersion: '22.17.0' }).deps), 'Node');
+  assert.equal(old.ok, false);
+  assert.equal(old.required, true);
+  assert.match(old.detail, /22\.17\.0/);
+  assert.equal(old.fix, nodeProblem('22.17.0', ''));
+  const fine = byName(await runDoctor(machine({ nodeVersion: '22.18.0' }).deps), 'Node');
+  assert.equal(fine.ok, true);
+  assert.equal(fine.fix, '');
 });
 
 const VENV = `${DATA}/venv`;
