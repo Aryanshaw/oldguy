@@ -107,7 +107,8 @@ async function detachWith(t, fileFields) {
     const r = await runYap(['serve', '--dir', slugDir, '--detach']);
     return { r, slugDir, info: JSON.parse(fs.readFileSync(file, 'utf8')) };
   } finally {
-    try { process.kill(JSON.parse(fs.readFileSync(file, 'utf8')).pid, 'SIGTERM'); } catch { /* nothing started */ }
+    // never signal this test process itself (a file that still names it means nothing was started)
+    try { const p = JSON.parse(fs.readFileSync(file, 'utf8')).pid; if (p !== process.pid) process.kill(p, 'SIGTERM'); } catch { /* nothing started */ }
   }
 }
 
@@ -236,5 +237,36 @@ test('N-2: --detach against a live pid that never answers prints the sentence, e
   } finally {
     // safety net for the old behaviour, which started a second server
     try { const p = JSON.parse(fs.readFileSync(file, 'utf8')).pid; if (p !== process.pid) process.kill(p, 'SIGTERM'); } catch { /* nothing started */ }
+  }
+});
+
+// ---- I-1: an answer that is not exactly this server is stale at once ----
+// A web server that answers every request with the given status and body text.
+async function fixedAnswer(t, status, bodyText) {
+  const web = http.createServer((req, res) => { res.writeHead(status, { 'content-type': 'application/json' }); res.end(bodyText); });
+  await new Promise((resolve) => web.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve) => { web.closeAllConnections(); web.close(resolve); }));
+  return web.address().port;
+}
+
+test('I-1: a 200 ping without a whole-number pid (or with another body shape) is stale, not busy', async (t) => {
+  for (const bodyText of ['{"ok":true}', '{"ok":true,"pid":"12"}', '{"ok":true,"pid":1.5}', '[]', 'null', '{"ok":false,"pid":1234}']) {
+    const port = await fixedAnswer(t, 200, bodyText);
+    const { slugDir } = folderNaming(t, port);
+    const started = Date.now();
+    assert.equal(await liveServer(slugDir, { pingMs: 300, totalMs: 3000 }), null, bodyText);
+    assert.ok(Date.now() - started < 1500, `${bodyText} took ${Date.now() - started} ms`);
+  }
+});
+
+test('I-1: --detach over such a file starts a fresh server promptly instead of refusing', async (t) => {
+  for (const bodyText of ['{"ok":true}', '{"ok":true,"pid":"12"}', '[]', 'null']) {
+    const port = await fixedAnswer(t, 200, bodyText);
+    const key = 'a'.repeat(32);
+    const started = Date.now();
+    const { r, info } = await detachWith(t, { url: `http://127.0.0.1:${port}/?key=${key}`, key, port, pid: process.pid, started_at: 'then' });
+    assert.equal(r.status, 0, `${bodyText}: ${r.stderr}`);
+    assert.notEqual(info.port, port, bodyText);
+    assert.ok(Date.now() - started < 4500, `${bodyText} took ${Date.now() - started} ms`);
   }
 });

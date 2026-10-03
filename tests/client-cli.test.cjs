@@ -278,3 +278,145 @@ test('the commands are wired into bin/yap.cjs: --dir is optional (the only folde
   assert.match(two.stderr, /^yap reply: .*--dir.*\n$/);
   assert.match(yap('--help').stdout, /^\s*reply\s.*\n[\s\S]*add-chapter[\s\S]*set-status[\s\S]*order/m);
 });
+
+// ---- fix round 1 ----
+const http = require('node:http');
+
+// A fake server over a fresh folder: answers every request with `answer(req)` -> {status, body}; counts requests.
+async function fakeServer(t, answer) {
+  const seen = { count: 0 };
+  const web = http.createServer((req, res) => {
+    seen.count += 1;
+    req.resume();
+    const { status, body } = answer(req);
+    res.writeHead(status, { 'content-type': 'application/json' });
+    res.end(typeof body === 'string' ? body : JSON.stringify(body));
+  });
+  await new Promise((resolve) => web.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve) => { web.closeAllConnections(); web.close(resolve); }));
+  const slugDir = slugFolder(t);
+  writeInfo(slugDir, { pid: process.pid, port: web.address().port, key: 'd'.repeat(32) });
+  return { slugDir, seen };
+}
+const UNEXPECTED = 'the server sent an unexpected answer\n';
+
+test('M-2: a huge multi-line server error is printed as one line of at most 300 characters ending in an ellipsis', async (t) => {
+  const { slugDir } = await fakeServer(t, () => ({ status: 400, body: { error: `first line\n${'word  \n'.repeat(30000)}` } }));
+  const r = await run(runAddChapter, ['--dir', slugDir, '--id', 'a']);
+  assert.equal(r.code, 1);
+  assert.equal(r.out, '');
+  assert.match(r.err, /^first line word[^\n]*…\n$/);
+  assert.ok(r.err.length <= 301, `${r.err.length} characters`);
+});
+
+test('M-2: success lines use only validated values: a hostile reply id, a bad position or a null body exit 1', async (t) => {
+  const answers = {
+    'reply id with a newline': [runReply, ['--in-reply-to', 'evt_1', '--text', 'x'], { reply: { id: 'rep_1\nINJECT' } }],
+    'reply id of another shape': [runReply, ['--in-reply-to', 'evt_1', '--text', 'x'], { reply: { id: 'evt_1' } }],
+    'reply missing': [runReply, ['--in-reply-to', 'evt_1', '--text', 'x'], {}],
+    'manifest without the added id': [runAddChapter, ['--id', 'a'], { manifest: { chapters: [{ id: 'other' }] } }],
+    'manifest missing': [runAddChapter, ['--id', 'a'], { nope: 1 }],
+    'body is null': [runSetStatus, ['--id', 'a', '--status', 'failed'], null],
+  };
+  for (const [name, [fn, args, body]] of Object.entries(answers)) {
+    const { slugDir } = await fakeServer(t, () => ({ status: 200, body: JSON.stringify(body) }));
+    const r = await run(fn, ['--dir', slugDir, ...args]);
+    assert.deepEqual([r.code, r.out, r.err], [1, '', UNEXPECTED], name);
+  }
+});
+
+test('M-3: ids that are not plain slugs are usage errors (exit 2, one line) before any request', async (t) => {
+  const { slugDir, seen } = await fakeServer(t, () => ({ status: 200, body: {} }));
+  const cases = [
+    [runAddChapter, ['--id', 'Bad_ID']],
+    [runAddChapter, ['--id', 'ok', '--after', 'Not Plain']],
+    [runAddChapter, ['--id', 'ok', '--parent', 'a/b']],
+    [runSetStatus, ['--id', 'Bad_ID', '--status', 'failed']],
+  ];
+  for (const [fn, args] of cases) {
+    const r = await run(fn, ['--dir', slugDir, ...args]);
+    assert.equal(r.code, 2, args.join(' '));
+    assert.match(r.err, /^yap [a-z-]+: [^\n]+\n$/);
+  }
+  assert.equal(seen.count, 0);
+});
+
+test('M-4: an extra word is a usage error for every command', async (t) => {
+  const { slugDir, seen } = await fakeServer(t, () => ({ status: 200, body: {} }));
+  const cases = [
+    [runReply, ['--in-reply-to', 'evt_1', '--text', 'x', 'extra']],
+    [runAddChapter, ['--id', 'a', 'extra']],
+    [runSetStatus, ['--id', 'a', '--status', 'failed', 'extra']],
+    [runOrder, ['a,b', 'extra']],
+  ];
+  for (const [fn, args] of cases) {
+    const r = await run(fn, ['--dir', slugDir, ...args]);
+    assert.equal(r.code, 2, args.join(' '));
+    assert.match(r.err, /^yap [a-z-]+: [^\n]+\n$/);
+  }
+  assert.equal(seen.count, 0);
+});
+
+test('M-4: an answer over 1 MB is cut off by the cap, well before the deadline, with the unreadable-answer message', async (t) => {
+  const sockets = new Set();
+  const flood = net.createServer((s) => {
+    sockets.add(s); s.on('error', () => {});
+    s.write('HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 999999999\r\n\r\n');
+    s.write('a'.repeat(3 * 1024 * 1024));
+  });
+  await new Promise((resolve) => flood.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve) => { for (const s of sockets) s.destroy(); flood.close(resolve); }));
+  const slugDir = slugFolder(t);
+  writeInfo(slugDir, { pid: process.pid, port: flood.address().port, key: 'c'.repeat(32) });
+  const started = Date.now();
+  const r = await run(runAddChapter, ['--dir', slugDir, '--id', 'a'], { timeoutMs: 4000 });
+  assert.deepEqual([r.code, r.err], [1, 'the server answered in a way yap could not read\n']);
+  assert.ok(Date.now() - started < 2000, `took ${Date.now() - started} ms`);
+});
+
+test('M-4: a hostile server.json (odd port, extra host or url) is never connected to; exit 1 "no server is running"', async (t) => {
+  let connections = 0;
+  const bait = net.createServer((s) => { connections += 1; s.destroy(); });
+  await new Promise((resolve) => bait.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve) => bait.close(resolve)));
+  const key = 'e'.repeat(32);
+  const bad = [
+    { pid: process.pid, port: '80@evil.example', key },
+    { pid: process.pid, port: 70000, key },
+    { pid: process.pid, port: 0, key },
+    { pid: process.pid, port: bait.address().port, key: 'short', host: 'evil.example' },
+    { pid: process.pid, port: '127.0.0.1:1', key, url: `http://evil.example:${bait.address().port}/?key=${key}`, host: 'evil.example' },
+  ];
+  for (const fields of bad) {
+    const slugDir = slugFolder(t);
+    writeInfo(slugDir, fields);
+    const r = await run(runAddChapter, ['--dir', slugDir, '--id', 'a']);
+    assert.deepEqual([r.code, r.out, r.err], [1, '', NO_SERVER], JSON.stringify(fields));
+  }
+  assert.equal(connections, 0);
+});
+
+test('M-4: a failed write of order.json exits 1 with one line, leaves the old file intact and no temp file behind', async (t) => {
+  // a folder nobody may write into
+  const locked = slugFolder(t);
+  await run(runOrder, ['--dir', locked, 'keep,me']);
+  fs.chmodSync(locked, 0o555);
+  try {
+    if (process.getuid && process.getuid() !== 0) {
+      const r = await run(runOrder, ['--dir', locked, 'new,list']);
+      assert.equal(r.code, 1);
+      assert.equal(r.out, '');
+      assert.match(r.err, /^yap order: [^\n]+\n$/);
+      assert.equal(fs.readFileSync(path.join(locked, 'order.json'), 'utf8'), '{"chapters":["keep","me"]}\n');
+      assert.deepEqual(fs.readdirSync(locked).sort(), ['chapters', 'order.json']);
+    }
+  } finally { fs.chmodSync(locked, 0o755); }
+  // the rename fails: a folder sits where order.json should go
+  const blocked = slugFolder(t);
+  fs.mkdirSync(path.join(blocked, 'order.json'));
+  const r2 = await run(runOrder, ['--dir', blocked, 'a,b']);
+  assert.equal(r2.code, 1);
+  assert.match(r2.err, /^yap order: [^\n]+\n$/);
+  assert.deepEqual(fs.readdirSync(blocked).sort(), ['chapters', 'order.json']);
+  assert.ok(fs.statSync(path.join(blocked, 'order.json')).isDirectory());
+});
