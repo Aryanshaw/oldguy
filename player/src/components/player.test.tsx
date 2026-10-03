@@ -251,6 +251,23 @@ describe('keyboard', () => {
     expect(eng.seek).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'CC' })).toHaveAttribute('aria-pressed', 'true');
   });
+  it('ignores shortcuts while a dialog is open and works again after it closes', () => {
+    const d = document.createElement('dialog');
+    d.setAttribute('open', '');
+    document.body.appendChild(d);
+    render(<Harness chapters={[ch('a'), ch('b')]} />);
+    eng.setPos({ chapterId: 'a', offset: 20 });
+    for (const k of ['ArrowRight', ']', 'c', ' ']) key(k);
+    expect(eng.seek).not.toHaveBeenCalled();
+    expect(eng.play).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'CC' })).toHaveAttribute('aria-pressed', 'true');
+    d.removeAttribute('open');
+    key('ArrowRight');
+    expect(eng.seek).toHaveBeenCalledTimes(1);
+    key('c');
+    expect(screen.getByRole('button', { name: 'CC' })).toHaveAttribute('aria-pressed', 'false');
+    d.remove();
+  });
   it('ArrowRight at 62s of a 64s chapter seeks to the next chapter at 3s', () => {
     render(<Harness chapters={[ch('a'), ch('b')]} />);
     eng.setPos({ chapterId: 'a', offset: 62 });

@@ -31,6 +31,7 @@ export function Controls({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || typing(e.target)) return;
+      if (document.querySelector('dialog[open]')) return; // a modal dialog makes the page behind it inert
       const { player: p, onToggleCaptions: cc } = latest.current;
       switch (e.key) {
         case ' ':
