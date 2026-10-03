@@ -11,6 +11,7 @@ const { scanChapter } = require('../lib/chapter-scan.cjs');
 const { serveFile, safeChapterFile } = require('../lib/range.cjs');
 const { createHub } = require('../lib/sse.cjs');
 const { API_ROUTES, clearHeartbeatTimer } = require('./api.cjs');
+const { PLAYER_ROUTES, readPlayerIndex } = require('./player-routes.cjs');
 const { startWatcher } = require('../lib/watcher.cjs');
 const { makeChapterSync } = require('./chapter-sync.cjs');
 const { liveServer } = require('../lib/live-server.cjs');
@@ -50,9 +51,10 @@ function handleHome({ req, res, url, state }) {
     res.writeHead(302, { 'Set-Cookie': `yap_key_${state.port}=${state.key}; HttpOnly; SameSite=Strict; Path=/`, Location: '/' });
     return res.end();
   }
-  const manifest = loadManifest(path.join(state.slugDir, 'manifest.json'));
+  // The built player when it exists, else the placeholder.
+  const index = readPlayerIndex(state);
   res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-  res.end(renderPage(manifest));
+  res.end(index || renderPage(loadManifest(path.join(state.slugDir, 'manifest.json'))));
 }
 
 // GET /api/ping: tells a caller (the --detach check) this really is a yap server and which process runs it.
@@ -100,6 +102,7 @@ const ROUTES = [
   { method: 'HEAD', pattern: '/chapters/:id/video', handler: mediaHandler('video') },
   { method: 'GET', pattern: '/chapters/:id/poster', handler: mediaHandler('poster') },
   { method: 'GET', pattern: '/chapters/:id/captions', handler: mediaHandler('captions') },
+  ...PLAYER_ROUTES,
   ...API_ROUTES,
 ];
 
@@ -147,6 +150,9 @@ function makeListener(state, routes, guard) {
       if (!verdict.ok) return sendJson(res, verdict.status, { error: verdict.reason });
       let url;
       try { url = new URL(req.url, 'http://placeholder'); } catch { return sendJson(res, 400, { error: 'bad request' }); }
+      // The URL parser folds a ".." segment (even written %2e%2e) into its parent, so a request meant for one place would
+      // land on another route. Answer 404 for any raw path that has one.
+      if (req.url.split('?')[0].split('/').some((seg) => { try { return decodeURIComponent(seg) === '..'; } catch { return false; } })) return sendJson(res, 404, { error: 'not found' });
       const hit = route(routes, req.method, url.pathname);
       if (hit.status === 404) return sendJson(res, 404, { error: 'not found' });
       if (hit.status === 405) return sendJson(res, 405, { error: 'method not allowed' });
