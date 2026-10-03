@@ -481,6 +481,22 @@ describe('engine fix round 3', () => {
     expect(b.paused).toBe(true);
   });
 
+  it('F2: play, pause at the end with a pending seek, target errors, then play: restarts, never replays the finished chapter', async () => {
+    e.setChapters([c1, c2]);
+    await e.play();
+    a.fire('ended');
+    b.fire('ended');
+    e.seek({ chapterId: 'c1', offset: 0 });
+    await e.play();
+    e.pause();
+    a.fire('error'); // the seek target (c1, loading in a) breaks
+    expect(e.state()).toBe('ended');
+    await e.play();
+    // c1 is broken, so the restart begins at c2 from its start, not at its end
+    expect(e.position()).toEqual({ chapterId: 'c2', offset: 0 });
+    expect(e.state()).toBe('playing');
+  });
+
   it('X2: pause then play at the end with a pending seek, target removed: ended and nothing playing', async () => {
     e.setChapters([c1, c2]);
     await e.play();

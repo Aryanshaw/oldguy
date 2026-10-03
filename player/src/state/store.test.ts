@@ -119,6 +119,28 @@ describe('store', () => {
     expect(s.store.get().thread).toEqual(appState.thread);
   });
 
+  it('press of a key that is pending or already sent posts nothing', async () => {
+    let resolve!: (e: StoredEvent) => void;
+    const s = await started(setup({ postMessage: () => new Promise<StoredEvent>((r) => (resolve = r)) }));
+    const first = s.store.press('make_video', 'mv:1');
+    await s.store.press('make_video', 'mv:1');
+    expect(s.postMessage).toHaveBeenCalledTimes(1);
+    resolve({ id: 'evt_2', ts: 'T', type: 'make_video' });
+    await first;
+    await s.store.press('make_video', 'mv:1');
+    expect(s.postMessage).toHaveBeenCalledTimes(1);
+    expect(s.store.get().sent).toEqual({ 'mv:1': true });
+  });
+
+  it('a failed press can be pressed again', async () => {
+    const post = vi.fn().mockRejectedValueOnce(new ApiError(500, 'bad')).mockResolvedValue({ id: 'evt_3', ts: 'T', type: 'just_text' });
+    const s = await started(setup({ postMessage: post }));
+    await expect(s.store.press('just_text', 'jt:a')).rejects.toBeInstanceOf(ApiError);
+    await s.store.press('just_text', 'jt:a');
+    expect(post).toHaveBeenCalledTimes(2);
+    expect(s.store.get().sent).toEqual({ 'jt:a': true });
+  });
+
   it('press rejection does not record sent and rethrows', async () => {
     const s = await started(setup({ postMessage: () => Promise.reject(new ApiError(500, 'bad')) }));
     await expect(s.store.press('just_text', 'k')).rejects.toBeInstanceOf(ApiError);

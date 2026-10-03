@@ -41,6 +41,8 @@ export function createStore(
   let stream: { close(): void } | null = null;
   // Bumped by start() and stop() so a load that finished late is ignored.
   let run = 0;
+  // Keys of button presses whose request is still in flight.
+  const pending = new Set<string>();
 
   const set = (patch: Partial<Snapshot>) => {
     const next = { ...snap, ...patch };
@@ -129,8 +131,15 @@ export function createStore(
       key: string,
       context?: Context,
     ): Promise<void> {
-      await post({ type: kind, context });
-      set({ sent: { ...snap.sent, [key]: true } });
+      // One request per key: a double click must not ask Claude twice. A failed press frees the key for another try.
+      if (pending.has(key) || snap.sent[key]) return;
+      pending.add(key);
+      try {
+        await post({ type: kind, context });
+        set({ sent: { ...snap.sent, [key]: true } });
+      } finally {
+        pending.delete(key);
+      }
     },
   };
 }

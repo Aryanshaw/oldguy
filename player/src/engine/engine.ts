@@ -164,8 +164,8 @@ export function createEngine(o: { a: HTMLVideoElement; b: HTMLVideoElement; urlF
   function recover() {
     if (pending || !cur) return;
     if (visEnded || errored.has(cur)) advance();
-    else if (atEnd && st === 'playing') {
-      // play() promised playback to a seek that is gone and the last chapter had finished.
+    else if (atEnd && st !== 'ended') {
+      // The last chapter had finished and the seek that would have moved on is gone (whether play() was pressed or not).
       ++playGen;
       vis.pause();
       setState('ended');
