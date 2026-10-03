@@ -13,6 +13,7 @@ const { createHub } = require('../lib/sse.cjs');
 const { API_ROUTES } = require('./api.cjs');
 const { startWatcher } = require('../lib/watcher.cjs');
 const { makeChapterSync } = require('./chapter-sync.cjs');
+const { liveServer } = require('../lib/live-server.cjs');
 
 // Headers put on every response, whatever the route.
 const SECURITY_HEADERS = {
@@ -186,6 +187,14 @@ function writeServerInfo(slugDir, info) {
   return file;
 }
 
+// Removes state/server.json only when it still holds this server's pid and key, so it never deletes another server's file.
+function removeOwnInfo(file, key) {
+  try {
+    const info = JSON.parse(fs.readFileSync(file, 'utf8'));
+    if (info.pid === process.pid && info.key === key) fs.rmSync(file, { force: true });
+  } catch { /* missing or unreadable: nothing of ours to remove */ }
+}
+
 // The one place that keeps a promise about posters: a chapter that is not ready never keeps a poster picture, whoever
 // changed its status. A ready row without a poster is what makes the watcher take a new frame.
 function dropStalePosters(m) {
@@ -224,6 +233,9 @@ function waitAtMost(promise, ms) {
 // deps (all optional, for tests): routes replaces the route table; now is a clock in ms; pingMs is the stream ping
 // interval; fs is used to save the manifest; scan, intervalMs, setInterval and clearInterval steer the folder watcher; exec and ffmpeg take poster frames; posterWaitMs bounds how long close() waits for them; beforeSave is awaited between change and save (tests); logError receives unexpected save failures.
 async function startServer({ slugDir, key = crypto.randomBytes(16).toString('hex'), port = 0, deps = {} }) {
+  // One server per folder: refuse when state/server.json names a live yap server (a stale file is replaced below).
+  const existing = await liveServer(slugDir);
+  if (existing) throw Object.assign(new Error('a server for this folder is already running'), { alreadyRunning: true, url: existing.url });
   ensureManifest(slugDir);
   const routes = deps.routes || ROUTES;
   const server = http.createServer();
@@ -269,7 +281,7 @@ async function startServer({ slugDir, key = crypto.randomBytes(16).toString('hex
     await state.watcher.idle();
     await waitAtMost(sync.posterIdle(), deps.posterWaitMs ?? POSTER_WAIT_MS);
     await new Promise((resolve) => {
-      fs.rmSync(infoFile, { force: true });
+      removeOwnInfo(infoFile, key);
       hub.close();
       server.close(() => resolve());
       server.closeAllConnections();
