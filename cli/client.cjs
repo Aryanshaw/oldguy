@@ -3,11 +3,11 @@
 // which only writes a file. Each prints one line and exits 0 (done), 1 (no server or it refused) or 2 (bad usage).
 const fs = require('node:fs');
 const path = require('node:path');
-const { parseFlags, guarded } = require('./cli-args.cjs');
-const { askServer, pidAlive } = require('./ask-server.cjs');
-const { resolveSlugDir, readInfo } = require('./server-cli.cjs');
-const { slugChapterId } = require('./chapter.cjs');
-const { STATUSES } = require('./manifest.cjs');
+const { parseFlags, guarded } = require('./args.cjs');
+const { askServer, pidAlive } = require('../lib/ask-server.cjs');
+const { resolveSlugDir, readInfo } = require('./server.cjs');
+const { slugChapterId } = require('../lib/chapter.cjs');
+const { STATUSES } = require('../lib/manifest.cjs');
 
 const DEADLINE_MS = 5000;
 const MAX_ANSWER_BYTES = 1024 * 1024;

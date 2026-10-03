@@ -3,8 +3,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
-const { parseFlags } = require('./cli-args.cjs');
-const { readInfo, liveServer } = require('./live-server.cjs');
+const { parseFlags } = require('./args.cjs');
+const { readInfo, liveServer } = require('../lib/live-server.cjs');
 
 const USAGE = 'usage: yap serve [--dir <slugDir>] [--detach]';
 

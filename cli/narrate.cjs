@@ -3,11 +3,11 @@
 // for one chapter, recording the repository's commit when --root is given.
 const fs = require('node:fs');
 const path = require('node:path');
-const { parseFlags } = require('./cli-args.cjs');
-const { narrateChapter } = require('./narrate.cjs');
-const { venvPython, checkWhisper } = require('./doctor.cjs');
-const { realExec } = require('./doctor-cli.cjs');
-const { resolveDataDir } = require('./data-dir.cjs');
+const { parseFlags } = require('./args.cjs');
+const { narrateChapter } = require('../lib/narrate.cjs');
+const { venvPython, checkWhisper } = require('../lib/doctor.cjs');
+const { realExec } = require('./doctor.cjs');
+const { resolveDataDir } = require('../lib/data-dir.cjs');
 
 const USAGE = 'usage: yap narrate <chapter-dir> [--root <repo>] [--data-dir <dir>]';
 const STEP_TIMEOUT_MS = 10 * 60 * 1000;

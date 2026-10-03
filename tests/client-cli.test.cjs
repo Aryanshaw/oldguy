@@ -11,7 +11,7 @@ const { loadManifest } = require('../lib/manifest.cjs');
 const { readOrder } = require('../lib/chapter-scan.cjs');
 const { readEventsAfter, readThread } = require('../lib/events.cjs');
 const { askServer } = require('../lib/ask-server.cjs');
-const { runReply, runAddChapter, runSetStatus, runOrder } = require('../lib/client-cli.cjs');
+const { runReply, runAddChapter, runSetStatus, runOrder } = require('../cli/client.cjs');
 
 const NO_SERVER = 'no server is running: start it with `yap serve --detach`\n';
 

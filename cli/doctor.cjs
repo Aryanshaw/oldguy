@@ -3,9 +3,9 @@
 const realFs = require('node:fs');
 const realOs = require('node:os');
 const { execFile } = require('node:child_process');
-const { parseFlags } = require('./cli-args.cjs');
-const { runDoctor, writeMarker } = require('./doctor.cjs');
-const { resolveDataDir } = require('./data-dir.cjs');
+const { parseFlags } = require('./args.cjs');
+const { runDoctor, writeMarker } = require('../lib/doctor.cjs');
+const { resolveDataDir } = require('../lib/data-dir.cjs');
 
 // Runs a real program with a time limit and never rejects: a non-zero exit, a signal kill (such as a dyld abort),
 // a timeout or a program that cannot start all come back as data the checks can read.

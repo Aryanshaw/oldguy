@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 // yap CLI entry point: looks the command up in a table and runs it.
 
-const { runAudit } = require('../lib/audit-cli.cjs');
-const { runPadWav } = require('../lib/wav-cli.cjs');
-const { runBeats } = require('../lib/beats-cli.cjs');
-const { runCaptions } = require('../lib/captions-cli.cjs');
-const { runDoctorCli } = require('../lib/doctor-cli.cjs');
-const { runScaffold } = require('../lib/scaffold-cli.cjs');
-const { runNarrate } = require('../lib/narrate-cli.cjs');
-const { runRender } = require('../lib/render-cli.cjs');
-const { runServe } = require('../lib/server-cli.cjs');
-const { runReply, runAddChapter, runSetStatus, runOrder } = require('../lib/client-cli.cjs');
+const { runAudit } = require('../cli/audit.cjs');
+const { runPadWav } = require('../cli/wav.cjs');
+const { runBeats } = require('../cli/beats.cjs');
+const { runCaptions } = require('../cli/captions.cjs');
+const { runDoctorCli } = require('../cli/doctor.cjs');
+const { runScaffold } = require('../cli/scaffold.cjs');
+const { runNarrate } = require('../cli/narrate.cjs');
+const { runRender } = require('../cli/render.cjs');
+const { runServe } = require('../cli/server.cjs');
+const { runReply, runAddChapter, runSetStatus, runOrder } = require('../cli/client.cjs');
 
 // One row per command.
 const COMMANDS = {

@@ -2,11 +2,11 @@
 // The `yap render <chapters-dir> --root <repo> [--only <id,...>] [--cap <n>] [--force] [--dry-run]` command.
 const fs = require('node:fs');
 const os = require('node:os');
-const { parseFlags } = require('./cli-args.cjs');
-const { renderChapters, renderArgs, checkArgs } = require('./render-chapters.cjs');
-const { renderCap } = require('./render-schedule.cjs');
-const { freeRamGb } = require('./doctor.cjs');
-const { realExec } = require('./doctor-cli.cjs');
+const { parseFlags } = require('./args.cjs');
+const { renderChapters, renderArgs, checkArgs } = require('../lib/render-chapters.cjs');
+const { renderCap } = require('../lib/render-schedule.cjs');
+const { freeRamGb } = require('../lib/doctor.cjs');
+const { realExec } = require('./doctor.cjs');
 
 const USAGE = 'usage: yap render <chapters-dir> --root <repo> [--only <id,id,...>] [--cap <n>] [--force] [--dry-run]';
 const RENDER_TIMEOUT_MS = 60 * 60 * 1000;
