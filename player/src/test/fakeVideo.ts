@@ -65,6 +65,7 @@ export function makeFakeVideo(): FakeVideo {
       handlers.get(name)?.delete(fn);
     },
     fire(name) {
+      if (name === 'ended') fake.paused = true;
       for (const fn of [...(handlers.get(name) ?? [])]) fn({ type: name });
     },
     listenerCount() {

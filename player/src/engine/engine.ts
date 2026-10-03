@@ -167,6 +167,7 @@ export function createEngine(o: { a: HTMLVideoElement; b: HTMLVideoElement; urlF
     else if (atEnd && st === 'playing') {
       // play() promised playback to a seek that is gone and the last chapter had finished.
       ++playGen;
+      vis.pause();
       setState('ended');
       emitTime();
     }
@@ -299,7 +300,7 @@ export function createEngine(o: { a: HTMLVideoElement; b: HTMLVideoElement; urlF
 
   function play(): Promise<void> {
     if (destroyed || !cur) return Promise.resolve();
-    if (st === 'ended' && pending) {
+    if ((st === 'ended' || atEnd) && pending) {
       // A seek is waiting on canplay: let commitPending start playback at its target.
       ++playGen;
       setState('playing');

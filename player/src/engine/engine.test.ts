@@ -463,4 +463,39 @@ describe('engine fix round 2', () => {
   });
 });
 
+describe('engine fix round 3', () => {
+  it('X1: play() twice at the end with a pending seek, target errors: ended and nothing playing', async () => {
+    e.setChapters([c1, c2]);
+    await e.play();
+    a.fire('ended');
+    b.fire('ended');
+    expect(e.state()).toBe('ended');
+    e.seek({ chapterId: 'c1', offset: 0 });
+    await e.play();
+    await e.play();
+    expect(b.paused).toBe(true); // the finished chapter is not replayed
+    a.fire('error');
+    expect(e.state()).toBe('ended');
+    expect(e.position()).toEqual({ chapterId: 'c2', offset: 30 });
+    expect(a.paused).toBe(true);
+    expect(b.paused).toBe(true);
+  });
+
+  it('X2: pause then play at the end with a pending seek, target removed: ended and nothing playing', async () => {
+    e.setChapters([c1, c2]);
+    await e.play();
+    a.fire('ended');
+    e.setChapters([c1]);
+    e.setChapters([c1, c3]);
+    e.seek({ chapterId: 'c3', offset: 0 });
+    e.pause();
+    await e.play();
+    e.setChapters([c1]);
+    expect(e.state()).toBe('ended');
+    expect(e.position()?.chapterId).toBe('c1');
+    expect(a.paused).toBe(true);
+    expect(b.paused).toBe(true);
+  });
+});
+
 void flush;
