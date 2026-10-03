@@ -77,16 +77,19 @@ test('whole line over maxBytes is rejected and nothing is written', () => withTm
   assert.throws(() => E.appendEvent(f, { type: 'message', text: '€'.repeat(3000) }), /too large/);
 }));
 
-test('200 appends from Promise.all give 200 distinct ids and no torn lines', async () => {
+test('200 appends from Promise.all give 200 distinct ids and whole lines', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-events-'));
   try {
-  const f = path.join(dir, 'events.jsonl');
-  const out = await Promise.all(Array.from({ length: 200 }, (_, i) =>
-    Promise.resolve().then(() => E.appendEvent(f, { type: 'message', text: `m${i}` }))));
-  assert.equal(new Set(out.map((e) => e.id)).size, 200);
-  const lines = fs.readFileSync(f, 'utf8').split('\n').filter(Boolean);
-  assert.equal(lines.length, 200);
-  lines.forEach((l) => JSON.parse(l));
+    const f = path.join(dir, 'events.jsonl');
+    const out = await Promise.all(Array.from({ length: 200 }, (_, i) =>
+      Promise.resolve().then(() => E.appendEvent(f, { type: 'message', text: `m${i}` }))));
+    assert.equal(new Set(out.map((e) => e.id)).size, 200);
+    const raw = fs.readFileSync(f, 'utf8');
+    assert.ok(raw.endsWith('\n'));
+    const lines = raw.slice(0, -1).split('\n');
+    assert.equal(lines.length, 200);
+    const ids = lines.map((l) => JSON.parse(l).id);
+    assert.deepEqual(new Set(ids), new Set(Array.from({ length: 200 }, (_, i) => `evt_${i + 1}`)));
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
@@ -121,4 +124,71 @@ test('reply text limits and source path safety', () => withTmp((dir) => {
   bad({ sources: [{ file: 'a.js', lines: '0' }] }, /lines/);
   bad({ sources: [{ file: 'a.js' }] }, /source/);
   assert.equal(fs.existsSync(th), false);
+}));
+
+// Writes raw lines into a file, then returns the next id the module hands out for it.
+function nextAfterRaw(dir, kind, lines) {
+  const ev = path.join(dir, 'events.jsonl');
+  const th = path.join(dir, 'thread.jsonl');
+  if (kind === 'evt') {
+    fs.writeFileSync(ev, lines.map((id) => JSON.stringify({ id, ts: 'x', type: 'export' }) + '\n').join(''));
+    return E.appendEvent(ev, { type: 'export' }).id;
+  }
+  fs.writeFileSync(ev, JSON.stringify({ id: 'evt_1', ts: 'x', type: 'export' }) + '\n');
+  fs.writeFileSync(th, lines.map((id) => JSON.stringify({ id, ts: 'x', in_reply_to: 'evt_1', text: 't' }) + '\n').join(''));
+  return E.appendReply(th, { in_reply_to: 'evt_1', text: 'a' }, { eventsFile: ev }).id;
+}
+
+for (const kind of ['evt', 'rep']) {
+  test(`${kind} ids: huge hand-edited id is invalid, next is max valid + 1 in plain digits`, () => withTmp((dir) => {
+    assert.equal(nextAfterRaw(dir, kind, [`${kind}_3`, `${kind}_1000000000000000000000`]), `${kind}_4`);
+    const list = kind === 'evt' ? E.readEventsAfter(path.join(dir, 'events.jsonl'), null) : E.readThread(path.join(dir, 'thread.jsonl'));
+    assert.deepEqual(list.map((x) => x.id), [`${kind}_3`, `${kind}_4`]);
+  }));
+  test(`${kind} ids: unsafe-integer id is invalid and ids keep growing from the largest valid`, () => withTmp((dir) => {
+    assert.equal(nextAfterRaw(dir, kind, [`${kind}_5`, `${kind}_9007199254740993`]), `${kind}_6`);
+  }));
+  test(`${kind} ids: out-of-order tail never goes backwards or repeats`, () => withTmp((dir) => {
+    assert.equal(nextAfterRaw(dir, kind, [`${kind}_9`, `${kind}_2`]), `${kind}_10`);
+  }));
+}
+
+test('reply ids survive reopening', () => withTmp((dir) => {
+  const ev = path.join(dir, 'events.jsonl');
+  const th = path.join(dir, 'thread.jsonl');
+  E.appendEvent(ev, { type: 'message', text: 'q' });
+  E.appendReply(th, { in_reply_to: 'evt_1', text: 'a' }, { eventsFile: ev });
+  assert.equal(E.appendReply(th, { in_reply_to: 'evt_1', text: 'b' }, { eventsFile: ev }).id, 'rep_2');
+  assert.deepEqual(E.readThread(th).map((r) => r.id), ['rep_1', 'rep_2']);
+}));
+
+test('partial last thread line is skipped and the next reply starts a fresh line', () => withTmp((dir) => {
+  const ev = path.join(dir, 'events.jsonl');
+  const th = path.join(dir, 'thread.jsonl');
+  E.appendEvent(ev, { type: 'message', text: 'q' });
+  E.appendReply(th, { in_reply_to: 'evt_1', text: 'a' }, { eventsFile: ev });
+  fs.appendFileSync(th, '{"id":"rep_2","ts":"x","in_reply_to":"evt_1","te');
+  assert.equal(E.readThread(th).length, 1);
+  assert.equal(E.appendReply(th, { in_reply_to: 'evt_1', text: 'b' }, { eventsFile: ev }).id, 'rep_2');
+  assert.deepEqual(E.readThread(th).map((r) => r.id), ['rep_1', 'rep_2']);
+}));
+
+test('readEventsAfter: absent id gives all, well-formed id gives larger numbers, malformed id throws', () => withTmp((dir) => {
+  const f = path.join(dir, 'events.jsonl');
+  for (let i = 0; i < 3; i++) E.appendEvent(f, { type: 'export' });
+  assert.equal(E.readEventsAfter(f, undefined).length, 3);
+  assert.equal(E.readEventsAfter(f, null).length, 3);
+  assert.deepEqual(E.readEventsAfter(f, 'evt_1').map((e) => e.id), ['evt_2', 'evt_3']);
+  assert.equal(E.readEventsAfter(f, 'evt_50').length, 0);
+  for (const bad of ['', 'rep_1', 'evt_x', 'evt_1e3', 'evt_9007199254740993', 7]) {
+    assert.throws(() => E.readEventsAfter(f, bad), (e) => e instanceof Error && !e.message.includes('\n') && /afterId/.test(e.message));
+  }
+}));
+
+test('an invalid injected clock gives a one-line Error', () => withTmp((dir) => {
+  const f = path.join(dir, 'events.jsonl');
+  for (const now of [() => new Date('nope'), () => 'today', () => undefined]) {
+    assert.throws(() => E.appendEvent(f, { type: 'export' }, { now }), (e) => e.constructor === Error && /clock/.test(e.message));
+  }
+  assert.equal(fs.existsSync(f), false);
 }));
