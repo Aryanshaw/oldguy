@@ -1,9 +1,9 @@
 'use strict';
 // The JSON API the player and Claude's CLI use: state, live stream, chat, replies, chapter changes and the heartbeat.
 const path = require('node:path');
-const { appendEvent, readEventsAfter, appendReply, readThread } = require('../lib/events.cjs');
-const { loadManifest, insertChapter, reorderChapters, setChapterFields } = require('../lib/manifest.cjs');
-const { scanChapter } = require('../lib/chapter-scan.cjs');
+const { appendEvent, readEventsAfter, appendReply, readThread } = require('../lib/events.mts');
+const { loadManifest, insertChapter, reorderChapters, setChapterFields } = require('../lib/manifest.mts');
+const { scanChapter } = require('../lib/chapter-scan.mts');
 const { handleExport } = require('./export-route.cjs');
 
 const HEARTBEAT_MS = 15000;

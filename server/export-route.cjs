@@ -1,8 +1,8 @@
 'use strict';
 // POST /api/export: writes the finished video, script and sources into a folder the viewer chose.
 const path = require('node:path');
-const { loadManifest } = require('../lib/manifest.cjs');
-const { exportVideo, checkDest } = require('../lib/export.cjs');
+const { loadManifest } = require('../lib/manifest.mts');
+const { exportVideo, checkDest } = require('../lib/export.mts');
 const { ffmpegPath } = require('../lib/poster.mts');
 
 // Answers {file, files, skipped} on success. The body is checked first (dest, mode); only one export runs at a time.

@@ -1,23 +1,42 @@
-'use strict';
 // A chapter folder: creating it from a spec, timing its scene pieces, and building its root composition.
-const fs = require('node:fs');
-const path = require('node:path');
-const { splitSentences } = require('./sentences.mts');
+import fs from 'node:fs';
+import path from 'node:path';
+import { splitSentences } from './sentences.mts';
+import * as title from '../scene-kit/title.mts';
+import * as steps from '../scene-kit/steps.mts';
+import * as codeCard from '../scene-kit/code-card.mts';
+import * as callout from '../scene-kit/callout.mts';
+import type { Rendered } from '../scene-kit/shared.mts';
 
-const KIT_DIR = path.join(__dirname, '..', 'scene-kit');
+// One source a chapter cites: where it lives, which lines, and the exact text quoted from them.
+type ChapterSource = { id: string; file: string; lines: [number, number]; quote: string };
+// One narrated sentence: a claim must cite sources, a framing sentence carries no claim.
+type ChapterSentence = { text: string; kind: 'claim' | 'framing'; source_ids: string[] };
+// One scene piece shown while a sentence is spoken: the piece name, its params and the sentence index it starts on.
+type ChapterScene = { piece: string; params: unknown; beat: number };
+// The chapter.json that `yap scaffold` writes.
+type ChapterSpec = { id: string; title: string; sources: ChapterSource[]; sentences: ChapterSentence[]; scene: ChapterScene[] };
+// What `yap scaffold` is handed: a spec that has not been checked yet.
+type ScaffoldInput = { root: string; id: unknown; title: unknown; sources: unknown; sentences: unknown; scene: unknown };
+// A scene piece placed in time: which piece, its params, when it starts and how long it lasts (seconds).
+type PieceWindow = { piece: string; params: unknown; startS: number; durationS: number };
+// The timed sentences a chapter's pieces are laid against.
+type TimedBeat = { start: number };
+
+const KIT_DIR = path.join(import.meta.dirname, '..', 'scene-kit');
 const GSAP_URL = 'https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js';
 const MAX_ID_LENGTH = 60;
 
 // The scene pieces a chapter may use, by the name written in chapter.json.
-const PIECES = {
-  title: require('../scene-kit/title.mts'),
-  steps: require('../scene-kit/steps.mts'),
-  'code-card': require('../scene-kit/code-card.mts'),
-  callout: require('../scene-kit/callout.mts'),
+const PIECES: Record<string, { render: (params: unknown, opts: unknown) => Rendered }> = {
+  title,
+  steps,
+  'code-card': codeCard,
+  callout,
 };
 
 // Turns a free-text id into a folder name: lower-case a-z0-9 words joined by single hyphens, never starting with a digit.
-function slugChapterId(raw) {
+function slugChapterId(raw: unknown): string {
   const text = String(raw ?? '');
   // a slash means someone passed a path; refuse it rather than quietly rewrite it into something else
   if (/[\\/]/.test(text)) throw new Error(`chapter id "${text}" looks like a path; give a plain name`);
@@ -31,7 +50,7 @@ function slugChapterId(raw) {
 }
 
 // Splits narration into sentences and insists on exactly one per listed sentence (one sentence per beat).
-function narrationSentences(text, expected) {
+function narrationSentences(text: string, expected: number): string[] {
   const sentences = splitSentences(text);
   if (sentences.length !== expected) {
     throw new Error(`narration has ${sentences.length} sentences but the chapter lists ${expected}; each listed sentence must be exactly one sentence`);
@@ -40,12 +59,12 @@ function narrationSentences(text, expected) {
 }
 
 // Collapses every whitespace run to one space, so line endings and double spaces never count as an edit.
-function normaliseText(text) {
+function normaliseText(text: unknown): string {
   return String(text).replace(/\s+/g, ' ').trim();
 }
 
 // Refuses narration that is not the audited chapter.json sentences joined by spaces: unaudited words must never be spoken.
-function checkNarrationText(narration, sentences) {
+function checkNarrationText(narration: string, sentences: { text: string }[]): void {
   const expected = normaliseText(sentences.map((s) => s.text).join(' '));
   if (normaliseText(narration) !== expected) {
     throw new Error('narration.txt no longer matches chapter.json: fix the spec, delete the chapter folder, then scaffold, audit and narrate again');
@@ -53,7 +72,7 @@ function checkNarrationText(narration, sentences) {
 }
 
 // Renders one piece with the scene kit; an unknown piece name is an error that lists the ones that exist.
-function renderPiece({ piece, params }, window) {
+function renderPiece({ piece, params }: { piece: string; params: unknown }, window: unknown): Rendered {
   if (!Object.hasOwn(PIECES, piece)) {
     throw new Error(`unknown piece "${piece}"; use one of ${Object.keys(PIECES).join('|')}`);
   }
@@ -61,10 +80,13 @@ function renderPiece({ piece, params }, window) {
 }
 
 // Checks each scene entry: a known piece with params the kit accepts, on a whole beat index that moves forward.
-function checkScene(scene, sentenceCount) {
+function checkScene(scene: unknown, sentenceCount: number): void {
   if (!Array.isArray(scene)) throw new Error('"scene" must be a list');
   let previousBeat = -1;
-  scene.forEach((entry, i) => {
+  const entries: unknown[] = scene;
+  entries.forEach((item, i) => {
+    // an entry may be anything the JSON held; the beat test below and renderPiece reject every shape that is not a usable piece
+    const entry = item as ChapterScene;
     const beat = entry && entry.beat;
     if (!Number.isInteger(beat) || beat < 0 || beat >= sentenceCount || beat <= previousBeat) {
       throw new Error(`scene[${i}]: beat must be a whole sentence index from 0 to ${sentenceCount - 1}, after the previous piece's beat`);
@@ -74,25 +96,30 @@ function checkScene(scene, sentenceCount) {
     try {
       renderPiece(entry, { startS: 0, durationS: 1, idPrefix: 'check' });
     } catch (err) {
-      throw new Error(`scene[${i}]: ${err.message}`);
+      // renderPiece only throws Error objects
+      throw new Error(`scene[${i}]: ${(err as Error).message}`);
     }
   });
 }
 
 // Checks every entry is exactly one sentence and that the joined narration splits back into those same entries,
 // so beats, scene pieces and claim labels all point at the same sentence; returns the joined narration.
-function checkSentences(sentences) {
+function checkSentences(sentences: unknown): string {
   if (!Array.isArray(sentences) || sentences.length === 0) throw new Error('"sentences" must be a non-empty list');
-  const texts = sentences.map((s, i) => {
-    if (!s || typeof s.text !== 'string' || !s.text.trim()) throw new Error(`sentences[${i}] needs non-empty "text"`);
-    const text = normaliseText(s.text);
+  const entries: unknown[] = sentences;
+  const rawTexts: string[] = [];
+  const texts = entries.map((s, i) => {
+    const raw = s ? (s as { text?: unknown }).text : undefined;
+    if (typeof raw !== 'string' || !raw.trim()) throw new Error(`sentences[${i}] needs non-empty "text"`);
+    rawTexts.push(raw);
+    const text = normaliseText(raw);
     const parts = splitSentences(text);
     if (parts.length !== 1 || parts[0] !== text) {
       throw new Error(`sentences[${i}] is not exactly one sentence (it reads as ${parts.length}): "${text}"`);
     }
     return text;
   });
-  const narration = sentences.map((s) => s.text).join(' ');
+  const narration = rawTexts.join(' ');
   // an entry with no end mark runs into the next one once joined, which moves every later beat
   const spoken = splitSentences(narration);
   const drift = texts.findIndex((text, i) => spoken[i] !== text);
@@ -101,12 +128,13 @@ function checkSentences(sentences) {
 }
 
 // Creates chapters/<slug>/ with chapter.json and narration.txt; checks everything first and never overwrites.
-function scaffoldChapter({ root, id, title, sources, sentences, scene }) {
+function scaffoldChapter({ root, id, title, sources, sentences, scene }: ScaffoldInput): string {
   const slug = slugChapterId(id);
   if (typeof title !== 'string' || !title.trim()) throw new Error('"title" must be non-empty text');
   if (!Array.isArray(sources)) throw new Error('"sources" must be a list');
   const narration = checkSentences(sentences);
-  checkScene(scene, sentences.length);
+  // checkSentences just proved this is a non-empty list
+  checkScene(scene, (sentences as unknown[]).length);
 
   const chaptersDir = path.join(root, 'chapters');
   const dir = path.join(chaptersDir, slug);
@@ -116,7 +144,7 @@ function scaffoldChapter({ root, id, title, sources, sentences, scene }) {
   try {
     fs.mkdirSync(dir);
   } catch (err) {
-    if (err.code === 'EEXIST') throw new Error(`chapter "${slug}" already exists: delete ${dir} and scaffold again`);
+    if ((err as NodeJS.ErrnoException).code === 'EEXIST') throw new Error(`chapter "${slug}" already exists: delete ${dir} and scaffold again`);
     throw err;
   }
   const chapter = { id: slug, title, sources, sentences, scene };
@@ -126,12 +154,12 @@ function scaffoldChapter({ root, id, title, sources, sentences, scene }) {
 }
 
 // Rounds a length in seconds up to the next tenth; an exact tenth stays (integer maths so 9.4 is not read as 9.400001).
-function roundUpTenth(seconds) {
+function roundUpTenth(seconds: number): number {
   return Math.ceil(Math.round(seconds * 1e6) / 1e5) / 10;
 }
 
 // Gives each scene piece its time window: from its sentence's start to the next piece's start, the last to the end.
-function pieceWindows(scene, beats, durationS) {
+function pieceWindows(scene: ChapterScene[], beats: TimedBeat[], durationS: number): PieceWindow[] {
   return scene.map((entry, i) => {
     const startS = beats[entry.beat].start;
     const endS = i + 1 < scene.length ? beats[scene[i + 1].beat].start : durationS;
@@ -140,10 +168,10 @@ function pieceWindows(scene, beats, durationS) {
 }
 
 // Builds the standalone chapter page: one 1920x1080 root, the theme, GSAP, and every piece on one paused timeline.
-function buildRootComposition({ id, durationS, pieces }) {
+function buildRootComposition({ id, durationS, pieces }: { id: unknown; durationS: unknown; pieces: PieceWindow[] }): string {
   // the id lands in an attribute and a script, so only an already-slugged id is accepted
   if (typeof id !== 'string' || !/^[a-z][a-z0-9-]*$/.test(id)) throw new Error(`composition id "${id}" must be a slug (a-z, 0-9, hyphens)`);
-  if (!Number.isFinite(durationS) || durationS <= 0) throw new Error('composition duration must be a number of seconds above 0');
+  if (typeof durationS !== 'number' || !Number.isFinite(durationS) || durationS <= 0) throw new Error('composition duration must be a number of seconds above 0');
   const theme = fs.readFileSync(path.join(KIT_DIR, 'theme.css'), 'utf8');
   const rendered = pieces.map((p, i) => renderPiece(p, { startS: p.startS, durationS: p.durationS, idPrefix: `p${i}` }));
   return [
@@ -178,6 +206,7 @@ function buildRootComposition({ id, durationS, pieces }) {
   ].join('\n');
 }
 
-module.exports = {
+export {
   slugChapterId, scaffoldChapter, checkScene, checkSentences, checkNarrationText, buildRootComposition, pieceWindows, roundUpTenth, narrationSentences,
 };
+export type { ChapterSource, ChapterSentence, ChapterScene, ChapterSpec, ScaffoldInput, PieceWindow, TimedBeat };

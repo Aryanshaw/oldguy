@@ -6,7 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const {
   slugChapterId, scaffoldChapter, buildRootComposition, pieceWindows, roundUpTenth, narrationSentences, checkNarrationText,
-} = require('../lib/chapter.cjs');
+} = require('../lib/chapter.mts');
 
 const SOURCES = [{ id: 's1', file: 'app.js', lines: [1, 2], quote: 'start()' }];
 const SENTENCES = [

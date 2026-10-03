@@ -2,7 +2,7 @@
 // The `yap scaffold <spec.json> --root <dir>` command: creates a chapter folder from a spec file.
 const fs = require('node:fs');
 const { parseFlags } = require('./args.cjs');
-const { scaffoldChapter } = require('../lib/chapter.cjs');
+const { scaffoldChapter } = require('../lib/chapter.mts');
 
 const HELP = `usage: yap scaffold <spec.json> --root <dir>
 Creates <dir>/chapters/<id>/ with chapter.json and narration.txt, then prints that folder.

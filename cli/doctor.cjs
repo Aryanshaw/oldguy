@@ -4,7 +4,7 @@ const realFs = require('node:fs');
 const realOs = require('node:os');
 const { execFile } = require('node:child_process');
 const { parseFlags } = require('./args.cjs');
-const { runDoctor, writeMarker } = require('../lib/doctor.cjs');
+const { runDoctor, writeMarker } = require('../lib/doctor.mts');
 const { resolveDataDir } = require('../lib/data-dir.mts');
 
 // Runs a real program with a time limit and never rejects: a non-zero exit, a signal kill (such as a dyld abort),

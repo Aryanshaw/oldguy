@@ -7,9 +7,9 @@ const path = require('node:path');
 const net = require('node:net');
 const { spawnSync } = require('node:child_process');
 const { startServer } = require('../server/server.cjs');
-const { loadManifest } = require('../lib/manifest.cjs');
-const { readOrder } = require('../lib/chapter-scan.cjs');
-const { readEventsAfter, readThread } = require('../lib/events.cjs');
+const { loadManifest } = require('../lib/manifest.mts');
+const { readOrder } = require('../lib/chapter-scan.mts');
+const { readEventsAfter, readThread } = require('../lib/events.mts');
 const { askServer } = require('../lib/ask-server.mts');
 const { runReply, runAddChapter, runSetStatus, runOrder } = require('../cli/client.cjs');
 

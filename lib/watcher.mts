@@ -1,10 +1,25 @@
-'use strict';
 // Watches the chapter folders by looking again every second (native file watchers are unreliable on temp and network
 // folders) and tells the caller what changed since the last look.
-const { scanProject } = require('./chapter-scan.cjs');
+import { scanProject } from './chapter-scan.mts';
+import type { ProjectScan, ScannedChapter } from './chapter-scan.mts';
+
+// What changed since the last look; `first` is set on the very first look, which reports every chapter as added.
+type Diff = { added: ScannedChapter[]; changed: ScannedChapter[]; removed: string[]; order: string[]; first?: true };
+// What startWatcher needs: where to look, who to tell, and (for tests) a different scanner, logger and timers.
+type WatcherOptions = {
+  slugDir: string;
+  onChange: (diff: Diff) => unknown;
+  intervalMs?: number;
+  scan?: (slugDir: string) => ProjectScan;
+  logError?: (err: unknown) => void;
+  setInterval?: typeof setInterval;
+  clearInterval?: typeof clearInterval;
+};
+// The handle startWatcher gives back.
+type Watcher = { stop: () => void; pollNow: () => Promise<void>; idle: () => Promise<void> };
 
 // Compares this scan with the last one: new folders, folders whose status or build hash differ, and folders now gone.
-function diffScans(prev, scanResult) {
+function diffScans(prev: Map<string, ScannedChapter>, scanResult: ProjectScan): Diff {
   const now = new Map(scanResult.chapters.map((c) => [c.id, c]));
   const added = scanResult.chapters.filter((c) => !prev.has(c.id));
   const changed = scanResult.chapters.filter((c) => {
@@ -16,7 +31,7 @@ function diffScans(prev, scanResult) {
 }
 
 // True when the diff says nothing happened.
-function isEmpty(diff) {
+function isEmpty(diff: Diff): boolean {
   return !diff.added.length && !diff.changed.length && !diff.removed.length;
 }
 
@@ -25,8 +40,8 @@ function isEmpty(diff) {
 function startWatcher({
   slugDir, onChange, intervalMs = 1000, scan = scanProject, logError = () => {},
   setInterval: setTimer = setInterval, clearInterval: clearTimer = clearInterval,
-}) {
-  let prev = new Map();
+}: WatcherOptions): Watcher {
+  let prev = new Map<string, ScannedChapter>();
   let stopped = false;
   let waiting = 0;
   let first = true;
@@ -34,7 +49,7 @@ function startWatcher({
 
   // One look. Errors are logged and swallowed so the next look still happens. The remembered scan only moves forward
   // once onChange has accepted the change, so a failed hand-over is offered again next time.
-  async function poll() {
+  async function poll(): Promise<void> {
     if (stopped) return;
     try {
       const result = scan(slugDir);
@@ -50,7 +65,7 @@ function startWatcher({
   }
 
   // Queues one look behind any look still running, so two never overlap.
-  function pollNow() {
+  function pollNow(): Promise<void> {
     waiting++;
     const run = tail.then(poll);
     tail = run.then(() => { waiting--; });
@@ -61,7 +76,7 @@ function startWatcher({
   if (timer && typeof timer.unref === 'function') timer.unref();
 
   // Stops the timer; a look already running finishes, but none starts afterwards.
-  function stop() {
+  function stop(): void {
     stopped = true;
     clearTimer(timer);
   }
@@ -72,4 +87,5 @@ function startWatcher({
   return { stop, pollNow, idle };
 }
 
-module.exports = { startWatcher };
+export { startWatcher };
+export type { Diff, WatcherOptions, Watcher };

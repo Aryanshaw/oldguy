@@ -9,7 +9,7 @@ const net = require('node:net');
 const { Readable } = require('node:stream');
 const { fork } = require('node:child_process');
 const { startServer } = require('../server/server.cjs');
-const { newManifest, insertChapter, saveManifest } = require('../lib/manifest.cjs');
+const { newManifest, insertChapter, saveManifest } = require('../lib/manifest.mts');
 const { sha256 } = require('../lib/build-record.mts');
 
 const BYTES = Buffer.from('0123456789abcdefghijklmnopqrstuvwxyz'); // 36 bytes

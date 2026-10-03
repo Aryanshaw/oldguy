@@ -6,8 +6,8 @@ const path = require('node:path');
 const { parseFlags, guarded } = require('./args.cjs');
 const { askServer, pidAlive } = require('../lib/ask-server.mts');
 const { resolveSlugDir, readInfo } = require('./server.cjs');
-const { slugChapterId } = require('../lib/chapter.cjs');
-const { STATUSES } = require('../lib/manifest.cjs');
+const { slugChapterId } = require('../lib/chapter.mts');
+const { STATUSES } = require('../lib/manifest.mts');
 
 const DEADLINE_MS = 5000;
 const MAX_ANSWER_BYTES = 1024 * 1024;

@@ -5,9 +5,9 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const http = require('node:http');
-const { exportVideo } = require('../lib/export.cjs');
+const { exportVideo } = require('../lib/export.mts');
 const { startServer } = require('../server/server.cjs');
-const { newManifest, insertChapter, saveManifest } = require('../lib/manifest.cjs');
+const { newManifest, insertChapter, saveManifest } = require('../lib/manifest.mts');
 const { sha256 } = require('../lib/build-record.mts');
 
 const BYTES = Buffer.from('MP4DATA');

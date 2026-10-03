@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
 const { parseFlags } = require('./args.cjs');
-const { readInfo, liveServer } = require('../lib/live-server.cjs');
+const { readInfo, liveServer } = require('../lib/live-server.mts');
 
 const USAGE = 'usage: yap serve [--dir <slugDir>] [--detach]';
 

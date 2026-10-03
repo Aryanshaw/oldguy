@@ -3,9 +3,9 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const { parseFlags } = require('./args.cjs');
-const { renderChapters, renderArgs, checkArgs } = require('../lib/render-chapters.cjs');
+const { renderChapters, renderArgs, checkArgs } = require('../lib/render-chapters.mts');
 const { renderCap } = require('../lib/render-schedule.mts');
-const { freeRamGb } = require('../lib/doctor.cjs');
+const { freeRamGb } = require('../lib/doctor.mts');
 const { realExec } = require('./doctor.cjs');
 
 const USAGE = 'usage: yap render <chapters-dir> --root <repo> [--only <id,id,...>] [--cap <n>] [--force] [--dry-run]';

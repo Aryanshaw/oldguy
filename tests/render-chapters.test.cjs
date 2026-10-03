@@ -4,11 +4,11 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { renderChapters, renderArgs, checkArgs } = require('../lib/render-chapters.cjs');
+const { renderChapters, renderArgs, checkArgs } = require('../lib/render-chapters.mts');
 const { HYPERFRAMES_VERSION } = require('../lib/hyperframes.mts');
 const { buildRecord } = require('../lib/build-record.mts');
-const { scaffoldChapter } = require('../lib/chapter.cjs');
-const { narrateChapter } = require('../lib/narrate.cjs');
+const { scaffoldChapter } = require('../lib/chapter.mts');
+const { narrateChapter } = require('../lib/narrate.mts');
 
 const CHANGED = 'chapter changed after narrate: fix the spec, delete the chapter folder, then scaffold, audit and narrate again';
 

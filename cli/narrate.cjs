@@ -4,8 +4,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { parseFlags } = require('./args.cjs');
-const { narrateChapter } = require('../lib/narrate.cjs');
-const { venvPython, checkWhisper } = require('../lib/doctor.cjs');
+const { narrateChapter } = require('../lib/narrate.mts');
+const { venvPython, checkWhisper } = require('../lib/doctor.mts');
 const { realExec } = require('./doctor.cjs');
 const { resolveDataDir } = require('../lib/data-dir.mts');
 

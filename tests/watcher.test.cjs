@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { startWatcher } = require('../lib/watcher.cjs');
+const { startWatcher } = require('../lib/watcher.mts');
 
 // A scan result for one chapter with only the fields the watcher looks at.
 const ch = (id, status = 'ready', buildSha256 = 'aaa') => ({ id, title: id, durationS: 3, status, buildSha256, verifiedAgainstCommit: null, hasPoster: false, issues: [] });
@@ -115,7 +115,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { startServer } = require('../server/server.cjs');
-const { newManifest, insertChapter, saveManifest, loadManifest } = require('../lib/manifest.cjs');
+const { newManifest, insertChapter, saveManifest, loadManifest } = require('../lib/manifest.mts');
 const { sha256 } = require('../lib/build-record.mts');
 
 const BUILD = JSON.stringify({ version: 2, verified_against_commit: 'c'.repeat(40), sha256: {} });

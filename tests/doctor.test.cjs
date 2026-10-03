@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fsReal = require('node:fs');
 const osReal = require('node:os');
 const path = require('node:path');
-const { runDoctor, writeMarker, checkWhisper } = require('../lib/doctor.cjs');
+const { runDoctor, writeMarker, checkWhisper } = require('../lib/doctor.mts');
 const { runDoctorCli, realExec } = require('../cli/doctor.cjs');
 const { nodeProblem } = require('../lib/node-floor.cjs');
 const { HYPERFRAMES_VERSION } = require('../lib/hyperframes.mts');
@@ -328,7 +328,7 @@ async function cliWithMarker(over) {
   try {
     const py = `${dir}/venv/bin/python`;
     const m = machine({ ...over, files: { [py]: 1 }, exec: { [py]: () => OK, ...over.exec } });
-    const code = await runDoctorCli(['--data-dir', dir], { ...m.deps, stdout: () => {}, stderr: () => {} , marker: require('../lib/doctor.cjs').writeMarker });
+    const code = await runDoctorCli(['--data-dir', dir], { ...m.deps, stdout: () => {}, stderr: () => {} , marker: require('../lib/doctor.mts').writeMarker });
     return { code, marked: fsReal.existsSync(path.join(dir, 'doctor-ok')) };
   } finally {
     fsReal.rmSync(dir, { recursive: true, force: true });

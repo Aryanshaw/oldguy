@@ -7,7 +7,7 @@ const path = require('node:path');
 const http = require('node:http');
 const net = require('node:net');
 const { startServer } = require('../server/server.cjs');
-const { newManifest, insertChapter, saveManifest } = require('../lib/manifest.cjs');
+const { newManifest, insertChapter, saveManifest } = require('../lib/manifest.mts');
 
 // Makes a temp slug folder (named "demo") and removes it when the test ends.
 function tempSlug(t) {

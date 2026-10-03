@@ -1,32 +1,27 @@
 // Live updates to open browser tabs: a hub that keeps the open event streams (SSE) and sends each one the same events.
 
 import type { ServerResponse } from 'node:http';
+import type { Manifest } from './manifest.mts';
+import type { Reply, ThreadEntry } from './events.mts';
 
 // The "state" event: the whole picture the browser needs.
 type StatePayload = {
-  manifest: unknown; // tightened to Manifest in Task 3
-  thread: unknown[]; // viewer messages and Claude's replies, in time order, each with a role
+  manifest: Manifest;
+  thread: ThreadEntry[]; // viewer messages and Claude's replies, in time order, each with a role
   claude_connected: boolean;
   now: number;
 };
 
 // The "chapter" event: a chapter list change, with the changed chapter's id and a reason when there is one.
 type ChapterPayload = {
-  op: string;
+  op: 'add' | 'reorder' | 'set' | 'scan';
   id?: string;
   reason?: string;
-  manifest: unknown; // tightened to Manifest in Task 3
+  manifest: Manifest;
 };
 
 // The "reply" event: Claude's stored answer to a viewer event.
-type ReplyPayload = {
-  id: string;
-  ts: string;
-  in_reply_to: string;
-  text: string;
-  sources?: { file: string; lines: unknown }[];
-  role: 'claude';
-};
+type ReplyPayload = Reply & { role: 'claude' };
 
 // The "ping" event: the time the hub sent it, so a dead connection shows up.
 type PingPayload = { now: number };

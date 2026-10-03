@@ -2,8 +2,8 @@
 // Keeps manifest.json in step with the chapter folders: the watcher's changes become manifest rows, and each ready
 // chapter gets a poster picture afterwards. Every manifest change goes through state.updateManifest.
 const path = require('node:path');
-const { insertChapter, reorderChapters, setChapterFields, loadManifest } = require('../lib/manifest.cjs');
-const { readOrder, scanChapter } = require('../lib/chapter-scan.cjs');
+const { insertChapter, reorderChapters, setChapterFields, loadManifest } = require('../lib/manifest.mts');
+const { readOrder, scanChapter } = require('../lib/chapter-scan.mts');
 const { extractPoster, ffmpegPath, posterTime } = require('../lib/poster.mts');
 
 // Turns the folder's status into the row's status. An idle folder never wipes a failure that was reported earlier.
