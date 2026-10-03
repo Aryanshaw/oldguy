@@ -147,3 +147,94 @@ test('a live server.json is reused but its stored url is never printed: the url 
   assert.equal(r.stdout.trim(), live.url);
   assert.doesNotMatch(r.stdout, /evil/);
 });
+
+// ---- slow or hostile answers to the liveness ping (N-1, N-2) ----
+const { liveServer, runServe } = require('../lib/server-cli.cjs');
+
+// Runs an async function while capturing what it writes to stdout and stderr; resolves {result, out, err}.
+async function captured(fn) {
+  const realOut = process.stdout.write;
+  const realErr = process.stderr.write;
+  let out = '';
+  let err = '';
+  // Only text is ours; binary chunks belong to the test runner's own reporting and pass through.
+  process.stdout.write = (s, ...rest) => (typeof s === 'string' ? (out += s, true) : realOut.call(process.stdout, s, ...rest));
+  process.stderr.write = (s, ...rest) => (typeof s === 'string' ? (err += s, true) : realErr.call(process.stderr, s, ...rest));
+  try { return { result: await fn(), out, err }; } finally { process.stdout.write = realOut; process.stderr.write = realErr; }
+}
+// Starts a raw TCP listener running `onConn(socket)` per connection; closed (with its sockets) when the test ends.
+async function rawListener(t, onConn) {
+  const sockets = new Set();
+  const srv = net.createServer((s) => { sockets.add(s); s.on('close', () => sockets.delete(s)); s.on('error', () => {}); onConn(s); });
+  await new Promise((resolve) => srv.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve) => { for (const s of sockets) s.destroy(); srv.close(resolve); }));
+  return srv.address().port;
+}
+// Makes a slug folder whose server.json names this test process and the given port.
+function folderNaming(t, port, key = 'a'.repeat(32)) {
+  const slugDir = path.join(tempRoot(t), 'demo');
+  fs.mkdirSync(path.join(slugDir, 'chapters'), { recursive: true });
+  fs.mkdirSync(path.join(slugDir, 'state'));
+  const text = JSON.stringify({ url: `http://127.0.0.1:${port}/?key=${key}`, key, port, pid: process.pid, started_at: 'then' });
+  fs.writeFileSync(path.join(slugDir, 'state', 'server.json'), text);
+  return { slugDir, text, file: path.join(slugDir, 'state', 'server.json') };
+}
+const HEAD = 'HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 100000000\r\n\r\n';
+
+test('N-1: a listener that drips one byte at a time cannot hold the ping past its one overall deadline', async (t) => {
+  const port = await rawListener(t, (s) => { s.write(HEAD); const i = setInterval(() => s.write('x'), 50); s.on('close', () => clearInterval(i)); });
+  const { slugDir } = folderNaming(t, port);
+  const started = Date.now();
+  const r = await liveServer(slugDir, { pingMs: 300, totalMs: 900 });
+  assert.ok(Date.now() - started < 3000, `took ${Date.now() - started} ms`);
+  assert.deepEqual(r, { busy: true });
+});
+
+test('N-1: a ping answer bigger than 4 KB is not this server (the file is stale), and is cut off quickly', async (t) => {
+  const port = await rawListener(t, (s) => { s.write(HEAD); const big = 'a'.repeat(65536); const i = setInterval(() => s.write(big), 5); s.on('close', () => clearInterval(i)); });
+  const { slugDir } = folderNaming(t, port);
+  const started = Date.now();
+  assert.equal(await liveServer(slugDir, { pingMs: 1000, totalMs: 1000 }), null);
+  assert.ok(Date.now() - started < 3000);
+});
+
+test('N-2: a live server that answers the ping late (after the first 1 s limit) is still found live', async (t) => {
+  let calls = 0;
+  const web = http.createServer((req, res) => {
+    calls += 1;
+    const send = () => res.end(JSON.stringify({ ok: true, pid: process.pid }));
+    if (calls === 1) setTimeout(send, 600); else send();
+  });
+  await new Promise((resolve) => web.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve) => { web.closeAllConnections(); web.close(resolve); }));
+  const { slugDir } = folderNaming(t, web.address().port);
+  const r = await liveServer(slugDir, { pingMs: 300, totalMs: 3000 });
+  assert.equal(r.pid, process.pid);
+  assert.equal(calls, 2);
+});
+
+test('N-2: a ping that times out for a dead pid is stale (null), not busy', async (t) => {
+  const port = await rawListener(t, () => {});
+  const { slugDir, file } = folderNaming(t, port);
+  fs.writeFileSync(file, JSON.stringify({ ...JSON.parse(fs.readFileSync(file, 'utf8')), pid: 2 ** 22 + 12345 }));
+  assert.equal(await liveServer(slugDir, { pingMs: 200, totalMs: 1000 }), null);
+});
+
+test('N-2: --detach against a live pid that never answers prints the sentence, exits 1, keeps server.json, starts nothing', async (t) => {
+  let connections = 0;
+  const port = await rawListener(t, () => { connections += 1; });
+  const { slugDir, text, file } = folderNaming(t, port);
+  const started = Date.now();
+  const { result, out, err } = await captured(() => runServe(['--dir', slugDir, '--detach']));
+  try {
+    assert.equal(result, 1);
+    assert.equal(err, 'a server for this folder is running but not answering\n');
+    assert.equal(out, '');
+    assert.equal(fs.readFileSync(file, 'utf8'), text);
+    assert.ok(Date.now() - started >= 4500 && Date.now() - started < 9000, `took ${Date.now() - started} ms`);
+    assert.ok(connections >= 2, 'it retried the ping');
+  } finally {
+    // safety net for the old behaviour, which started a second server
+    try { const p = JSON.parse(fs.readFileSync(file, 'utf8')).pid; if (p !== process.pid) process.kill(p, 'SIGTERM'); } catch { /* nothing started */ }
+  }
+});
