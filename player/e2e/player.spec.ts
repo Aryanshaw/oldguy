@@ -8,10 +8,11 @@ const require = createRequire(import.meta.url);
 const { startFixture } = require('./make-fixture.cjs') as typeof import('./make-fixture.cjs');
 
 type Fixture = Awaited<ReturnType<typeof startFixture>>;
-interface VideoEvt { kind: string; chapter: string; t: number; ct: number }
+interface VideoEvt { kind: string; chapter: string; t: number; ct: number; played: [number, number][] }
 interface FrameEvt { chapter: string; shown: number; visible: boolean }
 
-const JOIN_GAP_MS = 250;
+const JOIN_GAP_MS = 100;
+const SECONDS = 3;
 
 test.describe.configure({ mode: 'serial' });
 
@@ -40,12 +41,14 @@ async function instrument(page: Page) {
       const m = /\/chapters\/([^/]+)\/video/.exec(src);
       return m ? decodeURIComponent(m[1]) : '';
     };
-    for (const kind of ['timeupdate', 'error']) {
+    for (const kind of ['timeupdate', 'error', 'ended', 'play', 'playing', 'canplay']) {
       document.addEventListener(
         kind,
         (e) => {
           if (e.target instanceof HTMLVideoElement) {
-            w.__v.push({ kind, chapter: chapterOf(e.target), t: performance.now(), ct: e.target.currentTime });
+            const pr: [number, number][] = [];
+            for (let i = 0; i < e.target.played.length; i++) pr.push([e.target.played.start(i), e.target.played.end(i)]);
+            w.__v.push({ kind, chapter: chapterOf(e.target), t: performance.now(), ct: e.target.currentTime, played: pr });
           }
         },
         true,
@@ -94,7 +97,7 @@ test('the player plays, joins, asks, exports and notices the server stopping', a
     for (let i = 0; i < 3; i++) await expect(blocks.nth(i)).not.toHaveAttribute('data-look', 'rendering');
   });
 
-  await test.step('plays across two joins with a gap under 250 ms', async () => {
+  await test.step('plays across two joins; each ended -> first painted frame is at most 100 ms', async () => {
     await page.getByRole('button', { name: 'Play video' }).click();
     await expect
       .poll(async () => (await events(page)).some((e) => e.kind === 'timeupdate' && e.chapter === 'three-end' && e.ct > 0.5), {
@@ -102,52 +105,69 @@ test('the player plays, joins, asks, exports and notices the server stopping', a
         intervals: [100],
       })
       .toBe(true);
-    const ev = (await events(page)).filter((e) => e.kind === 'timeupdate');
-    const ids = ['one-intro', 'two-middle', 'three-end'];
-    // The brief's measure: last timeupdate of one chapter to the first of the next. Chromium fires timeupdate about
-    // every 250 ms, so a seamless join already reads about 250 here; the cadence is logged beside it.
-    const within = ev.filter((e, i) => i > 0 && ev[i - 1].chapter === e.chapter).map((e, i, a) => e.t - ev[ev.indexOf(e) - 1].t);
-    const cadence = within.sort((a, b) => a - b)[Math.floor(within.length / 2)];
-    const tuGaps: number[] = [];
-    // The precise measure: last painted frame of one chapter to the first painted frame of the next.
-    const fr = await frames(page);
-    const frGaps: number[] = [];
-    for (let i = 0; i < 2; i++) {
-      const last = ev.filter((e) => e.chapter === ids[i]).at(-1);
-      const first = ev.find((e) => e.chapter === ids[i + 1]);
-      expect(last, `a timeupdate of ${ids[i]}`).toBeTruthy();
-      expect(first, `a timeupdate of ${ids[i + 1]}`).toBeTruthy();
-      tuGaps.push(first!.t - last!.t);
-      const lastF = fr.filter((x) => x.visible && x.chapter === ids[i]).at(-1);
-      const firstF = fr.find((x) => x.visible && x.chapter === ids[i + 1]);
-      expect(lastF, `a painted frame of ${ids[i]}`).toBeTruthy();
-      expect(firstF, `a painted frame of ${ids[i + 1]}`).toBeTruthy();
-      frGaps.push(firstF!.shown - lastF!.shown);
-    }
-    console.log(`JOIN_TIMEUPDATE_GAPS_MS ${tuGaps.map((g) => g.toFixed(0)).join(' ')} (timeupdate cadence ${cadence.toFixed(0)})`);
-    console.log(`JOIN_FRAME_GAPS_MS ${frGaps.map((g) => g.toFixed(0)).join(' ')}`);
-    for (const g of frGaps) expect(g).toBeLessThan(JOIN_GAP_MS);
-    // the timeupdate gap may not exceed the cadence by more than the brief's 250 ms
-    for (const g of tuGaps) expect(g - cadence).toBeLessThan(JOIN_GAP_MS);
     await expect(clock(page)).toHaveText(/^0:0[6-9] \/ 0:09$/);
+    const all = await events(page);
+    const ev = all.filter((e) => e.kind === 'timeupdate');
+    const ids = ['one-intro', 'two-middle', 'three-end'];
+    const fr = await frames(page);
+    const endedToFrame: number[] = [];
+    for (let i = 0; i < 2; i++) {
+      // Spike 6's metric: the outgoing element's `ended` to the first painted frame of the incoming visible element.
+      const ended = all.find((e) => e.kind === 'ended' && e.chapter === ids[i]);
+      expect(ended, `an ended event of ${ids[i]}`).toBeTruthy();
+      const firstF = fr.find((x) => x.visible && x.chapter === ids[i + 1] && x.shown >= ended!.t - 1);
+      expect(firstF, `a painted frame of ${ids[i + 1]} after ${ids[i]} ended`).toBeTruthy();
+      const ms = firstF!.shown - ended!.t;
+      endedToFrame.push(ms);
+      // Logged only: other events of the incoming element, the last-frame gap and the raw timeupdate gap.
+      const inc = all.filter((e) => e.chapter === ids[i + 1] && e.t >= ended!.t - 1);
+      const at = (k: string) => { const e = inc.find((x) => x.kind === k); return e ? (e.t - ended!.t).toFixed(0) : 'n/a'; };
+      const lastF = fr.filter((x) => x.visible && x.chapter === ids[i]).at(-1);
+      const lastTu = ev.filter((e) => e.chapter === ids[i]).at(-1);
+      const firstTu = ev.find((e) => e.chapter === ids[i + 1]);
+      console.log(
+        `JOIN ${i + 1}: ended->first-frame ${ms.toFixed(0)} ms; incoming events after ended: play ${at('play')} playing ${at('playing')} canplay ${at('canplay')}; ` +
+          `last-frame->first-frame ${(firstF!.shown - lastF!.shown).toFixed(0)} ms; timeupdate gap ${(firstTu!.t - lastTu!.t).toFixed(0)} ms`,
+      );
+    }
+    console.log(`JOIN_ENDED_TO_FRAME_MS ${endedToFrame.map((g) => g.toFixed(0)).join(' ')}`);
+    for (const g of endedToFrame) expect(g).toBeLessThanOrEqual(JOIN_GAP_MS);
   });
 
-  await test.step('captions show during chapter one, audio is not muted, no video error', async () => {
-    // seek back to the start of chapter one and look for its cue
-    await page.getByRole('group', { name: 'Chapters' }).getByRole('button').nth(0).click();
-    await expect(page.getByText('One intro caption line.')).toBeVisible();
+  await test.step('after the play-through: every chapter played [0, duration - 0.1], no error event, visible element not muted', async () => {
+    // Wait for the end of the last chapter, then read the `played` ranges the elements reported, merged per chapter.
+    await expect.poll(async () => (await events(page)).some((e) => e.kind === 'ended' && e.chapter === 'three-end'), { timeout: 8000 }).toBe(true);
+    const all = await events(page);
+    for (const id of ['one-intro', 'two-middle', 'three-end']) {
+      const ranges = all.filter((e) => e.chapter === id).flatMap((e) => e.played).sort((a, b) => a[0] - b[0]);
+      const merged: [number, number][] = [];
+      for (const r of ranges) {
+        const last = merged.at(-1);
+        if (last && r[0] <= last[1] + 0.05) last[1] = Math.max(last[1], r[1]);
+        else merged.push([r[0], r[1]]);
+      }
+      expect(merged.length, `${id} played ranges ${JSON.stringify(merged)}`).toBeGreaterThan(0);
+      expect(merged[0][0], `${id} starts at 0`).toBeLessThanOrEqual(0.1);
+      expect(merged[0][1], `${id} played to the end`).toBeGreaterThanOrEqual(SECONDS - 0.1);
+      expect(merged.length, `${id} played in one piece: ${JSON.stringify(merged)}`).toBe(1);
+    }
+    expect(all.filter((e) => e.kind === 'error')).toEqual([]);
     const muted = await page.evaluate(() =>
       [...document.querySelectorAll('video')].filter((v) => getComputedStyle(v).visibility !== 'hidden').map((v) => v.muted),
     );
-    expect(muted.length).toBe(1);
     expect(muted).toEqual([false]);
-    expect((await events(page)).filter((e) => e.kind === 'error')).toEqual([]);
     const errs = await page.evaluate(() => [...document.querySelectorAll('video')].map((v) => v.error?.code ?? null));
     expect(errs).toEqual([null, null]);
   });
 
+  await test.step('the caption cue shows during chapter one', async () => {
+    await page.getByRole('group', { name: 'Chapters' }).getByRole('button').nth(0).click();
+    await expect(page.getByText('One intro caption line.')).toBeVisible();
+  });
+
   await test.step('a seek into another chapter lands at the right offset', async () => {
-    await page.getByRole('button', { name: 'Pause', exact: true }).click();
+    const pause = page.getByRole('button', { name: 'Pause', exact: true });
+    if (await pause.count()) await pause.click(); // after the play-through the player may already be stopped
     await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeVisible();
     await page.getByRole('group', { name: 'Chapters' }).getByRole('button').nth(0).click({ position: { x: 1, y: 10 } });
     await expect(clock(page)).toHaveText(/^0:00 \//);
