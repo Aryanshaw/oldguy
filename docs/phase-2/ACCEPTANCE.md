@@ -30,6 +30,10 @@ row). After the final review's five fixes the script was tightened and extended 
 - New Step 1b: a second foreground `yap serve` on the same folder exits 1 with
   `a server for this folder is already running`; a second `serve --detach` prints the running server's URL and
   exits 0; the first server keeps its pid and its `server.json`, and only one server process exists.
+- New check `4.cli-order-moves-page` (added with the `yap order` fix, commit `dccb8d4`; that run: **66 passed, 0
+  failed of 66**): with the server running, `yap order beta-wrap,zeta-intro,alpha-setup,mid-flow` prints
+  `order written: 4 chapters; the page now shows the new order` and the manifest order becomes beta-wrap,
+  zeta-intro, alpha-setup, extra-topic, mid-flow (the chapter the list did not name stays after the one it followed).
 - New check `4b.stream-says-connected-then-disconnected`: after the heartbeat the open stream carried a `state`
   event with `claude_connected` true and, once the heartbeat ran out, one with false.
 

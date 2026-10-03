@@ -602,6 +602,15 @@ async function step4() {
     return [set.code === 0 && set.out === 'chapter extra-topic is failed' && row && row.status === 'failed',
       `exit ${set.code}, stdout "${set.out}"${set.err ? `, stderr "${set.err}"` : ''}; row status ${row && row.status}, title ${row && row.title}`];
   });
+
+  // moving chapters that are already on the page
+  const move = yap(['order', 'beta-wrap,zeta-intro,alpha-setup,mid-flow', '--dir', ctx.slugDir]);
+  await check('4.cli-order-moves-page', async () => {
+    const ids = (await getState()).manifest.chapters.map((c) => c.id);
+    const want = ['beta-wrap', 'zeta-intro', 'alpha-setup', 'extra-topic', 'mid-flow'];
+    return [move.code === 0 && move.out === 'order written: 4 chapters; the page now shows the new order' && ids.join() === want.join(),
+      `exit ${move.code}, stdout "${move.out}"${move.err ? `, stderr "${move.err}"` : ''}; manifest ${ids.join(', ')}`];
+  });
 }
 
 // Step 4b: the heartbeat flips claude_connected on, and it goes off again after 15 s of silence.
