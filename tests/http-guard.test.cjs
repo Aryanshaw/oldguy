@@ -1,0 +1,131 @@
+'use strict';
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const http = require('node:http');
+const { PassThrough } = require('node:stream');
+const { createGuard, readJsonBody } = require('../lib/http-guard.cjs');
+
+const KEY = 'a'.repeat(32);
+const PORT = 4321;
+// Builds the bit of a request the guard looks at.
+function fakeReq({ method = 'GET', url = '/', headers = {} } = {}) {
+  return { method, url, headers: { host: `127.0.0.1:${PORT}`, ...headers } };
+}
+const guard = createGuard({ key: KEY, port: PORT });
+
+test('no key, wrong key and wrong-length key are refused with 403', () => {
+  for (const req of [fakeReq(), fakeReq({ url: '/?key=nope' }), fakeReq({ headers: { 'x-yap-key': 'b'.repeat(32) } }), fakeReq({ headers: { 'x-yap-key': 'short' } })]) {
+    const r = guard.check(req);
+    assert.equal(r.ok, false);
+    assert.equal(r.status, 403);
+  }
+});
+
+test('the key is accepted from the header, the cookie and the query', () => {
+  assert.equal(guard.check(fakeReq({ headers: { 'x-yap-key': KEY } })).ok, true);
+  assert.equal(guard.check(fakeReq({ headers: { cookie: `other=1; yap_key=${KEY}` } })).ok, true);
+  assert.equal(guard.check(fakeReq({ url: `/?key=${KEY}` })).ok, true);
+});
+
+test('Host must be exactly 127.0.0.1:port or localhost:port, and is checked before the key', () => {
+  const withKey = (host) => fakeReq({ headers: { 'x-yap-key': KEY, host } });
+  assert.equal(guard.check(withKey(`127.0.0.1:${PORT}`)).ok, true);
+  assert.equal(guard.check(withKey(`localhost:${PORT}`)).ok, true);
+  assert.equal(guard.check(withKey(`LOCALHOST:${PORT}`)).ok, true);
+  for (const bad of ['evil.example', `evil.example:${PORT}`, '127.0.0.1', `127.0.0.1:${PORT + 1}`, `127.0.0.1:${PORT}.evil.example`, `[::1]:${PORT}`]) {
+    assert.equal(guard.check(withKey(bad)).status, 403, bad);
+  }
+  assert.equal(guard.check({ method: 'GET', url: '/', headers: { 'x-yap-key': KEY } }).status, 403, 'missing Host');
+  // A bad Host with a bad key gives the same answer as a bad Host with a good key.
+  const a = guard.check(fakeReq({ headers: { host: 'evil.example' } }));
+  const b = guard.check(fakeReq({ headers: { host: 'evil.example', 'x-yap-key': KEY } }));
+  assert.deepEqual(a, b);
+});
+
+test('POST needs an absent or own Origin; null and foreign origins are refused', () => {
+  const post = (origin) => fakeReq({ method: 'POST', headers: { 'x-yap-key': KEY, ...(origin === undefined ? {} : { origin }) } });
+  assert.equal(guard.check(post(undefined)).ok, true);
+  assert.equal(guard.check(post(`http://127.0.0.1:${PORT}`)).ok, true);
+  assert.equal(guard.check(post(`http://localhost:${PORT}`)).ok, true);
+  for (const bad of ['https://evil.example', 'null', `http://127.0.0.1:${PORT + 1}`, `https://127.0.0.1:${PORT}`, '']) {
+    assert.equal(guard.check(post(bad)).status, 403, bad);
+  }
+  // A foreign Origin on GET does not matter.
+  assert.equal(guard.check(fakeReq({ headers: { 'x-yap-key': KEY, origin: 'https://evil.example' } })).ok, true);
+});
+
+// Starts a tiny server whose handler reads a JSON body and answers with the result or the error status.
+function bodyServer(opts) {
+  return new Promise((resolve) => {
+    const seen = {};
+    const server = http.createServer((req, res) => {
+      seen.req = req;
+      readJsonBody(req, opts).then(
+        (obj) => { res.writeHead(200); res.end(JSON.stringify(obj)); },
+        (err) => { res.writeHead(err.status || 500, { Connection: 'close' }); res.end(String(err.status)); },
+      );
+    });
+    server.listen(0, '127.0.0.1', () => resolve({ server, seen, port: server.address().port }));
+  });
+}
+// Sends one request and resolves with {status, body}, or {error} if the connection was cut.
+function send(port, { headers = {}, body, chunks }) {
+  return new Promise((resolve) => {
+    const req = http.request({ host: '127.0.0.1', port, method: 'POST', headers, agent: false }, (res) => {
+      let d = '';
+      res.on('data', (c) => { d += c; });
+      res.on('end', () => resolve({ status: res.statusCode, body: d }));
+    });
+    req.on('error', (error) => resolve({ error }));
+    if (chunks) chunks(req); else req.end(body);
+  });
+}
+
+test('readJsonBody returns the parsed object and allows content-type parameters', async () => {
+  const { server, port } = await bodyServer({});
+  try {
+    const r = await send(port, { headers: { 'content-type': 'application/json; charset=utf-8' }, body: '{"a":1}' });
+    assert.deepEqual([r.status, r.body], [200, '{"a":1}']);
+  } finally { server.close(); }
+});
+
+test('readJsonBody rejects wrong type (415), bad JSON and non-objects (400)', async () => {
+  const { server, port } = await bodyServer({});
+  try {
+    assert.equal((await send(port, { headers: { 'content-type': 'text/plain' }, body: '{}' })).status, 415);
+    assert.equal((await send(port, { body: '{}' })).status, 415);
+    const json = { 'content-type': 'application/json' };
+    for (const bad of ['{nope', '[1]', 'null', '"s"', '5', '']) {
+      assert.equal((await send(port, { headers: json, body: bad })).status, 400, bad);
+    }
+  } finally { server.close(); }
+});
+
+test('readJsonBody rejects an over-cap body with 413 and destroys the request, with or without Content-Length', async () => {
+  const { server, seen, port } = await bodyServer({ maxBytes: 100 });
+  try {
+    const json = { 'content-type': 'application/json' };
+    const big = JSON.stringify({ x: 'y'.repeat(500) });
+    const sized = await send(port, { headers: json, body: big });
+    assert.equal(sized.status, 413);
+    const chunked = await send(port, { headers: json, chunks: (req) => { req.write('{"x":"'); req.write('y'.repeat(500)); req.end('"}'); } });
+    assert.equal(chunked.status, 413);
+    await new Promise((r) => setTimeout(r, 50));
+    assert.equal(seen.req.destroyed, true);
+  } finally { server.close(); }
+});
+
+test('readJsonBody gives up with 408 when the body never finishes', async () => {
+  const { server, port } = await bodyServer({ timeoutMs: 100 });
+  try {
+    const r = await send(port, { headers: { 'content-type': 'application/json' }, chunks: (req) => { req.write('{"a":'); } });
+    assert.equal(r.status, 408);
+  } finally { server.closeAllConnections(); server.close(); }
+});
+
+test('readJsonBody works on a plain stream too (unit)', async () => {
+  const s = new PassThrough();
+  s.headers = { 'content-type': 'application/json' };
+  s.end('{"ok":true}');
+  assert.deepEqual(await readJsonBody(s), { ok: true });
+});

@@ -9,6 +9,7 @@ const { runDoctorCli } = require('../lib/doctor-cli.cjs');
 const { runScaffold } = require('../lib/scaffold-cli.cjs');
 const { runNarrate } = require('../lib/narrate-cli.cjs');
 const { runRender } = require('../lib/render-cli.cjs');
+const { runServe } = require('../lib/server-cli.cjs');
 
 // One row per command.
 const COMMANDS = {
@@ -20,6 +21,7 @@ const COMMANDS = {
   scaffold: { summary: 'create a chapter folder from a spec (yap scaffold --help)', run: runScaffold },
   render: { summary: 'audit every chapter, then render the ones that pass to mp4', run: runRender },
   narrate: { summary: 'make a chapter\'s narration audio, beats, captions and page', run: runNarrate },
+  serve: { summary: 'start the local video player server (--detach to run in the background)', run: runServe },
 };
 
 // Prints each command name with its one-line summary.
