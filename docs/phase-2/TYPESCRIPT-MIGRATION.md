@@ -48,8 +48,9 @@ rewritten to give the same result for every input (each listed in the ledger).
 5. The command adapters moved into `cli/` and lost the `-cli` suffix; the shared helper is `cli/args.mts`.
 6. The executor changed from subagent-driven to native part-way (after Task 2) at the owner's instruction, because
    dispatching subagents began to be refused by the session's permission check. Tasks 0 to 2 were written by
-   subagents and checked by the controller; Tasks 3 to 7 were written and checked by the controller. The independent
-   review is the final whole-branch review.
+   subagents and checked by the controller; Tasks 3 to 7 were written and checked by the controller. The fresh-eyes review
+   at the end could not be dispatched (the session refused the reviewer), so the last review was a self-review by the
+   controller: weaker than an independent one, and the owner should decide whether it is enough before merging.
 
 ## What was not done
 
@@ -59,6 +60,18 @@ rewritten to give the same result for every input (each listed in the ledger).
 - A project that imports Yap's types must have `@types/node` available: the type files import modules that use Node's
   types, so the checker needs them (shown by the first attempt of the player proof above, which failed until the Node
   types were provided). Phase 3 can either rely on `@types/node` (normal in a Vite project) or add a types-only entry file.
+
+## Final review (self-review, no independent reviewer was available)
+
+Re-checked at the end: stale `.cjs` mentions in source (one comment fixed), every `as` cast (the only uncommented ones
+are the ~15 `(err as Error).message` casts on caught values and a few one-line casts next to their checks), the five
+Review Focus items (1 and 4: `tests/node-floor.test.cjs`, including real runs under Node 22.17 and 22.18; 2: the whole
+suite loads every module through `require()` and passes; 3: `tests/code-rules.test.cjs`; 5: the acceptance script and
+`tests/server-cli.test.cjs`), and the rule tests (each is run on a made-up file that breaks it). No Critical or Important
+finding. Deferred minors: the ~15 `(err as Error).message` casts could become one helper; `source.lines as [number,
+number]` in `lib/audit.mts` states a contract the runtime does not enforce (unchanged behaviour); the launcher's
+node_modules message is tested through `nodeProblem`, not by running a launcher from inside a `node_modules` folder;
+`tests/code-rules-lib.cjs` finds imports with regular expressions, so an unusual import form could escape it.
 
 ## Proposed spec amendments (for the owner; none applied)
 

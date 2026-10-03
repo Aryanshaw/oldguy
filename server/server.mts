@@ -230,7 +230,7 @@ function normaliseRows(m: Manifest): Manifest {
 }
 
 // Makes the one queue every manifest change goes through: each job loads the file, changes it with a pure function from
-// lib/manifest.cjs (the change may be async), and saves it atomically, one job at a time. A job that fails does not stop the jobs behind it.
+// lib/manifest.mts (the change may be async), and saves it atomically, one job at a time. A job that fails does not stop the jobs behind it.
 // Once isClosing() says so, a new job is refused with a 503 (jobs already queued still run, and close() waits for them).
 // The returned function also has .idle(), a promise that resolves when every job queued so far has finished.
 function makeManifestQueue(slugDir: string, deps: ServerDeps, isClosing: () => boolean): ManifestQueue {
