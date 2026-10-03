@@ -13,7 +13,7 @@ Needs: `HYPERFRAMES_FFMPEG_PATH` pointing at a working ffmpeg (Homebrew's ffmpeg
 | Keyed URL loads, title equals `manifest.title`, four timeline blocks, the fourth `rendering` | pass | title "demo" |
 | No console message, page error or `securitypolicyviolation` for the whole run | pass | the only console line is Chromium's log of the one 409 the test provokes (full export with drafts); asserted to occur exactly once |
 | Play: time passes 6.5 s within 12 s (two joins crossed) | pass | clock 0:06 to 0:09 |
-| Join: outgoing element's `ended` to the first painted frame of the incoming visible element (spike 6's metric; asserted <= 100 ms per join) | **FAIL** | 121/135, 131/121, 120/126 ms (three runs) |
+| Join: outgoing element's `ended` to the first painted frame of the incoming visible element (spike 6's metric; asserted <= 100 ms per join) | **FAIL** | before R18: 121/135, 131/121, 120/126 ms; after R18: 117/126, 121/129, 124/130 ms |
 | Audio coverage: each chapter's `played` ranges merge to one range covering [0, 2.9]; no `error` event; both `video.error` null; visible element not muted | pass | |
 | Caption cue "One intro caption line." visible in chapter one | pass | |
 | Escape closes the export dialog in a real browser | pass | |
@@ -37,6 +37,19 @@ Logged only (not asserted), per join, two runs of `npm run e2e`:
 | 2 | 2 | 121 ms | 2 ms | none | 167 ms | 264 ms |
 
 The raw `timeupdate` gap sits on Chromium's ~265 ms `timeupdate` cadence and says nothing about stalls. `canplay` did not fire on the incoming element after `ended` (it was already loaded). `play`/`playing` fire 2 ms after `ended` (one run 42 ms), so the call to play is prompt; the remaining ~120 ms until a frame is painted is not explained by these events. Cause not isolated. The `Cache-Control: no-store` suspicion is not supported: one request per chapter video during a play, none at the swap. The server header was not touched and no threshold was loosened.
+
+After R18 (idle element hidden with `opacity: 0`, `pointer-events: none`, `aria-hidden` instead of `visibility: hidden`), three runs:
+
+| Run | Join | ended to first frame | play()/playing after ended | canplay | last frame to first frame | raw timeupdate gap |
+|---|---|---|---|---|---|---|
+| 1 | 1 | 117 ms | 5 ms | none | 183 ms | 262 ms |
+| 1 | 2 | 126 ms | 3 ms | none | 167 ms | 250 ms |
+| 2 | 1 | 121 ms | 5 ms | none | 183 ms | 251 ms |
+| 2 | 2 | 129 ms | 1 ms | none | 167 ms | 254 ms |
+| 3 | 1 | 124 ms | 7 ms | none | 183 ms | 265 ms |
+| 3 | 2 | 130 ms | 4 ms | none | 183 ms | 263 ms |
+
+No change: the hiding style is not the cause. `canplay` still does not fire on the incoming element. The assertion still fails; no other engine change was tried.
 
 Environment caveat: headless Chromium; `expectedDisplayTime` may include compositor latency that spike 6 did not measure the same way. Owner or controller to decide whether the 100 ms bar is the right one for this harness or the engine needs work.
 

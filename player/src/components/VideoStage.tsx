@@ -7,20 +7,23 @@ export function VideoStage({ player, chapters, captionsOn }: { player: Player; c
   const none = playable(chapters).length === 0;
   const waiting = chapters.some((c) => c.status === 'rendering' || c.status === 'pending');
   const showPlay = !none && (player.state === 'blocked' || player.state === 'idle');
-  const hide = { visibility: 'hidden' } as const;
+  // The idle element stays composited (opacity 0, not visibility hidden) so it is already decoded at the swap.
+  const idle = { opacity: 0, pointerEvents: 'none' } as const;
   return (
     <div className="bd sh-lg relative aspect-video w-full overflow-hidden rounded-[14px] bg-yk-black">
       <video
         ref={player.refA}
         playsInline
         className="absolute inset-0 h-full w-full"
-        style={player.visible === 'a' ? undefined : hide}
+        style={player.visible === 'a' ? { opacity: 1 } : idle}
+        aria-hidden={player.visible === 'a' ? undefined : true}
       />
       <video
         ref={player.refB}
         playsInline
         className="absolute inset-0 h-full w-full"
-        style={player.visible === 'b' ? undefined : hide}
+        style={player.visible === 'b' ? { opacity: 1 } : idle}
+        aria-hidden={player.visible === 'b' ? undefined : true}
       />
       {none ? (
         <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-lg font-black text-yk-cream">

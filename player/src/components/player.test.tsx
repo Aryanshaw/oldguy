@@ -95,6 +95,19 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
+describe('video stacking', () => {
+  it('hides the idle element with opacity 0 and aria-hidden, never with visibility hidden', () => {
+    const { container } = render(<Harness chapters={[ch('a')]} />);
+    const [a, b] = Array.from(container.querySelectorAll('video'));
+    expect(a.style.opacity).toBe('1');
+    expect(a.hasAttribute('aria-hidden')).toBe(false);
+    expect(b.style.opacity).toBe('0');
+    expect(b.style.pointerEvents).toBe('none');
+    expect(b.getAttribute('aria-hidden')).toBe('true');
+    for (const v of [a, b]) expect(v.style.visibility).not.toBe('hidden');
+  });
+});
+
 describe('empty state', () => {
   it('says the first chapter is rendering when one is rendering or pending', () => {
     render(<Harness chapters={[ch('a', { status: 'rendering', duration_s: null })]} />);

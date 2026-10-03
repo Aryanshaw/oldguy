@@ -60,7 +60,7 @@ async function instrument(page: Page) {
     const seen = new WeakSet<HTMLVideoElement>();
     const watch = (v: HTMLVideoElement) => {
       const tick = (_now: number, meta: { expectedDisplayTime: number }) => {
-        f.push({ chapter: chapterOf(v), shown: meta.expectedDisplayTime, visible: getComputedStyle(v).visibility !== 'hidden' });
+        f.push({ chapter: chapterOf(v), shown: meta.expectedDisplayTime, visible: Number(getComputedStyle(v).opacity) > 0.5 });
         v.requestVideoFrameCallback(tick);
       };
       v.requestVideoFrameCallback(tick);
@@ -153,7 +153,7 @@ test('the player plays, joins, asks, exports and notices the server stopping', a
     }
     expect(all.filter((e) => e.kind === 'error')).toEqual([]);
     const muted = await page.evaluate(() =>
-      [...document.querySelectorAll('video')].filter((v) => getComputedStyle(v).visibility !== 'hidden').map((v) => v.muted),
+      [...document.querySelectorAll('video')].filter((v) => Number(getComputedStyle(v).opacity) > 0.5).map((v) => v.muted),
     );
     expect(muted).toEqual([false]);
     const errs = await page.evaluate(() => [...document.querySelectorAll('video')].map((v) => v.error?.code ?? null));
@@ -176,7 +176,7 @@ test('the player plays, joins, asks, exports and notices the server stopping', a
     await expect(page.getByRole('heading', { level: 2 }).first()).toHaveText('Two middle');
     await expect(clock(page)).toHaveText(/^0:05 \//);
     const seen = await page.evaluate(() => {
-      const v = [...document.querySelectorAll('video')].find((el) => getComputedStyle(el).visibility !== 'hidden')!;
+      const v = [...document.querySelectorAll('video')].find((el) => Number(getComputedStyle(el).opacity) > 0.5)!;
       return { src: v.currentSrc, ct: v.currentTime };
     });
     expect(seen.src).toContain('/chapters/two-middle/video');
