@@ -4,6 +4,7 @@ const path = require('node:path');
 const { appendEvent, readEventsAfter, appendReply, readThread } = require('../lib/events.cjs');
 const { loadManifest, insertChapter, reorderChapters, setChapterFields } = require('../lib/manifest.cjs');
 const { scanChapter } = require('../lib/chapter-scan.cjs');
+const { handleExport } = require('./export-route.cjs');
 
 const HEARTBEAT_MS = 15000;
 // The only chapter fields the API may change.
@@ -191,6 +192,7 @@ const API_ROUTES = [
   { method: 'POST', pattern: '/api/reply', handler: handleReply },
   { method: 'POST', pattern: '/api/chapters', handler: handleChapters },
   { method: 'POST', pattern: '/api/heartbeat', handler: handleHeartbeat },
+  { method: 'POST', pattern: '/api/export', handler: handleExport },
 ];
 
 module.exports = { API_ROUTES };
