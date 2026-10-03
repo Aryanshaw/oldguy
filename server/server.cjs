@@ -80,7 +80,8 @@ function mediaHandler(kind) {
   return async ({ req, res, params, state }) => {
     const row = findChapterRow(state, params.id);
     const dir = row && path.join(state.slugDir, 'chapters', row.id);
-    const ok = row && (kind !== 'video' || (row.status === 'ready' && scanChapter(dir).status === 'ready'));
+    const ok = row && (kind !== 'video' || (row.status === 'ready' && scanChapter(dir).status === 'ready'))
+      && (kind !== 'poster' || row.poster !== null);
     const real = ok && safeChapterFile(dir, file);
     if (!real) return sendJson(res, 404, { error: 'not found' });
     // Test hook: lets a test change the file after the check and before the open.
@@ -185,6 +186,13 @@ function writeServerInfo(slugDir, info) {
   return file;
 }
 
+// The one place that keeps a promise about posters: a chapter that is not ready never keeps a poster picture, whoever
+// changed its status. A ready row without a poster is what makes the watcher take a new frame.
+function dropStalePosters(m) {
+  if (!m.chapters.some((c) => c.status !== 'ready' && c.poster !== null)) return m;
+  return { ...m, chapters: m.chapters.map((c) => (c.status !== 'ready' && c.poster !== null ? { ...c, poster: null } : c)) };
+}
+
 // Makes the one queue every manifest change goes through: each job loads the file, changes it with a pure function from
 // lib/manifest.cjs (the change may be async), and saves it atomically, one job at a time. A job that fails does not stop the jobs behind it.
 function makeManifestQueue(slugDir, deps) {
@@ -192,7 +200,7 @@ function makeManifestQueue(slugDir, deps) {
   let tail = Promise.resolve();
   return (change) => {
     const job = tail.then(async () => {
-      const next = await change(loadManifest(file));
+      const next = dropStalePosters(await change(loadManifest(file)));
       if (deps.beforeSave) await deps.beforeSave();
       saveManifest(file, next, deps.fs ? { fs: deps.fs } : undefined);
       return next;
@@ -202,9 +210,19 @@ function makeManifestQueue(slugDir, deps) {
   };
 }
 
+// How long close() waits for poster work that will not stop (a real ffmpeg is killed at once and ends sooner).
+const POSTER_WAIT_MS = 25000;
+
+// Waits for a promise, but gives up after `ms` milliseconds (the promise itself is left alone).
+function waitAtMost(promise, ms) {
+  let timer;
+  const limit = new Promise((resolve) => { timer = setTimeout(resolve, ms); });
+  return Promise.race([promise, limit]).finally(() => clearTimeout(timer));
+}
+
 // Starts the server on 127.0.0.1 and resolves with { url, key, port, close() }.
 // deps (all optional, for tests): routes replaces the route table; now is a clock in ms; pingMs is the stream ping
-// interval; fs is used to save the manifest; scan, intervalMs, setInterval and clearInterval steer the folder watcher; exec and ffmpeg take poster frames; beforeSave is awaited between change and save (tests); logError receives unexpected save failures.
+// interval; fs is used to save the manifest; scan, intervalMs, setInterval and clearInterval steer the folder watcher; exec and ffmpeg take poster frames; posterWaitMs bounds how long close() waits for them; beforeSave is awaited between change and save (tests); logError receives unexpected save failures.
 async function startServer({ slugDir, key = crypto.randomBytes(16).toString('hex'), port = 0, deps = {} }) {
   ensureManifest(slugDir);
   const routes = deps.routes || ROUTES;
@@ -248,7 +266,7 @@ async function startServer({ slugDir, key = crypto.randomBytes(16).toString('hex
     state.watcher.stop();
     sync.stop();
     await state.watcher.idle();
-    await sync.posterIdle();
+    await waitAtMost(sync.posterIdle(), deps.posterWaitMs ?? POSTER_WAIT_MS);
     await new Promise((resolve) => {
       fs.rmSync(infoFile, { force: true });
       hub.close();

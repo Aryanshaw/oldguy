@@ -51,6 +51,8 @@ async function setup(t, rows = [['intro', 'ready']], deps = {}) {
   const slugDir = buildSlug(t, rows);
   const srv = await startServer({ slugDir, deps: { exec: fakeFfmpeg, ...deps } });
   t.after(() => srv.close());
+  // the poster route answers only once the manifest lists the poster, so wait for the start-up frames
+  await srv.state.posterIdle();
   return { srv, slugDir };
 }
 // One plain HTTP request returning the body as a Buffer.
@@ -143,10 +145,8 @@ test('poster and captions: right type and bytes, and they do not need ready', as
   fs.rmSync(path.join(slugDir, 'chapters', 'draft', 'chapter.mp4'));
   const srv = await startServer({ slugDir, deps: { exec: fakeFfmpeg } });
   t.after(() => srv.close());
-  const p = await get(srv, '/chapters/draft/poster');
-  assert.equal(p.status, 200);
-  assert.equal(p.headers['content-type'], 'image/jpeg');
-  assert.equal(p.body.toString(), 'JPEGDATA');
+  // not ready means no poster in the manifest, so the route says 404 even though the file is on disk
+  assert.equal((await get(srv, '/chapters/draft/poster')).status, 404);
   const c = await get(srv, '/chapters/draft/captions');
   assert.equal(c.status, 200);
   assert.equal(c.headers['content-type'], 'text/vtt; charset=utf-8');
@@ -323,7 +323,8 @@ async function hangUpStorm(t, count) {
   fs.writeFileSync(script, `
     const fs = require('node:fs');
     const { startServer } = require(${JSON.stringify(path.join(__dirname, '..', 'server', 'server.cjs'))});
-    startServer({ slugDir: ${JSON.stringify(slugDir)}, deps: { exec: async (f, a) => { fs.writeFileSync(a[a.length - 1], 'JPEGDATA'); } } }).then((srv) => {
+    startServer({ slugDir: ${JSON.stringify(slugDir)}, deps: { exec: async (f, a) => { fs.writeFileSync(a[a.length - 1], 'JPEGDATA'); } } }).then(async (srv) => {
+      await srv.state.posterIdle();
       process.send({ ready: true, port: srv.port, key: srv.key });
       process.on('message', () => { global.gc(); setTimeout(() => { global.gc(); process.send({ fds: fs.readdirSync('/dev/fd').length }); }, 100); });
     });`);

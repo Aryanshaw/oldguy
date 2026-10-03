@@ -44,8 +44,7 @@ function makeChapterSync(state) {
   const abort = new AbortController();
 
   // Applies one diff to the manifest. Fills `jobs` with chapters that need a poster and `lost` with ids whose folder is gone.
-  // A chapter that stops being ready loses its poster in the same change, so a ready row without a poster always means
-  // "take one" and no memory of older builds is needed.
+  // A ready row without a poster means "take one"; the manifest queue clears the poster of any row that is not ready.
   function applyDiff(m, diff, jobs, lost) {
     const listed = new Set(readOrder(slugDir).ids || []);
     let next = m;
@@ -53,16 +52,13 @@ function makeChapterSync(state) {
       const row = next.chapters.find((r) => r.id === c.id);
       if (c.status === 'ready' && (!row || !row.poster || row.build_sha256 !== c.buildSha256)) jobs.push(c);
       if (!row) { next = placeRow(next, newRow(c), diff.order, listed); continue; }
-      const status = mapStatus(c.status, row.status);
-      const patch = { status, duration_s: c.durationS, build_sha256: c.buildSha256, verified_against_commit: c.verifiedAgainstCommit };
+      const patch = { status: mapStatus(c.status, row.status), duration_s: c.durationS, build_sha256: c.buildSha256, verified_against_commit: c.verifiedAgainstCommit };
       if (!row.title) patch.title = c.title || c.id;
-      if (row.status === 'ready' && status !== 'ready') patch.poster = null;
       next = setChapterFields(next, c.id, patch);
     }
     for (const id of diff.removed) {
-      const row = next.chapters.find((r) => r.id === id);
-      if (!row) continue;
-      next = setChapterFields(next, id, row.status === 'ready' ? { status: 'failed', poster: null } : { status: 'failed' });
+      if (!next.chapters.some((r) => r.id === id)) continue;
+      next = setChapterFields(next, id, { status: 'failed' });
       lost.push(id);
     }
     return next;

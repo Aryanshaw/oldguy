@@ -529,3 +529,115 @@ test('a row failed because its folder vanished recovers to the scan status when 
     await srv.close();
   }
 });
+
+// ---- fix round 2: a chapter that is not ready never keeps a poster ----
+const http = require('node:http');
+const net = require('node:net');
+// One API call with the session key; JSON body optional. Returns {status, json}.
+function call(srv, method, url, body) {
+  return new Promise((resolve, reject) => {
+    const payload = body === undefined ? undefined : JSON.stringify(body);
+    const headers = { host: `127.0.0.1:${srv.port}`, 'x-yap-key': srv.key };
+    if (payload !== undefined) headers['content-type'] = 'application/json';
+    const r = http.request({ host: '127.0.0.1', port: srv.port, method, path: url, agent: false, headers }, (res) => {
+      let text = '';
+      res.on('data', (c) => { text += c; });
+      res.on('end', () => resolve({ status: res.statusCode, json: text ? JSON.parse(text) : undefined }));
+    });
+    r.on('error', reject);
+    r.end(payload);
+  });
+}
+const setStatus = (srv, id, status) => call(srv, 'POST', '/api/chapters', { op: 'set', id, fields: { status } });
+
+test('N1: ready A with poster -> API sets failed -> poster cleared -> build B re-rendered -> a new frame is taken', async (t) => {
+  const slugDir = tempSlug(t);
+  const dir = makeChapter(slugDir, 'intro');
+  const g = gatedExec();
+  const { srv } = await boot(t, slugDir, { deps: { exec: g.exec } });
+  await srv.state.posterIdle();
+  assert.equal(rowOf(slugDir, 'intro').poster, 'chapters/intro/poster.jpg');
+  assert.equal((await setStatus(srv, 'intro', 'failed')).status, 200);
+  const state = (await call(srv, 'GET', '/api/state')).json;
+  assert.equal(state.manifest.chapters[0].poster, null);
+  fs.writeFileSync(path.join(dir, 'build.json'), BUILD2);
+  await srv.state.watcher.pollNow();
+  assert.equal(rowOf(slugDir, 'intro').status, 'stale');
+  fs.writeFileSync(path.join(dir, 'render.json'), JSON.stringify({ build_sha256: sha256(BUILD2) }));
+  await srv.state.watcher.pollNow();
+  await srv.state.posterIdle();
+  assert.equal(rowOf(slugDir, 'intro').status, 'ready');
+  assert.equal(g.calls.length, 2);
+  assert.equal(rowOf(slugDir, 'intro').poster, 'chapters/intro/poster.jpg');
+  assert.equal(fs.readFileSync(path.join(dir, 'poster.jpg'), 'utf8'), 'JPEG-2');
+});
+
+test('N1: an API set to any non-ready status leaves no poster behind', async (t) => {
+  for (const status of ['pending', 'rendering', 'stale', 'failed']) {
+    const slugDir = tempSlug(t);
+    makeChapter(slugDir, 'intro');
+    const { srv } = await boot(t, slugDir);
+    await srv.state.posterIdle();
+    assert.equal(rowOf(slugDir, 'intro').poster, 'chapters/intro/poster.jpg');
+    assert.equal((await setStatus(srv, 'intro', status)).status, 200);
+    assert.equal(rowOf(slugDir, 'intro').poster, null, status);
+    await srv.close();
+  }
+});
+
+test('N1: adding a chapter, reordering and renaming leave a ready row\'s poster alone', async (t) => {
+  const slugDir = tempSlug(t);
+  makeChapter(slugDir, 'intro');
+  const { srv } = await boot(t, slugDir);
+  await srv.state.posterIdle();
+  assert.equal((await call(srv, 'POST', '/api/chapters', { op: 'add', id: 'extra', title: 'Extra' })).status, 200);
+  assert.equal((await call(srv, 'POST', '/api/chapters', { op: 'reorder', ids: ['extra', 'intro'] })).status, 200);
+  assert.equal((await call(srv, 'POST', '/api/chapters', { op: 'set', id: 'intro', fields: { title: 'New name' } })).status, 200);
+  assert.equal(rowOf(slugDir, 'intro').poster, 'chapters/intro/poster.jpg');
+  assert.equal(rowOf(slugDir, 'extra').poster, null);
+});
+
+test('N3: the poster route is 404 while the row has no poster even if the file exists, and 200 once an extraction sets it', async (t) => {
+  const slugDir = tempSlug(t);
+  const dir = makeChapter(slugDir, 'intro');
+  fs.writeFileSync(path.join(dir, 'poster.jpg'), 'OLDFRAME');
+  let fail = true;
+  const exec = async (f, args) => { if (fail) throw new Error('no frames'); fs.writeFileSync(args[args.length - 1], 'NEWFRAME'); };
+  const { srv } = await boot(t, slugDir, { deps: { exec } });
+  await srv.state.posterIdle();
+  assert.equal(rowOf(slugDir, 'intro').poster, null);
+  const get = (p) => fetch(`http://127.0.0.1:${srv.port}${p}`, { headers: { 'x-yap-key': srv.key } });
+  assert.equal((await get('/chapters/intro/poster')).status, 404);
+  fail = false;
+  fs.writeFileSync(path.join(dir, 'build.json'), BUILD2);
+  fs.writeFileSync(path.join(dir, 'render.json'), JSON.stringify({ build_sha256: sha256(BUILD2) }));
+  await srv.state.watcher.pollNow();
+  await srv.state.posterIdle();
+  const r = await get('/chapters/intro/poster');
+  assert.equal(r.status, 200);
+  assert.equal(await r.text(), 'NEWFRAME');
+});
+
+test('N2: close() stops waiting for a stuck extraction after the bound; the port is free and nothing is written afterwards', async (t) => {
+  const slugDir = tempSlug(t);
+  const dir = makeChapter(slugDir, 'intro');
+  let release;
+  const stuck = new Promise((r) => { release = r; });
+  const exec = async (f, args) => { fs.writeFileSync(args[args.length - 1], 'LATE'); await stuck; };
+  const { srv, events } = await boot(t, slugDir, { deps: { exec, posterWaitMs: 30 } });
+  await tick();
+  await srv.close();
+  const port = srv.port;
+  await new Promise((resolve, reject) => {
+    const s = net.connect(port, '127.0.0.1');
+    s.on('connect', () => { s.destroy(); reject(new Error('port still open')); });
+    s.on('error', resolve);
+  });
+  const text = fs.readFileSync(path.join(slugDir, 'manifest.json'), 'utf8');
+  const seen = events.length;
+  release();
+  await tick(); await tick();
+  assert.equal(fs.readFileSync(path.join(slugDir, 'manifest.json'), 'utf8'), text);
+  assert.equal(events.length, seen);
+  assert.equal(fs.existsSync(path.join(dir, 'poster.jpg')), false);
+});
