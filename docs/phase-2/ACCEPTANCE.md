@@ -11,7 +11,7 @@ so that no Claude run, TTS or Hyperframes render is needed.
 |---|---|---|
 | 1. Start with `serve --detach`, `state/server.json`, key cookie, page | PASS | 7 of 7 |
 | 2. Key guard, manifest, posters, media serving | PASS | 17 of 17 |
-| 3. Real browser check | Pending | done by the controller in Chrome |
+| 3. Real browser check (by hand, Chrome 154) | PASS | 8 of 8 |
 | 4. Live updates, chat with a CLI reply, chapter commands | PASS | 14 of 14 |
 | 4b. Heartbeat | PASS | 3 of 3 |
 | 5. Export | PASS | 9 of 9 |
