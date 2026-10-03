@@ -104,7 +104,30 @@ lengths) is the one that compares the server's work with real video lengths.
 
 ## Step 3: real browser check
 
-Pending: done by the controller in Chrome.
+Done by hand in Google Chrome 154.0.8037.95 against the script's `--keep` server (same synthetic project, commit
+`570a58c` plus the acceptance script). Values were read from the page with the browser's own scripting console;
+the page itself ships no scripts.
+
+| Check | Result | Observed |
+|---|---|---|
+| Opening the printed URL (key in the query) | PASS | lands on `http://127.0.0.1:<port>/` with no key left in the address bar |
+| Page lists the chapters in story order | PASS | `Zeta intro`, `Alpha setup`, `Mid flow`, `Beta wrap` (order.json order, not alphabetical), each with its status |
+| Page has no scripts | PASS | `document.scripts.length` is 0 |
+| Each ready video loads its metadata | PASS | three `<video>` elements, all `readyState` 4, 320x180, durations 3.2 s, 4.4 s, 4.92 s: equal to `duration_s` in `/api/state` |
+| The stale chapter shows no video | PASS | `Mid flow` shows the word `stale` and has no `<video>` element |
+| A ranged request from the page | PASS | `fetch` with `Range: bytes=0-99` on chapter 2: 206, `Content-Range: bytes 0-99/174315`, `video/mp4` |
+| Playing chapter 2 | PASS | from 0.4 s the clock reached 2.195 s after about 1.5 s; 155 frames decoded; no media error |
+| Seeking inside chapter 2 | PASS | seek to 3.5 s then back to 0.4 s; both `seeked` events fired; the frame's burnt-in timecode reads `00:00:00.400`; buffered range 0 to 4.4 s |
+
+Screenshot: `frames/placeholder-page-chrome.jpg` (taken after the seek back to 0.4 s).
+
+One thing to know when repeating this: while the tab is in the background Chrome does not load video metadata
+at all (`readyState` stayed 0 and no request was made for 5 s). It loaded at once when the tab became visible.
+That is the browser's behaviour for hidden tabs, not the server's; the same request made with `fetch` from the
+hidden tab was answered straight away.
+
+Not covered here: the thread is not shown on the placeholder page (it is in `/api/state` only), posters are not
+shown on it either, and no other browser was tried.
 
 ## Step 4: live updates, chat, chapter commands
 
