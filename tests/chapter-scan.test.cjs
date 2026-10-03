@@ -183,3 +183,58 @@ test('scanProject reports a garbage order.json and still lists folders', () => w
   assert.deepEqual(p.order, ['a']);
   assert.equal(p.issues.length, 1);
 }));
+
+test('a broken chapter.mp4 link is never ready, adds an issue, and follows the no-video rule', () => withTmp((root) => {
+  const dir = makeChapter(root, 'a', { mp4: false });
+  fs.symlinkSync(path.join(root, 'nowhere.mp4'), path.join(dir, 'chapter.mp4'));
+  let c = scan(dir);
+  assert.equal(c.status, 'pending');
+  assert.ok(c.issues.some((i) => /broken link/.test(i)));
+  fs.mkdirSync(path.join(dir, 'work-1'));
+  assert.equal(scan(dir).status, 'rendering');
+}));
+
+test('a chapter.mp4 that is a directory is never ready, adds an issue, and follows the no-video rule', () => withTmp((root) => {
+  const dir = makeChapter(root, 'a', { mp4: false });
+  fs.mkdirSync(path.join(dir, 'chapter.mp4'));
+  let c = scan(dir);
+  assert.equal(c.status, 'pending');
+  assert.ok(c.issues.some((i) => /not a regular file/.test(i)));
+  fs.mkdirSync(path.join(dir, 'work-1'));
+  assert.equal(scan(dir).status, 'rendering');
+}));
+
+test('a symlinked chapter folder is skipped by scanProject with an issue that says it is a link', () => withTmp((root) => {
+  const ch = path.join(root, 'chapters');
+  makeChapter(ch, 'good');
+  makeChapter(path.join(root, 'elsewhere'), 'other');
+  fs.symlinkSync(path.join(root, 'elsewhere', 'other'), path.join(ch, 'linked'));
+  const p = S.scanProject(root);
+  assert.deepEqual(p.order, ['good']);
+  assert.ok(p.issues.some((i) => i.includes('linked') && /is a link/.test(i)));
+}));
+
+test('scanChapter refuses a symlinked chapter folder: pending with a link issue, never ready', () => withTmp((root) => {
+  const real = makeChapter(path.join(root, 'elsewhere'), 'other');
+  const link = path.join(root, 'linked');
+  fs.symlinkSync(real, link);
+  const c = scan(link);
+  assert.equal(c.status, 'pending');
+  assert.ok(c.issues.some((i) => /is a link/.test(i)));
+}));
+
+test('an in-folder link target whose name starts with two dots is not mistaken for outside', () => withTmp((root) => {
+  const dir = makeChapter(root, 'a', { mp4: false });
+  fs.writeFileSync(path.join(dir, '..video.mp4'), 'video');
+  fs.symlinkSync(path.join(dir, '..video.mp4'), path.join(dir, 'chapter.mp4'));
+  assert.equal(scan(dir).status, 'ready');
+}));
+
+test('scanProject reports why chapters/ cannot be listed when it is a file', () => withTmp((root) => {
+  fs.writeFileSync(path.join(root, 'chapters'), 'not a folder');
+  const p = S.scanProject(root);
+  assert.deepEqual(p.order, []);
+  assert.deepEqual(p.chapters, []);
+  assert.equal(p.issues.length, 1);
+  assert.match(p.issues[0], /chapters/);
+}));
