@@ -51,3 +51,44 @@ test('garbage versions are a problem line and never throw', () => {
     assert.ok(!line.includes('\n'), String(v));
   }
 });
+
+// Real runs under other Node versions, when this machine has them (nvm keeps them under ~/.nvm/versions/node).
+const { spawnSync } = require('node:child_process');
+const os = require('node:os');
+const path = require('node:path');
+const fsNode = require('node:fs');
+const ROOT = path.join(__dirname, '..');
+
+// The path of an installed Node of this exact version, or null when it is not installed.
+function nodeOfVersion(version) {
+  const bin = path.join(os.homedir(), '.nvm', 'versions', 'node', `v${version}`, 'bin', 'node');
+  return fsNode.existsSync(bin) ? bin : null;
+}
+
+test('under Node 22.17 the command and the hook each print one plain sentence, never a syntax error', (t) => {
+  const old = nodeOfVersion('22.17.0');
+  if (!old) return t.skip('Node 22.17.0 is not installed on this machine');
+  const cli = spawnSync(old, [path.join(ROOT, 'bin', 'yap.cjs'), '--help'], { encoding: 'utf8' });
+  assert.equal(cli.status, 1);
+  assert.equal(cli.stdout, '');
+  assert.match(cli.stderr, /^yap: Yap needs Node 22\.18 or newer; this is Node 22\.17\.0\./);
+  assert.equal(cli.stderr.trim().split('\n').length, 1);
+  assert.doesNotMatch(cli.stderr, /SyntaxError|ERR_UNKNOWN_FILE_EXTENSION/);
+  const hook = spawnSync(old, [path.join(ROOT, 'hooks', 'session-start.cjs')], { input: '{}', encoding: 'utf8' });
+  assert.equal(hook.status, 0);
+  assert.equal(hook.stdout, '');
+  assert.match(hook.stderr, /^yap: Yap needs Node 22\.18 or newer/);
+  assert.equal(hook.stderr.trim().split('\n').length, 1);
+});
+
+test('under Node 22.18 the command and the hook run normally', (t) => {
+  const floor = nodeOfVersion('22.18.0');
+  if (!floor) return t.skip('Node 22.18.0 is not installed on this machine');
+  const cli = spawnSync(floor, [path.join(ROOT, 'bin', 'yap.cjs'), '--help'], { encoding: 'utf8' });
+  assert.equal(cli.status, 0);
+  assert.match(cli.stdout, /commands:/);
+  assert.equal(cli.stderr, '');
+  const hook = spawnSync(floor, [path.join(ROOT, 'hooks', 'session-start.cjs')], { input: '{}', encoding: 'utf8' });
+  assert.equal(hook.status, 0);
+  assert.equal(hook.stderr, '');
+});

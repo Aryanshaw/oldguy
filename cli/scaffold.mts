@@ -1,8 +1,8 @@
-'use strict';
 // The `yap scaffold <spec.json> --root <dir>` command: creates a chapter folder from a spec file.
-const fs = require('node:fs');
-const { parseFlags } = require('./args.cjs');
-const { scaffoldChapter } = require('../lib/chapter.mts');
+import fs from 'node:fs';
+import { parseFlags } from './args.mts';
+import { scaffoldChapter } from '../lib/chapter.mts';
+import type { ScaffoldInput } from '../lib/chapter.mts';
 
 const HELP = `usage: yap scaffold <spec.json> --root <dir>
 Creates <dir>/chapters/<id>/ with chapter.json and narration.txt, then prints that folder.
@@ -23,17 +23,17 @@ until the next piece's beat starts; the last one stays until the chapter ends.
 `;
 
 // Reads the spec file and creates the chapter; exit 0 = created, 1 = spec refused, 2 = usage.
-function runScaffold(args) {
+function runScaffold(args: string[]): number {
   if (args.includes('--help')) {
     process.stdout.write(HELP);
     return 0;
   }
-  let positional;
-  let flags;
+  let positional: string[];
+  let flags: Record<string, string>;
   try {
     ({ positional, flags } = parseFlags(args, ['--root']));
   } catch (err) {
-    process.stderr.write(`yap scaffold: ${err.message}\n${HELP}`);
+    process.stderr.write(`yap scaffold: ${(err as Error).message}\n${HELP}`);
     return 2;
   }
   if (positional.length !== 1 || !flags['--root']) {
@@ -41,14 +41,15 @@ function runScaffold(args) {
     return 2;
   }
   try {
-    const spec = JSON.parse(fs.readFileSync(positional[0], 'utf8'));
+    // read as it is; scaffoldChapter checks every field
+    const spec = JSON.parse(fs.readFileSync(positional[0], 'utf8')) as Omit<ScaffoldInput, 'root'>;
     const dir = scaffoldChapter({ ...spec, root: flags['--root'] });
     process.stdout.write(`${dir}\n`);
     return 0;
   } catch (err) {
-    process.stderr.write(`yap scaffold: ${String(err.message).replace(/\s*\n\s*/g, ' ')}\n`);
+    process.stderr.write(`yap scaffold: ${String((err as Error).message).replace(/\s*\n\s*/g, ' ')}\n`);
     return 1;
   }
 }
 
-module.exports = { runScaffold };
+export { runScaffold };

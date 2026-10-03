@@ -4,7 +4,7 @@ const fsReal = require('node:fs');
 const osReal = require('node:os');
 const path = require('node:path');
 const { runDoctor, writeMarker, checkWhisper } = require('../lib/doctor.mts');
-const { runDoctorCli, realExec } = require('../cli/doctor.cjs');
+const { runDoctorCli, realExec } = require('../cli/doctor.mts');
 const { nodeProblem } = require('../lib/node-floor.cjs');
 const { HYPERFRAMES_VERSION } = require('../lib/hyperframes.mts');
 

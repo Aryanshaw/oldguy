@@ -15,7 +15,7 @@ type Chosen = (Folder & { missing?: undefined }) | { id: string; dir?: undefined
 // What running the layout check gives back.
 type CheckResult = { code: number | null; stdout?: string; stderr?: string; timedOut?: boolean };
 // Runs the layout check on one chapter folder; the CLI passes the real Hyperframes one.
-type CheckFn = (dir: string) => Promise<CheckResult>;
+type CheckFn = (dir: string) => Promise<CheckResult> | CheckResult;
 // What renderChapters needs besides the folder: the repo to audit against, the parallel limit, the renderer and the checker.
 type RenderOptions = {
   root: string; cap: number; render: (chapter: Folder) => unknown; check: CheckFn; only?: string[]; force?: boolean; dryRun?: boolean;

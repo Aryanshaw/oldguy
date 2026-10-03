@@ -1,12 +1,15 @@
-'use strict';
 // The `yap render <chapters-dir> --root <repo> [--only <id,...>] [--cap <n>] [--force] [--dry-run]` command.
-const fs = require('node:fs');
-const os = require('node:os');
-const { parseFlags } = require('./args.cjs');
-const { renderChapters, renderArgs, checkArgs } = require('../lib/render-chapters.mts');
-const { renderCap } = require('../lib/render-schedule.mts');
-const { freeRamGb } = require('../lib/doctor.mts');
-const { realExec } = require('./doctor.cjs');
+import fs from 'node:fs';
+import os from 'node:os';
+import { parseFlags } from './args.mts';
+import { renderChapters, renderArgs, checkArgs } from '../lib/render-chapters.mts';
+import { renderCap } from '../lib/render-schedule.mts';
+import { freeRamGb } from '../lib/doctor.mts';
+import { realExec } from './doctor.mts';
+import type { ChapterOutcome, CheckResult, Folder } from '../lib/render-chapters.mts';
+
+// What the command line asked for.
+type RenderArgs = { chaptersDir: string; root: string; cap: number | undefined; dryRun: boolean; force: boolean; only: string[] | undefined };
 
 const USAGE = 'usage: yap render <chapters-dir> --root <repo> [--only <id,id,...>] [--cap <n>] [--force] [--dry-run]';
 const RENDER_TIMEOUT_MS = 60 * 60 * 1000;
@@ -15,7 +18,7 @@ const CHECK_TIMEOUT_MS = 10 * 60 * 1000;
 const RENDER_MAX_BUFFER = 256 * 1024 * 1024;
 
 // Renders one chapter for real; a failed render becomes an error carrying the last line Hyperframes printed.
-async function realRender({ dir }) {
+async function realRender({ dir }: Folder): Promise<void> {
   const r = await realExec('npx', renderArgs(dir), { timeout: RENDER_TIMEOUT_MS, maxBuffer: RENDER_MAX_BUFFER });
   if (r.code !== 0) {
     const last = String(r.stderr || '').trim().split('\n').pop();
@@ -24,23 +27,23 @@ async function realRender({ dir }) {
 }
 
 // Stands in for the real render: says what would run and runs nothing.
-function dryRender({ dir }) {
+function dryRender({ dir }: Folder): void {
   process.stdout.write(`would run: npx ${renderArgs(dir).join(' ')}\n`);
 }
 
 // Runs the pinned Hyperframes layout check on one chapter folder; its exit code and output decide the gate.
-function realCheck(dir) {
+function realCheck(dir: string): Promise<CheckResult> {
   return realExec('npx', checkArgs(dir), { timeout: CHECK_TIMEOUT_MS, maxBuffer: RENDER_MAX_BUFFER });
 }
 
 // Stands in for the layout check in a dry run: says what would run, runs nothing, and lets the chapter through.
-function dryCheck(dir) {
+function dryCheck(dir: string): CheckResult {
   process.stdout.write(`would run: npx ${checkArgs(dir).join(' ')}\n`);
   return { code: 0, stdout: '', stderr: '' };
 }
 
 // Turns `--only a,b` into ['a', 'b'] (undefined when absent); an empty list is a usage error.
-function onlyIds(value) {
+function onlyIds(value: string | undefined): string[] | undefined {
   if (value === undefined) return undefined;
   const ids = value.split(',').map((id) => id.trim()).filter(Boolean);
   if (ids.length === 0) throw new Error('--only needs chapter ids separated by commas');
@@ -48,7 +51,7 @@ function onlyIds(value) {
 }
 
 // Reads the arguments; throws a usage message for anything missing or malformed.
-function parseArgs(args) {
+function parseArgs(args: string[]): RenderArgs {
   const dryRun = args.includes('--dry-run');
   const force = args.includes('--force');
   const valued = args.filter((a) => a !== '--dry-run' && a !== '--force');
@@ -61,19 +64,19 @@ function parseArgs(args) {
 }
 
 // One output line per chapter: failed with its reason, skipped as already rendered, or ready (would-words in a dry run).
-function resultLine(r, dryRun) {
+function resultLine(r: ChapterOutcome, dryRun: boolean): string {
   if (r.status !== 'ready') return `${r.id}: failed (${r.reason})`;
   if (r.skipped) return `${r.id}: ${dryRun ? 'would skip' : 'ready'} (already rendered)`;
   return `${r.id}: ${dryRun ? 'would render' : 'ready'}`;
 }
 
 // Audits, layout-checks and renders every chapter; exit 0 = all ready, 1 = any failed or none found, 2 = usage.
-async function runRender(args) {
-  let opts;
+async function runRender(args: string[]): Promise<number> {
+  let opts: RenderArgs;
   try {
     opts = parseArgs(args);
   } catch (err) {
-    process.stderr.write(`yap render: ${err.message}\n${USAGE}\n`);
+    process.stderr.write(`yap render: ${(err as Error).message}\n${USAGE}\n`);
     return 2;
   }
   // without --cap, free memory decides, measured the way the doctor measures it
@@ -91,4 +94,4 @@ async function runRender(args) {
   return results.every((r) => r.status === 'ready') ? 0 : 1;
 }
 
-module.exports = { runRender };
+export { runRender };

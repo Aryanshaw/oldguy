@@ -1,9 +1,11 @@
-'use strict';
+
+// Plain arguments, and the `--flag value` pairs by flag name.
+type ParsedFlags = { positional: string[]; flags: Record<string, string> };
 
 // Separates plain arguments from `--flag value` pairs; throws on a flag that is unknown or has no value.
-function parseFlags(args, allowed) {
-  const positional = [];
-  const flags = {};
+function parseFlags(args: string[], allowed: string[]): ParsedFlags {
+  const positional: string[] = [];
+  const flags: Record<string, string> = {};
   for (let i = 0; i < args.length; i++) {
     if (!args[i].startsWith('--')) {
       positional.push(args[i]);
@@ -19,7 +21,7 @@ function parseFlags(args, allowed) {
 }
 
 // Reads a flag as a number of seconds (0 or more), or returns the fallback when absent.
-function secondsFlag(flags, name, fallback) {
+function secondsFlag<F extends number | undefined>(flags: Record<string, string>, name: string, fallback: F): number | F {
   if (flags[name] === undefined) return fallback;
   const n = flags[name].trim() === '' ? NaN : Number(flags[name]);
   if (!Number.isFinite(n) || n < 0) throw new Error(`${name} needs a number of seconds, 0 or more`);
@@ -27,13 +29,15 @@ function secondsFlag(flags, name, fallback) {
 }
 
 // Runs a command body and turns any error into one stderr line and exit code 2.
-function guarded(name, body) {
+function guarded<T>(name: string, body: () => T): T | 2 {
   try {
     return body();
   } catch (err) {
-    process.stderr.write(`yap ${name}: ${String(err.message).replace(/\s*\n\s*/g, ' ')}\n`);
+    // the bodies throw Errors with a message
+    process.stderr.write(`yap ${name}: ${String((err as Error).message).replace(/\s*\n\s*/g, ' ')}\n`);
     return 2;
   }
 }
 
-module.exports = { parseFlags, secondsFlag, guarded };
+export { parseFlags, secondsFlag, guarded };
+export type { ParsedFlags };

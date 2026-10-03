@@ -11,7 +11,7 @@ const { loadManifest } = require('../lib/manifest.mts');
 const { readOrder } = require('../lib/chapter-scan.mts');
 const { readEventsAfter, readThread } = require('../lib/events.mts');
 const { askServer } = require('../lib/ask-server.mts');
-const { runReply, runAddChapter, runSetStatus, runOrder } = require('../cli/client.cjs');
+const { runReply, runAddChapter, runSetStatus, runOrder } = require('../cli/client.mts');
 
 const NO_SERVER = 'no server is running: start it with `yap serve --detach`\n';
 

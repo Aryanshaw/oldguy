@@ -6,7 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const http = require('node:http');
 const { spawnSync } = require('node:child_process');
-const { resolveSlugDir } = require('../cli/server.cjs');
+const { resolveSlugDir } = require('../cli/server.mts');
 
 const YAP = path.join(__dirname, '..', 'bin', 'yap.cjs');
 
@@ -150,7 +150,7 @@ test('a live server.json is reused but its stored url is never printed: the url 
 });
 
 // ---- slow or hostile answers to the liveness ping (N-1, N-2) ----
-const { liveServer, runServe } = require('../cli/server.cjs');
+const { liveServer, runServe } = require('../cli/server.mts');
 
 // Runs an async function while capturing what it writes to stdout and stderr; resolves {result, out, err}.
 async function captured(fn) {
