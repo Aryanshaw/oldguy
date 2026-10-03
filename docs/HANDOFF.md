@@ -2,24 +2,32 @@
 
 # Yap — handoff (continue the discussion in `~/Documents/pracice/yap`)
 
-Written 2026-10-02. Read this first, then the spec. Nothing here is code: the repo holds
-only a design spec so far.
+Updated 2026-10-03. Read this first, then the spec and `docs/phase-1/SUMMARY.md`.
 
 ## 0. Where we are
 
-- Repo: `~/Documents/pracice/yap` (git, branch `master`, 3 commits, only the spec file).
-- Spec: `docs/superpowers/specs/2026-10-02-yap-design.md` (336+ lines). It already records
-  the architecture, manifest/event formats, server API, player layout, generation
-  workflow, failure handling, security, testing, 7 spikes, repo layout, v1 non-goals.
+- Repo: `~/Documents/pracice/yap`. Branches (nothing pushed or merged, owner approval needed):
+  `master` (spec only) <- `phase-0-spikes` (~17 commits) <- `phase-1-generator` (~60 commits,
+  now also holds the Phase 2 plan, commit `c254f21`).
+- Spec: `docs/superpowers/specs/2026-10-02-yap-design.md`, approved, amended with Phase 0 results.
   **Do not re-derive it; read it.**
-- Process state (superpowers:brainstorming, *architectural* path): design sections 1–4
-  were presented and approved in conversation; the spec was written and committed.
-  **The next gate is the owner reviewing the written spec.** Only after approval: invoke
-  `superpowers:writing-plans`, then the owner picks an execution method. No code before
-  that (hard gate).
-- Name: **Yap** ("Claude yaps. You watch."). Domain: `justyap.com` and every `yap.*` are
-  taken; `justyap.dev` and `justyap.io` were available on 2026-10-02 (owner buys; not yet
-  bought).
+- **Phase 0 (spikes) done.** Evidence in `docs/spikes/` (SUMMARY.md, ENV.md). Key facts: parallel
+  renders beat sequential (0.37-0.40x), chapter gap handled, local Kokoro TTS needs no key,
+  `hyperframes transcribe` silently runs `brew install whisper.cpp` (installer must ask consent).
+- **Phase 1 (generator) done.** Plugin skeleton, `bin/yap.cjs` (doctor, audit, beats, captions,
+  pad-wav, scaffold, render, narrate), `lib/`, `scene-kit/`, hooks, `skills/yap`, 304 tests
+  (`npm test`), real runs (positive: first playable chapter in ~145 s; negative request creates
+  nothing). Roll-up: `docs/phase-1/SUMMARY.md` (folder contract in 1.3, Phase 2 hand-over in 7).
+- **Phase 2 (manifest + local server): plan written, not started.**
+  `docs/superpowers/plans/2026-10-03-phase-2-manifest-server.md` (Tasks 0-12, 7 Review Focus
+  risks). Waiting on the owner for: (1) approval of spec amendments A1-A9
+  (`docs/phase-1/SUMMARY.md` section 6; Task 0 is blocked until then), (2) execution method
+  (recommended: subagent-driven, one whole-branch review at the end). Branch `phase-2-server`
+  is created from `phase-1-generator` at execution time.
+- Later: Phase 3 player (React+Vite prebuilt), Phase 4 chat bridge (Monitor), Polish (README,
+  demo video, `npx yap-setup` installer with consent checklist).
+- Name: **Yap** ("Claude yaps. You watch."). Domain `justyap.dev` or `justyap.io` (owner buys;
+  not yet bought).
 
 ## 1. Discovery: how the idea started (the problem statement)
 
@@ -98,15 +106,19 @@ talking a lot). Collisions are in unrelated spaces (`yapi` API tool 27k★, `yap
 
 ## 4. Open items
 
-- Owner reviews the spec (the gate). Then `writing-plans`.
-- The 7 spikes in spec §9 (session id + `claude -p --resume`; parallel chapter renders;
-  scene timing vs Kokoro; Kokoro free/local with no key; plugin install hook for doctor;
-  gap between chapter MP4s; Monitor long-idle behaviour). Each should be answered cheaply
-  before the plan depends on it.
-- Buy `justyap.dev` or `justyap.io` (owner action). Hostinger MCP is available for DNS/hosting
-  if wanted; domain purchase needs explicit owner approval.
-- Optional ideas raised, not in spec: "canon" vocabulary; stale-code warning (v2); drag
-  reorder (v2); speaking mascot host (v2); podcast/reel format with user-chosen characters (v2).
+- Owner: approve A1-A9, choose execution method, then Phase 2 starts.
+- Owner: approve merge/push of `phase-0-spikes` and `phase-1-generator` (not done).
+- Owner: buy domain; pick installer name (placeholder `yap-setup`).
+- Remove this file before the repo is ever public.
+- Not proven yet: marketplace install (only `--plugin-dir` tested), 16 GB machine, interactive
+  sessions, human listening/audio-sync check, `CLAUDE_PLUGIN_DATA` on a real install.
+- Known debt: kept example folders have v1 `build.json` (render refuses; re-narrate if used as
+  fixtures), parked I4 (titles/steps/callouts/framing text not audited), ~45 deferred minors in
+  `.superpowers/sdd/2026-10-03-phase-1-generator/` (git-ignored ledger).
+- Owner rules: show no cost/price/token talk anywhere in Yap; spec amendments need approval;
+  plain-words comments above every function and step; no runtime deps in `bin/`, `lib/`, `server/`.
+- Ideas not in spec: stale-code warning (v2), drag reorder (v2), speaking mascot (v2),
+  podcast/reel format (v2).
 
 ## 5. Environment facts
 
@@ -136,10 +148,8 @@ talking a lot). Collisions are in unrelated spaces (`yapi` API tool 27k★, `yap
 
 ## 7. Suggested skills for the next session
 
-- `superpowers:brainstorming` — resume at the **spec review gate**; then hand off to
-  `superpowers:writing-plans` (the only allowed next skill after approval).
-- `superpowers:writing-plans` → `superpowers:subagent-driven-development` (or
-  `superpowers:executing-plans`) for execution; `superpowers:test-driven-development`.
+- Next: `superpowers:subagent-driven-development` (or `superpowers:executing-plans`) on the
+  Phase 2 plan once the owner approves; `superpowers:test-driven-development`.
 - Build-time: `plugin-dev:create-plugin`, `plugin-dev:plugin-structure`,
   `plugin-dev:skill-development`, `plugin-dev:hook-development` (install-time doctor),
   `write-a-skill`.
