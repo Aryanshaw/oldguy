@@ -104,7 +104,7 @@ test('assets get their content types; unknown extensions are 404', async (t) => 
 test('asset names that try to leave assets/ never reach another file', async (t) => {
   const { srv, playerDir } = await setup(t, { index: INDEX, assets: { 'app.js': 'ok' } });
   fs.writeFileSync(path.join(playerDir, 'secret.js'), 'SECRET');
-  const targets = ['/assets/..%2Findex.html', '/assets/..%2Fsecret.js', '/assets/%2e%2e', '/assets/a/b.js', `/assets/${'a'.repeat(200)}.js`, '/assets/a%00.js', '/assets/.hidden.js', '/assets/a..b.js'];
+  const targets = ['/assets/..%2Findex.html', '/assets/..%2Fsecret.js', '/assets/%2e%2e', '/assets/a/b.js', `/assets/${'a'.repeat(200)}.js`, '/assets/a%00.js', '/assets/.hidden.js', '/assets/a..b.js', '/assets/..\\', '/assets/..\\app.js', '/assets/%2e%2e%5c'];
   for (const target of targets) {
     const answer = await raw(srv, target);
     assert.ok([400, 404].includes(statusOf(answer)), `${target} -> ${answer.slice(0, 20)}`);

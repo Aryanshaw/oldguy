@@ -140,6 +140,12 @@ function answerError(res, err) {
   sendJson(res, 500, { error: 'internal error' });
 }
 
+// True when a raw request path has a ".." segment. The URL parser treats "\\" like "/" and decodes %2e, so both
+// separators are split on and each piece is decoded before it is compared.
+function hasDotDotSegment(rawPath) {
+  return rawPath.split(/[\\/]/).some((seg) => { try { return decodeURIComponent(seg).split(/[\\/]/).includes('..'); } catch { return false; } });
+}
+
 // Builds the request listener: security headers, guard, then the router. Everything sits inside one try so a
 // throw (or a rejected handler) can never become an unhandled rejection that stops the process.
 function makeListener(state, routes, guard) {
@@ -152,7 +158,7 @@ function makeListener(state, routes, guard) {
       try { url = new URL(req.url, 'http://placeholder'); } catch { return sendJson(res, 400, { error: 'bad request' }); }
       // The URL parser folds a ".." segment (even written %2e%2e) into its parent, so a request meant for one place would
       // land on another route. Answer 404 for any raw path that has one.
-      if (req.url.split('?')[0].split('/').some((seg) => { try { return decodeURIComponent(seg) === '..'; } catch { return false; } })) return sendJson(res, 404, { error: 'not found' });
+      if (hasDotDotSegment(req.url.split('?')[0])) return sendJson(res, 404, { error: 'not found' });
       const hit = route(routes, req.method, url.pathname);
       if (hit.status === 404) return sendJson(res, 404, { error: 'not found' });
       if (hit.status === 405) return sendJson(res, 405, { error: 'method not allowed' });
