@@ -10,14 +10,30 @@ so that no Claude run, TTS or Hyperframes render is needed.
 | Step | Result | Checks |
 |---|---|---|
 | 1. Start with `serve --detach`, `state/server.json`, key cookie, page | PASS | 7 of 7 |
+| 1b. A second start on the same folder | PASS | 3 of 3 |
 | 2. Key guard, manifest, posters, media serving | PASS | 17 of 17 |
 | 3. Real browser check (by hand, Chrome 154) | PASS | 8 of 8 |
 | 4. Live updates, chat with a CLI reply, chapter commands | PASS | 14 of 14 |
-| 4b. Heartbeat | PASS | 3 of 3 |
+| 4b. Heartbeat | PASS | 4 of 4 |
 | 5. Export | PASS | 9 of 9 |
 | 6. Hostile requests | PASS | 11 of 11 |
 
-The final script was run three times in a row; each run: **61 passed, 0 failed of 61**, exit 0. No server and no
+**Re-run after the final review.** The tables below were first recorded at `570a58c` (61 of 61, three runs in a
+row). After the final review's five fixes the script was tightened and extended and run again at `ef84d53`:
+**65 passed, 0 failed of 65**, `npm test` 596 of 596. What changed in the script:
+
+- Four checks now assert what their names say: the page shows exactly 3 videos; a video renamed away reads
+  `pending` with its poster cleared (check renamed `4.mp4-gone-pending-within-3s`); after the video comes back
+  `poster.jpg` is a newly written file (its inode changes); a malformed absolute-form request with the right key
+  is exactly 400 (check renamed `6.absolute-form-bad-port-400`).
+- Ready rows must carry `video` and `captions` paths, and the stale row must carry neither.
+- New Step 1b: a second foreground `yap serve` on the same folder exits 1 with
+  `a server for this folder is already running`; a second `serve --detach` prints the running server's URL and
+  exits 0; the first server keeps its pid and its `server.json`, and only one server process exists.
+- New check `4b.stream-says-connected-then-disconnected`: after the heartbeat the open stream carried a `state`
+  event with `claude_connected` true and, once the heartbeat ran out, one with false.
+
+The first recording: the script was run three times in a row; each run: **61 passed, 0 failed of 61**, exit 0. No server and no
 temp folder was left behind after any run (`pgrep -fl "yap.cjs serve"` empty, no `yap-p2-accept-*` in `$TMPDIR`).
 `npm test` still runs 575 tests, all passing (the script's name does not end in `.test.cjs`).
 
@@ -137,7 +153,7 @@ shown on it either, and no other browser was tried.
 |---|---|---|
 | `4.stream-first-event-state` | PASS | 200 `text/event-stream`; first event `state` |
 | `4.mp4-gone-video-404-immediately` | PASS | `chapter.mp4` renamed away: `/video` 404 1 ms later |
-| `4.mp4-gone-not-ready-within-3s` | PASS | status **pending** after 915 ms, poster null (see the note below) |
+| `4.mp4-gone-pending-within-3s` | PASS | status **pending** after 915 ms, poster null (see the note below) |
 | `4.mp4-gone-chapter-event` | PASS | a `chapter` event (op scan) showing alpha-setup pending arrived 914 ms after the rename |
 | `4.mp4-back-ready-within-3s` | PASS | renamed back: ready after 1018 ms |
 | `4.mp4-back-poster-again` | PASS | poster set again 1071 ms after the rename back; poster.jpg is a new file (inode changed) |
@@ -187,7 +203,7 @@ shows the check under test and not the key guard.
 | Check | Result | Observed |
 |---|---|---|
 | `6.forged-host-403` | PASS | `Host: evil.example` with the right key: 403 `{"error":"forbidden"}` |
-| `6.absolute-form-bad-port-4xx` | PASS | raw `GET http://x:99999/ HTTP/1.1`: `HTTP/1.1 400 Bad Request` with body `{"error":"bad request"}` (the server's own answer, not Node's parser) |
+| `6.absolute-form-bad-port-400` | PASS | raw `GET http://x:99999/ HTTP/1.1`: `HTTP/1.1 400 Bad Request` with body `{"error":"bad request"}` (the server's own answer, not Node's parser) |
 | `6.answers-after-absolute-form` | PASS | `/api/ping` 200 afterwards, same pid |
 | `6.escape-dotdot-slash-404` | PASS | raw `GET /chapters/..%2f..%2fetc/video`: `HTTP/1.1 404 Not Found` |
 | `6.escape-dotdot-404` | PASS | raw `GET /chapters/%2e%2e/video`: `HTTP/1.1 404 Not Found` |
@@ -212,7 +228,7 @@ Measured, not pass/fail. Ranges are over the three final runs.
 - `manifest.json` after the run (5 rows): 2494 bytes.
 - Events seen on the stream during Step 4 to 6: `state`, then `chapter` events for each folder change and poster,
   `state` after the message and after the heartbeat, `reply` for the CLI reply, and one `ping` (the 15 s keep-alive).
-- Stopping the server with SIGTERM took 51 to 55 ms, and `state/server.json` was removed.
+- Stopping the server with SIGTERM took 53 to 55 ms, and `state/server.json` was removed.
 
 ## Findings
 

@@ -385,8 +385,26 @@ async function step1(detach) {
     const at = CHAPTERS.map((c) => html.indexOf(`<h2>${c.title}</h2>`));
     const inOrder = at.every((v, i) => v >= 0 && (i === 0 || v > at[i - 1]));
     const videos = (html.match(/<video /g) || []).length;
-    return [r.status === 200 && /^text\/html/.test(r.headers['content-type']) && inOrder,
+    return [r.status === 200 && /^text\/html/.test(r.headers['content-type']) && inOrder && videos === READY_IDS.length,
       `${r.status} ${r.headers['content-type']}; all 4 titles in story order: ${inOrder}; ${videos} <video> elements`];
+  });
+}
+
+// Step 1b: a second start on the same folder. The foreground form is refused; --detach hands back the running one.
+async function step1b() {
+  const before = fs.readFileSync(path.join(ctx.slugDir, 'state', 'server.json'), 'utf8');
+  const fg = yap(['serve', '--dir', ctx.slugDir]);
+  await check('1b.second-foreground-serve-refused', () => [fg.code !== 0 && fg.code !== null && /a server for this folder is already running/.test(fg.err),
+    `exit ${fg.code}, stderr "${short(fg.err.replace(ctx.key, '<key>'), 160)}"`]);
+  const again = yap(['serve', '--detach', '--dir', ctx.slugDir]);
+  await check('1b.second-detach-prints-same-url', () => [again.code === 0 && again.out === `http://127.0.0.1:${ctx.port}/?key=${ctx.key}`,
+    `exit ${again.code}, printed the running server's URL: ${again.out === `http://127.0.0.1:${ctx.port}/?key=${ctx.key}`}`]);
+  await check('1b.first-server-untouched', async () => {
+    const r = await httpRequest({ path: '/api/ping', headers: keyed() });
+    const pid = JSON.parse(r.body.toString('utf8')).pid;
+    const same = fs.readFileSync(path.join(ctx.slugDir, 'state', 'server.json'), 'utf8') === before;
+    return [r.status === 200 && pid === ctx.pid && same && serversFor(ctx.slugDir).length === 1,
+      `ping ${r.status}, pid ${pid} (started as ${ctx.pid}), server.json unchanged: ${same}, server processes for this folder: ${serversFor(ctx.slugDir).length}`];
   });
 }
 
@@ -428,8 +446,9 @@ async function step2() {
       const row = rowOf(state.manifest, rid);
       const real = ctx.chapters[rid].duration;
       const buildSha = sha256(fs.readFileSync(path.join(ctx.chapters[rid].dir, 'build.json')));
-      const ok = row.status === 'ready' && Math.abs(row.duration_s - real) <= 0.05 && row.build_sha256 === buildSha;
-      return [ok, `status ${row.status}, duration_s ${row.duration_s} vs ffprobe ${real}, build_sha256 ${row.build_sha256 === buildSha ? 'matches build.json' : row.build_sha256}`];
+      const paths = row.video === `chapters/${rid}/chapter.mp4` && row.captions === `chapters/${rid}/captions.vtt`;
+      const ok = row.status === 'ready' && Math.abs(row.duration_s - real) <= 0.05 && row.build_sha256 === buildSha && paths;
+      return [ok, `status ${row.status}, duration_s ${row.duration_s} vs ffprobe ${real}, build_sha256 ${row.build_sha256 === buildSha ? 'matches build.json' : row.build_sha256}, video ${row.video}, captions ${row.captions}`];
     });
   }
   // the watch was started right after `serve --detach` returned, so this time is not delayed by the Step 1 checks
@@ -447,7 +466,8 @@ async function step2() {
   }
   await check('2.stale-row', () => {
     const row = rowOf(state.manifest, STALE_ID);
-    return [row.status === 'stale' && row.poster === null, `status ${row.status}, poster ${row.poster}`];
+    return [row.status === 'stale' && row.poster === null && row.video === null && row.captions === null,
+      `status ${row.status}, poster ${row.poster}, video ${row.video}, captions ${row.captions}`];
   });
   const mp4 = fs.readFileSync(ctx.chapters[id].mp4);
   const size = mp4.length;
@@ -515,7 +535,7 @@ async function step4() {
     return [r.status === 404, `${r.status} ${Date.now() - t0} ms after the rename`];
   });
   let w = await waitRow(LIVE_ID, (r) => r.status !== 'ready', 3000);
-  await check('4.mp4-gone-not-ready-within-3s', () => [w.row !== null,
+  await check('4.mp4-gone-pending-within-3s', () => [w.row !== null && w.row.status === 'pending' && w.row.poster === null,
     w.row ? `status ${w.row.status} (expected pending per controller ruling) after ${Date.now() - t0} ms; poster ${w.row.poster}` : 'still ready after 3 s']);
   let ev = await waitEvent(stream, mark, (e) => e.event === 'chapter' && e.data && rowOf(e.data.manifest, LIVE_ID) && rowOf(e.data.manifest, LIVE_ID).status !== 'ready', 3000);
   await check('4.mp4-gone-chapter-event', () => [Boolean(ev), ev ? `chapter event (op ${ev.data.op}) showing ${LIVE_ID} ${rowOf(ev.data.manifest, LIVE_ID).status}, ${ev.at - t0} ms after the rename` : 'no such chapter event within 3 s']);
@@ -531,7 +551,7 @@ async function step4() {
   w = await waitRow(LIVE_ID, (r) => r.status === 'ready' && r.poster, 15000);
   await check('4.mp4-back-poster-again', () => {
     const inoAfter = fs.existsSync(posterFile) ? fs.statSync(posterFile).ino : null;
-    return [w.row !== null, w.row ? `poster "${w.row.poster}" ${Date.now() - t1} ms after the rename back; poster.jpg inode ${inoBefore} -> ${inoAfter} (${inoBefore !== inoAfter ? 'new file' : 'same file'})` : `poster still null after 15 s; poster.jpg on disk: ${inoAfter !== null}`];
+    return [w.row !== null && inoBefore !== null && inoAfter !== null && inoAfter !== inoBefore, w.row ? `poster "${w.row.poster}" ${Date.now() - t1} ms after the rename back; poster.jpg inode ${inoBefore} -> ${inoAfter} (${inoBefore !== inoAfter ? 'new file' : 'same file'})` : `poster still null after 15 s; poster.jpg on disk: ${inoAfter !== null}`];
   });
 
   // edit build.json, then restore it
@@ -587,6 +607,7 @@ async function step4() {
 // Step 4b: the heartbeat flips claude_connected on, and it goes off again after 15 s of silence.
 async function step4b() {
   await check('4b.connected-false-at-first', async () => { const s = await getState(); return [s.claude_connected === false, `claude_connected ${s.claude_connected}`]; });
+  const mark = ctx.stream ? ctx.stream.events.length : 0;
   await check('4b.heartbeat-then-true', async () => {
     const r = await httpRequest({ method: 'POST', path: '/api/heartbeat', headers: keyed(), body: {} });
     const s = await getState();
@@ -594,6 +615,11 @@ async function step4b() {
   });
   await sleep(16000);
   await check('4b.false-after-16s', async () => { const s = await getState(); return [s.claude_connected === false, `claude_connected ${s.claude_connected} after 16 s`]; });
+  await check('4b.stream-says-connected-then-disconnected', () => {
+    const seen = ctx.stream.events.slice(mark).filter((e) => e.event === 'state').map((e) => e.data.claude_connected);
+    const on = seen.indexOf(true);
+    return [on >= 0 && seen.indexOf(false, on) > on, `state events after the heartbeat carried claude_connected: ${seen.join(', ') || '(none)'}`];
+  });
 }
 
 // Hashes a file's bytes, or null when it is missing.
@@ -671,10 +697,10 @@ async function step6() {
     const r = await httpRequest({ path: '/api/state', headers: keyed({ host: 'evil.example' }) });
     return [r.status === 403, `Host: evil.example with the right key -> ${r.status} ${r.body.toString('utf8')}`];
   });
-  await check('6.absolute-form-bad-port-4xx', async () => {
+  await check('6.absolute-form-bad-port-400', async () => {
     const r = await rawRequest(`GET http://x:99999/ HTTP/1.1\r\n${hostLine}${keyLine}Connection: close\r\n\r\n`);
     const code = statusOf(r.text);
-    return [code >= 400 && code < 500, `"${statusLine(r.text)}"${r.error ? ` (socket ${r.error})` : ''}; body ${short(r.text.split('\r\n\r\n')[1] || '', 80)}`];
+    return [code === 400, `"${statusLine(r.text)}"${r.error ? ` (socket ${r.error})` : ''}; body ${short(r.text.split('\r\n\r\n')[1] || '', 80)}`];
   });
   await check('6.answers-after-absolute-form', async () => {
     const r = await httpRequest({ path: '/api/ping', headers: keyed() });
@@ -806,6 +832,7 @@ async function fullRun() {
   }
   ctx.postersWatch = waitForPosters(15000);
   await step1(detach);
+  await step1b();
   await step2();
   await step4();
   await step4b();
