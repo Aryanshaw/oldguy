@@ -132,7 +132,7 @@ function route(routes, method, pathname) {
 // Answers a handler's failure: a known status error keeps its short message, anything else becomes a plain 500 (real error to stderr).
 function answerError(res, err) {
   if (res.headersSent) return res.end();
-  if (err && Number.isInteger(err.status) && err.status >= 400 && err.status < 500) return sendJson(res, err.status, { error: String(err.message).replace(/\s+/g, ' ') });
+  if (err && Number.isInteger(err.status) && ((err.status >= 400 && err.status < 500) || err.status === 503)) return sendJson(res, err.status, { error: String(err.message).replace(/\s+/g, ' ') });
   process.stderr.write(`yap server: ${err && err.stack ? err.stack : err}\n`);
   sendJson(res, 500, { error: 'internal error' });
 }
@@ -212,10 +212,13 @@ function normaliseRows(m) {
 
 // Makes the one queue every manifest change goes through: each job loads the file, changes it with a pure function from
 // lib/manifest.cjs (the change may be async), and saves it atomically, one job at a time. A job that fails does not stop the jobs behind it.
-function makeManifestQueue(slugDir, deps) {
+// Once isClosing() says so, a new job is refused with a 503 (jobs already queued still run, and close() waits for them).
+// The returned function also has .idle(), a promise that resolves when every job queued so far has finished.
+function makeManifestQueue(slugDir, deps, isClosing) {
   const file = path.join(slugDir, 'manifest.json');
   let tail = Promise.resolve();
-  return (change) => {
+  const update = (change) => {
+    if (isClosing()) return Promise.reject(Object.assign(new Error('the server is closing'), { status: 503 }));
     const job = tail.then(async () => {
       const next = normaliseRows(await change(loadManifest(file)));
       if (deps.beforeSave) await deps.beforeSave();
@@ -225,10 +228,14 @@ function makeManifestQueue(slugDir, deps) {
     tail = job.catch(() => {});
     return job;
   };
+  update.idle = () => tail;
+  return update;
 }
 
 // How long close() waits for poster work that will not stop (a real ffmpeg is killed at once and ends sooner).
 const POSTER_WAIT_MS = 25000;
+// How long close() waits for manifest saves that are already queued.
+const QUEUE_WAIT_MS = 25000;
 
 // Waits for a promise, but gives up after `ms` milliseconds (the promise itself is left alone).
 function waitAtMost(promise, ms) {
@@ -239,7 +246,7 @@ function waitAtMost(promise, ms) {
 
 // Starts the server on 127.0.0.1 and resolves with { url, key, port, close() }.
 // deps (all optional, for tests): routes replaces the route table; now is a clock in ms; pingMs is the stream ping
-// interval; fs is used to save the manifest; scan, intervalMs, setInterval and clearInterval steer the folder watcher; exec and ffmpeg take poster frames; posterWaitMs bounds how long close() waits for them; beforeSave is awaited between change and save (tests); logError receives unexpected save failures.
+// interval; fs is used to save the manifest; scan, intervalMs, setInterval and clearInterval steer the folder watcher; exec and ffmpeg take poster frames; posterWaitMs bounds how long close() waits for them and queueWaitMs how long it waits for queued manifest saves; setTimeout and clearTimeout drive the 15 s "Claude went quiet" timer; beforeSave is awaited between change and save (tests); logError receives unexpected save failures.
 async function startServer({ slugDir, key = crypto.randomBytes(16).toString('hex'), port = 0, deps = {} }) {
   // One server per folder: refuse when state/server.json names a live yap server (a stale file is replaced below).
   const existing = await liveServer(slugDir);
@@ -259,7 +266,7 @@ async function startServer({ slugDir, key = crypto.randomBytes(16).toString('hex
   const hub = createHub({ pingMs: deps.pingMs });
   const state = {
     slugDir, key, port: actualPort, deps, hub, lastHeartbeat: null,
-    updateManifest: makeManifestQueue(slugDir, deps),
+    updateManifest: makeManifestQueue(slugDir, deps, () => state.closing === true),
     logError: deps.logError || ((err) => process.stderr.write(`yap server: ${err && err.stack ? err.stack : err}\n`)),
   };
   server.on('request', makeListener(state, routes, createGuard({ key, port: actualPort })));
@@ -289,6 +296,8 @@ async function startServer({ slugDir, key = crypto.randomBytes(16).toString('hex
     sync.stop();
     await state.watcher.idle();
     await waitAtMost(sync.posterIdle(), deps.posterWaitMs ?? POSTER_WAIT_MS);
+    // Saves already queued finish first (new ones are refused), so nothing writes the manifest after close() resolves.
+    await waitAtMost(state.updateManifest.idle(), deps.queueWaitMs ?? QUEUE_WAIT_MS);
     await new Promise((resolve) => {
       removeOwnInfo(infoFile, key);
       hub.close();

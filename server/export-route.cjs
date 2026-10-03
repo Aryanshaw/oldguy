@@ -16,6 +16,8 @@ async function handleExport({ req, res, state, sendJson, readJsonBody }) {
   if (typeof dest !== 'string') return sendJson(res, 400, { error: 'dest must be a folder path' });
   const destDir = checkDest(dest, state.slugDir);
   if (state.exporting) return sendJson(res, 409, { error: 'an export is already running' });
+  // The body took time to arrive: look again, so an export never starts once close() has begun.
+  if (state.closing) return sendJson(res, 503, { error: 'the server is closing' });
   state.exporting = true;
   try {
     const manifest = loadManifest(path.join(state.slugDir, 'manifest.json'));
