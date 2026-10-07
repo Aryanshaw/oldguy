@@ -79,7 +79,7 @@ test('every yap command mentioned is a real command in yap --help', () => {
 test('SKILL.md links every reference, every link resolves, and the required references exist', () => {
   const linked = new Set([...readText(SKILL).matchAll(/references\/([a-z-]+\.md)/g)].map((m) => m[1]));
   const present = new Set(fs.existsSync(REFS_DIR) ? fs.readdirSync(REFS_DIR) : []);
-  for (const name of ['scope.md', 'verify.md', 'storyboard.md', 'visuals.md', 'narrate.md', 'render.md', 'doctor.md']) {
+  for (const name of ['scope.md', 'verify.md', 'storyboard.md', 'visuals.md', 'narrate.md', 'render.md', 'doctor.md', 'ask-loop.md']) {
     assert.ok(present.has(name), `references/${name} is missing`);
   }
   for (const name of linked) assert.ok(present.has(name), `SKILL.md links references/${name}, which does not exist`);
