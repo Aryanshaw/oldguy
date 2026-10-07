@@ -7,6 +7,7 @@ import * as steps from '../scene-kit/steps.mts';
 import * as codeCard from '../scene-kit/code-card.mts';
 import * as callout from '../scene-kit/callout.mts';
 import * as flow from '../scene-kit/flow.mts';
+import * as design from '../scene-kit/design.mts';
 import type { Rendered } from '../scene-kit/shared.mts';
 
 // One source a chapter cites: where it lives, which lines, and the exact text quoted from them.
@@ -39,6 +40,7 @@ const PIECES: Record<string, { render: (params: unknown, opts: unknown) => Rende
   'code-card': codeCard,
   callout,
   flow,
+  design,
 };
 
 // Turns a free-text id into a folder name: lower-case a-z0-9 words joined by single hyphens, never starting with a digit.
@@ -137,12 +139,39 @@ function checkSentences(sentences: unknown): string {
   return narration;
 }
 
+// Replaces each design piece's {"file": "scenes/x.html"} with the file's text as {"html": ...}, so chapter.json holds
+// the whole scene (and build.json fingerprints it). The file must sit inside the video folder.
+function inlineSceneFiles(scene: unknown, root: string): unknown {
+  if (!Array.isArray(scene)) return scene;
+  const entries: unknown[] = scene;
+  return entries.map((item, i) => {
+    // only a design entry with a "file" changes; checkScene checks every entry's shape right after
+    const entry = item as { piece?: unknown; params?: { file?: unknown; html?: unknown } } | null;
+    const params = entry && entry.piece === 'design' ? entry.params : undefined;
+    if (!params || params.file === undefined) return item;
+    const { file, ...rest } = params;
+    if (typeof file !== 'string' || !file) throw new Error(`scene[${i}]: design "file" must be a path inside ${root}`);
+    const base = path.resolve(root);
+    const full = path.resolve(base, file);
+    const rel = path.relative(base, full);
+    if (rel.startsWith('..') || path.isAbsolute(rel)) throw new Error(`scene[${i}]: design file ${file} is outside ${root}`);
+    let html: string;
+    try {
+      html = fs.readFileSync(full, 'utf8');
+    } catch {
+      throw new Error(`scene[${i}]: cannot read design file ${file}`);
+    }
+    return { ...entry, params: { ...rest, html } };
+  });
+}
+
 // Creates chapters/<slug>/ with chapter.json and narration.txt; checks everything first and never overwrites.
-function scaffoldChapter({ root, id, title, sources, sentences, scene }: ScaffoldInput): string {
+function scaffoldChapter({ root, id, title, sources, sentences, scene: given }: ScaffoldInput): string {
   const slug = slugChapterId(id);
   if (typeof title !== 'string' || !title.trim()) throw new Error('"title" must be non-empty text');
   if (!Array.isArray(sources)) throw new Error('"sources" must be a list');
   const narration = checkSentences(sentences);
+  const scene = inlineSceneFiles(given, root);
   // checkSentences just proved this is a non-empty list
   checkScene(scene, (sentences as unknown[]).length);
 

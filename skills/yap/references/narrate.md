@@ -5,8 +5,8 @@ the audit approved.
 
 ## The house voice
 
-Polite, cheery and efficient: a friendly helper who likes explaining things. Short sentences. Plain words. Name the
-thing on screen ("this line", "the `add` function") rather than describing a picture. Say what happens and why,
+Polite, cheery and efficient: a friendly helper who likes explaining things. Short sentences. Plain words. Say what
+the system does: name a part by what it does before its code name, and name code only when it is on screen. Say what happens and why,
 once, and move on. No filler ("so basically", "as you can see"), no jokes at the code's expense, and nothing about
 what making the video uses up (the repository's own payment code is a flow like any other: explain it).
 Audience is a beginner: explain a term the first time it appears, in half a sentence.

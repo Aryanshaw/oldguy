@@ -256,3 +256,6 @@
 .yk-kind-fail { border-color: var(--yk-red); }
 .yk-kind-fail .yk-flow-num { background: var(--yk-red); }
 .yk-kind-fail .yk-flow-label { color: var(--yk-red); }
+
+/* design: a scene Claude lays out itself; the root is a plain 1920x1080 box it positions things in */
+.yk-design { display: block; }
