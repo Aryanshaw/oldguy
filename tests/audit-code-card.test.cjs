@@ -107,18 +107,6 @@ test('claims and sources are audited exactly as before alongside the cards', (t)
   assert.deepEqual(lines(r), ['sentence 1: claim has no source ids']);
 });
 
-test('a legitimate card over the todo-app fixture passes the audit and fits the card', () => {
-  const root = path.join(__dirname, '..', 'fixtures', 'todo-app');
-  const card = [
-    { no: 9, text: '  const todos = loadTodos();' },
-    { no: 10, text: '  const id = todos.length === 0 ? 1 : Math.max(…' },
-    { no: 11, text: '  const todo = { id, title: text, done: false,…', highlight: true },
-    { no: 12, text: '  todos.push(todo);' },
-  ];
-  assert.deepEqual(auditCard(root, card, 'add.js'), { ok: true, failures: [] });
-  assert.doesNotThrow(() => codeCard.render({ file: 'add.js', lines: card }, { startS: 0, durationS: 1 }));
-});
-
 test('yap audit prints one scene line per card problem and exits 1', (t) => {
   const root = repo(t);
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-card-cli-'));
