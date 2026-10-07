@@ -12,9 +12,9 @@ import type { ExportResult } from '../lib/export.mts';
 import type { Route, RouteContext, ServerState } from './types.mts';
 
 // What a client sends to POST /api/message.
-type MessageBody = { type: EventType; text?: string; context?: EventContext };
+type MessageBody = { type: EventType; text?: string; context?: EventContext; ref?: string };
 // What a client sends to POST /api/reply.
-type ReplyBody = { in_reply_to: string; text: string; sources?: SourceRef[] };
+type ReplyBody = { in_reply_to: string; text: string; sources?: SourceRef[]; offer_video?: true };
 // The chapter fields POST /api/chapters may change with op "set".
 type SettableFields = Partial<Pick<ManifestRow, 'status' | 'quality' | 'title' | 'placement_reason' | 'question'>>;
 // What a client sends to POST /api/chapters: add a chapter, put all of them in a new order, or change one.
@@ -113,10 +113,11 @@ function handleStream({ res, state }: RouteContext): void {
 
 // POST /api/message: stores a viewer event (type, text, context) and tells the other open tabs.
 async function handleMessage({ req, res, state, sendJson, readJsonBody }: RouteContext): Promise<void> {
-  const { type, text, context } = await readJsonBody(req);
+  const { type, text, context, ref } = await readJsonBody(req);
   const input: Record<string, unknown> = { type };
   if (text !== undefined) input.text = text;
   if (context !== undefined) input.context = context;
+  if (ref !== undefined) input.ref = ref;
   const event = lib(() => appendEvent(eventsFile(state), input, { now: clockDate(state) }));
   tell(state, 'state', () => buildState(state));
   sendJson(res, 200, { event });
@@ -124,9 +125,10 @@ async function handleMessage({ req, res, state, sendJson, readJsonBody }: RouteC
 
 // POST /api/reply: stores Claude's answer to an event and streams it to the open tabs.
 async function handleReply({ req, res, state, sendJson, readJsonBody }: RouteContext): Promise<void> {
-  const { in_reply_to, text, sources } = await readJsonBody(req);
+  const { in_reply_to, text, sources, offer_video } = await readJsonBody(req);
   const input: Record<string, unknown> = { in_reply_to, text };
   if (sources !== undefined) input.sources = sources;
+  if (offer_video !== undefined) input.offer_video = offer_video;
   const reply = lib(() => appendReply(threadFile(state), input, { eventsFile: eventsFile(state), now: clockDate(state) }));
   tell(state, 'reply', () => ({ ...reply, role: 'claude' }));
   sendJson(res, 200, { reply });

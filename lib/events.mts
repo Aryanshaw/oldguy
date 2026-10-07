@@ -14,19 +14,21 @@ type EventType = (typeof TYPES)[number];
 // What the viewer was looking at when they did it: which chapter and which second.
 type EventContext = { chapter_id: string; t: number };
 // One line of events.jsonl, as stored.
-type ViewerEvent = { id: string; ts: string; type: EventType; text?: string; context?: EventContext };
+// make_video events also carry ref, the id of the reply the viewer wants turned into a chapter.
+type ViewerEvent = { id: string; ts: string; type: EventType; text?: string; context?: EventContext; ref?: string };
 // A source Claude cites in a reply: a file and its lines ("12" or "12-20").
 type SourceRef = { file: string; lines: string };
 // One line of thread.jsonl, as stored: Claude's answer to an event.
-type Reply = { id: string; ts: string; in_reply_to: string; text: string; sources?: SourceRef[] };
+// offer_video: true puts a "Make this a video" button under the reply; without it the page shows none.
+type Reply = { id: string; ts: string; in_reply_to: string; text: string; sources?: SourceRef[]; offer_video?: true };
 // One entry of the chat as the page shows it: the viewer's message or Claude's reply, tagged with who sent it.
 type ThreadEntry = (ViewerEvent & { role: 'viewer' }) | (Reply & { role: 'claude' });
 // Options shared by the writers: a clock and the largest line they will store.
 type WriteOptions = { now?: () => Date; maxBytes?: number };
 // What a viewer event may carry before it has been checked.
-type EventInput = { type?: unknown; text?: unknown; context?: unknown };
+type EventInput = { type?: unknown; text?: unknown; context?: unknown; ref?: unknown };
 // What a reply may carry before it has been checked.
-type ReplyInput = { in_reply_to?: unknown; text?: unknown; sources?: unknown };
+type ReplyInput = { in_reply_to?: unknown; text?: unknown; sources?: unknown; offer_video?: unknown };
 
 // Fails with a one-line message; the server turns it into a 400.
 function fail(message: string): never {
@@ -137,16 +139,28 @@ function appendLine(file: string, entry: ViewerEvent | Reply, maxBytes: number):
   fs.appendFileSync(file, prefix + line);
 }
 
+// A make_video event must name the reply it is about (rep_<n>); no other event type carries ref.
+function checkRef(type: unknown, ref: unknown): void {
+  if (type !== 'make_video') {
+    if (ref !== undefined) fail('only make_video carries ref');
+    return;
+  }
+  if (ref === undefined) fail('ref is required for make_video');
+  if (!validId(ref, 'rep')) fail('ref must look like rep_<number>');
+}
+
 // Validates and stores a viewer event; returns the stored event with its id and timestamp.
 function appendEvent(file: string, anything: unknown, { now = () => new Date(), maxBytes = DEFAULT_MAX_BYTES }: WriteOptions = {}): ViewerEvent {
   const input = anything as EventInput | null | undefined;
   if (!input || !(TYPES as readonly unknown[]).includes(input.type)) fail(`type must be one of: ${TYPES.join(', ')}`);
   checkText(input.text, input.type === 'message');
   checkContext(input.context);
+  checkRef(input.type, input.ref);
   // the type, text and context were all checked just above
   const event: ViewerEvent = { id: nextId(file, 'evt'), ts: stamp(now), type: input.type as EventType };
   if (input.text !== undefined) event.text = input.text as string;
   if (input.context !== undefined) event.context = input.context as EventContext;
+  if (input.ref !== undefined) event.ref = input.ref as string;
   appendLine(file, event, maxBytes);
   return event;
 }
@@ -165,12 +179,14 @@ function appendReply(file: string, anything: unknown, { eventsFile = '', now = (
   if (!input) fail('reply is required');
   checkText(input.text, true);
   checkSources(input.sources);
+  if (input.offer_video !== undefined && input.offer_video !== true) fail('offer_video must be true when given');
   if (!readEntries<ViewerEvent>(eventsFile, 'evt').some((e) => e.id === input.in_reply_to)) {
     fail(`in_reply_to ${input.in_reply_to} is not a known event`);
   }
   // the event id was found in the file just above, and the text and sources were checked before that
   const reply: Reply = { id: nextId(file, 'rep'), ts: stamp(now), in_reply_to: input.in_reply_to as string, text: input.text as string };
   if (input.sources !== undefined) reply.sources = (input.sources as SourceRef[]).map(({ file: f, lines }) => ({ file: f, lines }));
+  if (input.offer_video === true) reply.offer_video = true;
   appendLine(file, reply, maxBytes);
   return reply;
 }

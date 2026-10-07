@@ -71,7 +71,7 @@ test('POST /api/message appends exactly one line and returns the event; state sh
   assert.equal(s.thread.length, 1);
   assert.equal(s.thread[0].role, 'viewer');
   assert.equal(s.thread[0].text, 'why?');
-  assert.equal((await call(srv, 'POST', '/api/message', { type: 'make_video' })).status, 200);
+  assert.equal((await call(srv, 'POST', '/api/message', { type: 'make_video', ref: 'rep_1' })).status, 200);
   assert.equal((await call(srv, 'GET', '/api/state')).json.thread.length, 1, 'button events are not shown in the thread');
 });
 
@@ -338,4 +338,19 @@ test('a broken manifest after start: message and heartbeat are stored and still 
   assert.equal(hb.status, 200);
   assert.equal(srv.state.lastHeartbeat !== null, true);
   assert.equal(lines(path.join(slugDir, 'state', 'thread.jsonl')).length, 1);
+});
+
+test('POST /api/message stores ref on make_video; POST /api/reply stores offer_video and state shows both', async (t) => {
+  const { srv, slugDir } = await setup(t);
+  await call(srv, 'POST', '/api/message', { type: 'message', text: 'what if it fails?' });
+  const rep = await call(srv, 'POST', '/api/reply', { in_reply_to: 'evt_1', text: 'it retries', offer_video: true });
+  assert.equal(rep.status, 200, rep.text);
+  assert.equal(rep.json.reply.offer_video, true);
+  const mv = await call(srv, 'POST', '/api/message', { type: 'make_video', ref: rep.json.reply.id });
+  assert.equal(mv.status, 200, mv.text);
+  assert.equal(mv.json.event.ref, 'rep_1');
+  assert.equal((await call(srv, 'POST', '/api/message', { type: 'make_video' })).status, 400);
+  const state = await call(srv, 'GET', '/api/state');
+  assert.equal(state.json.thread.find((e) => e.role === 'claude').offer_video, true);
+  assert.equal(JSON.parse(lines(path.join(slugDir, 'state', 'events.jsonl'))[1]).ref, 'rep_1');
 });
