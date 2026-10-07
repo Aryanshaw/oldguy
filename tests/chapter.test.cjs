@@ -151,8 +151,8 @@ test('pieceWindows: each piece runs from its beat start to the next piece, the l
     { piece: 'steps', params: { items: [] }, beat: 2 },
   ];
   assert.deepEqual(pieceWindows(scene, beats, 9.5), [
-    { piece: 'title', params: { heading: 'a' }, startS: 0.04, durationS: 4.96 },
-    { piece: 'steps', params: { items: [] }, startS: 5, durationS: 4.5 },
+    { piece: 'title', params: { heading: 'a' }, startS: 0.04, durationS: 4.96, beatsS: [0.04, 2, 5] },
+    { piece: 'steps', params: { items: [] }, startS: 5, durationS: 4.5, beatsS: [0.04, 2, 5] },
   ]);
 });
 

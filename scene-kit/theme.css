@@ -165,3 +165,94 @@
 .yk-point-up::after { bottom: 100%; left: 50%; border-bottom-color: var(--yk-orange); }
 .yk-point-left::after { right: 100%; top: 50%; border-right-color: var(--yk-orange); }
 .yk-point-right::after { left: 100%; top: 50%; border-left-color: var(--yk-orange); }
+
+/* flow: a diagram that stays on screen; lanes are the parts of a system, steps appear in them one by one.
+   Contrast on the panel (#2A2417): off-white 14.28, dim note (#C9BFA3) 8.6; lane colours used for headings and
+   number discs only (black digits on them: yellow 11.99, orange 7.99, green 10.3, blue 8.9, pink 7.6). */
+:root {
+  --yk-step-bg: #1F1A10;
+  --yk-line: #4A412C;
+  --yk-dim: #C9BFA3;
+  --yk-green: #6FD08C;
+  --yk-blue: #6CB8FF;
+  --yk-pink: #FF7AB6;
+  --yk-red: #FF6B5E;
+}
+.yk-flow {
+  justify-content: flex-start;
+  align-items: stretch;
+  padding: 56px 64px;
+  gap: 28px;
+  box-sizing: border-box;
+}
+.yk-flow-head { display: flex; flex-direction: column; gap: 6px; }
+.yk-flow-kicker {
+  font-family: var(--yk-font-mono);
+  font-size: var(--yk-size-small);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--yk-yellow);
+}
+.yk-flow-title { font-size: 64px; line-height: 1.1; font-weight: 900; color: var(--yk-text); }
+.yk-flow-lanes { flex: 1; display: flex; gap: 20px; min-height: 0; }
+.yk-lane {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 22px 20px;
+  background: var(--yk-panel);
+  border: 3px solid var(--yk-line);
+}
+.yk-lane-c1 { --lane: var(--yk-yellow); }
+.yk-lane-c2 { --lane: var(--yk-green); }
+.yk-lane-c3 { --lane: var(--yk-orange); }
+.yk-lane-c4 { --lane: var(--yk-blue); }
+.yk-lane-c5 { --lane: var(--yk-pink); }
+.yk-lane-glow { position: absolute; inset: -3px; border: 4px solid var(--lane); opacity: 0; pointer-events: none; }
+.yk-lane-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 36px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--lane);
+}
+.yk-lane-dot { flex: none; width: 16px; height: 16px; border-radius: 50%; background: var(--lane); }
+.yk-lane-note { font-size: 26px; color: var(--yk-dim); }
+.yk-lane-steps { display: flex; flex-direction: column; gap: 16px; margin-top: 8px; }
+.yk-flow-step {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 18px 18px;
+  background: var(--yk-step-bg);
+  border: 2px solid var(--yk-line);
+}
+.yk-flow-num {
+  flex: none;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 900;
+  background: var(--lane);
+  color: var(--yk-black);
+}
+.yk-flow-text { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.yk-flow-label { font-size: 34px; line-height: 1.2; font-weight: 800; color: var(--yk-text); }
+.yk-flow-detail { font-size: 26px; line-height: 1.3; color: var(--yk-dim); }
+.yk-flow-glow { position: absolute; inset: -2px; border: 4px solid var(--lane); opacity: 0; pointer-events: none; }
+.yk-kind-ok { border-color: var(--yk-green); }
+.yk-kind-ok .yk-flow-num { background: var(--yk-green); }
+.yk-kind-fail { border-color: var(--yk-red); }
+.yk-kind-fail .yk-flow-num { background: var(--yk-red); }
+.yk-kind-fail .yk-flow-label { color: var(--yk-red); }

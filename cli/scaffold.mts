@@ -18,6 +18,12 @@ Pieces and their params:
   code-card  {"file": text, "lines": [{"no": number, "text": text, "highlight": true (optional)}]}
              each line is the repository line as it is, or its start cut at 68 columns ending in …
   callout    {"text": text, "pointTo": up|down|left|right (optional, default down)}
+  flow       {"kicker": text (optional), "heading": text (optional),
+              "lanes": [{"id": lane-id, "label": text, "note": text (optional)}] (2 to 5),
+              "steps": [{"lane": lane-id, "label": text, "detail": text (optional), "at": sentence index,
+                         "kind": ok|fail (optional)}] (1 to 14, at most 6 per lane)}
+             a diagram that stays up: each step appears with sentence "at" (from the piece's beat to before the
+             next piece's beat, never going back) and stays; the newest step and its lane light up
 "beat" is the 0-based index of the sentence a piece appears with; beats must go up. A piece stays on screen
 until the next piece's beat starts; the last one stays until the chapter ends.
 `;

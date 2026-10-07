@@ -6,6 +6,7 @@ import * as title from '../scene-kit/title.mts';
 import * as steps from '../scene-kit/steps.mts';
 import * as codeCard from '../scene-kit/code-card.mts';
 import * as callout from '../scene-kit/callout.mts';
+import * as flow from '../scene-kit/flow.mts';
 import type { Rendered } from '../scene-kit/shared.mts';
 
 // One source a chapter cites: where it lives, which lines, and the exact text quoted from them.
@@ -18,8 +19,9 @@ type ChapterScene = { piece: string; params: unknown; beat: number };
 type ChapterSpec = { id: string; title: string; sources: ChapterSource[]; sentences: ChapterSentence[]; scene: ChapterScene[] };
 // What `yap scaffold` is handed: a spec that has not been checked yet.
 type ScaffoldInput = { root: string; id: unknown; title: unknown; sources: unknown; sentences: unknown; scene: unknown };
-// A scene piece placed in time: which piece, its params, when it starts and how long it lasts (seconds).
-type PieceWindow = { piece: string; params: unknown; startS: number; durationS: number };
+// A scene piece placed in time: which piece, its params, when it starts and how long it lasts, and when every sentence
+// of the chapter starts (seconds; the flow piece shows its steps on later sentences).
+type PieceWindow = { piece: string; params: unknown; startS: number; durationS: number; beatsS: number[] };
 // The timed sentences a chapter's pieces are laid against.
 type TimedBeat = { start: number };
 
@@ -36,6 +38,7 @@ const PIECES: Record<string, { render: (params: unknown, opts: unknown) => Rende
   steps,
   'code-card': codeCard,
   callout,
+  flow,
 };
 
 // Turns a free-text id into a folder name: lower-case a-z0-9 words joined by single hyphens, never starting with a digit.
@@ -95,9 +98,13 @@ function checkScene(scene: unknown, sentenceCount: number): void {
       throw new Error(`scene[${i}]: beat must be a whole sentence index from 0 to ${sentenceCount - 1}, after the previous piece's beat`);
     }
     previousBeat = beat;
-    // a throwaway render lets the scene kit itself reject bad params (such as an unknown pointTo)
+    // a throwaway render lets the scene kit itself reject bad params (such as an unknown pointTo); sentence i "starts" at
+    // second i, and the window runs to the next piece's beat, so a flow step on a sentence outside its piece is refused
+    const next = (entries[i + 1] as ChapterScene | undefined)?.beat;
+    const endBeat = typeof next === 'number' && Number.isInteger(next) && next > beat && next <= sentenceCount ? next : sentenceCount;
+    const beatsS = Array.from({ length: sentenceCount }, (_, n) => n);
     try {
-      renderPiece(entry, { startS: 0, durationS: 1, idPrefix: 'check' });
+      renderPiece(entry, { startS: beat, durationS: endBeat - beat, idPrefix: 'check', beatsS });
     } catch (err) {
       // renderPiece only throws Error objects
       throw new Error(`scene[${i}]: ${(err as Error).message}`);
@@ -163,10 +170,11 @@ function roundUpTenth(seconds: number): number {
 
 // Gives each scene piece its time window: from its sentence's start to the next piece's start, the last to the end.
 function pieceWindows(scene: ChapterScene[], beats: TimedBeat[], durationS: number): PieceWindow[] {
+  const beatsS = beats.map((b) => b.start);
   return scene.map((entry, i) => {
     const startS = beats[entry.beat].start;
     const endS = i + 1 < scene.length ? beats[scene[i + 1].beat].start : durationS;
-    return { piece: entry.piece, params: entry.params, startS, durationS: Number((endS - startS).toFixed(3)) };
+    return { piece: entry.piece, params: entry.params, startS, durationS: Number((endS - startS).toFixed(3)), beatsS };
   });
 }
 
@@ -177,7 +185,7 @@ function buildRootComposition({ id, durationS, pieces }: { id: unknown; duration
   if (typeof id !== 'string' || !/^[a-z][a-z0-9-]*$/.test(id)) throw new Error(`composition id "${id}" must be a slug (a-z, 0-9, hyphens)`);
   if (typeof durationS !== 'number' || !Number.isFinite(durationS) || durationS <= 0) throw new Error('composition duration must be a number of seconds above 0');
   const theme = fs.readFileSync(path.join(KIT_DIR, 'theme.css'), 'utf8');
-  const rendered = pieces.map((p, i) => renderPiece(p, { startS: p.startS, durationS: p.durationS, idPrefix: `p${i}` }));
+  const rendered = pieces.map((p, i) => renderPiece(p, { startS: p.startS, durationS: p.durationS, idPrefix: `p${i}`, beatsS: p.beatsS }));
   return [
     '<!doctype html>',
     '<html lang="en">',
