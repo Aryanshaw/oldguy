@@ -1,5 +1,18 @@
 {
   "name": "yap",
-  "description": "Turn a topic into a narrated explainer video, with a CLI for the deterministic steps.",
-  "version": "0.1.0"
+  "description": "Ask how a feature of your codebase works and get a short narrated video, built from chapters that are fact-checked against the code, in a local player you can chat with.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Aryan Shaw"
+  },
+  "homepage": "https://github.com/Aryanshaw/yap",
+  "repository": "https://github.com/Aryanshaw/yap",
+  "license": "MIT",
+  "keywords": [
+    "explainer",
+    "video",
+    "codebase",
+    "onboarding",
+    "narration"
+  ]
 }

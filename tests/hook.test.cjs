@@ -156,7 +156,7 @@ test('hooks.json wires one SessionStart and one SessionEnd command hook, each wi
     assert.equal(groups[0].hooks.length, 1);
     const hook = groups[0].hooks[0];
     assert.equal(hook.type, 'command');
-    assert.equal(hook.command, `node \${CLAUDE_PLUGIN_ROOT}/hooks/${script}`);
+    assert.equal(hook.command, `node "\${CLAUDE_PLUGIN_ROOT}/hooks/${script}"`);
     assert.equal(hook.timeout, 5);
   }
 });

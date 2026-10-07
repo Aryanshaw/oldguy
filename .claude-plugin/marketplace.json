@@ -1,0 +1,14 @@
+{
+  "name": "yap",
+  "owner": { "name": "Aryan Shaw" },
+  "metadata": { "description": "Yap: Claude yaps. You watch." },
+  "plugins": [
+    {
+      "name": "yap",
+      "source": "./",
+      "description": "Ask how a feature of your codebase works and get a short narrated video, fact-checked against the code.",
+      "version": "0.1.0",
+      "license": "MIT"
+    }
+  ]
+}
