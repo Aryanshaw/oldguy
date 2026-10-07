@@ -24,7 +24,8 @@ type Reply = { id: string; ts: string; in_reply_to: string; text: string; source
 // One line of acks.jsonl: Claude has handled an event that gets no text reply (a button press).
 type Ack = { id: string; ts: string; event_id: string };
 // One entry of the chat as the page shows it: the viewer's message or Claude's reply, tagged with who sent it.
-type ThreadEntry = (ViewerEvent & { role: 'viewer' }) | (Reply & { role: 'claude' });
+// A reply carries video_asked: true once the viewer has pressed its "Make this a video" button.
+type ThreadEntry = (ViewerEvent & { role: 'viewer' }) | (Reply & { role: 'claude'; video_asked?: true });
 // Options shared by the writers: a clock and the largest line they will store.
 type WriteOptions = { now?: () => Date; maxBytes?: number };
 // What a viewer event may carry before it has been checked.

@@ -86,10 +86,12 @@ function timeOf(entry: { ts: string }): number {
 
 // Builds the chat list the browser shows: viewer messages and Claude's replies in time order, events first on a tie.
 function buildThread(state: ServerState): ThreadEntry[] {
-  const viewer = readEventsAfter(eventsFile(state), null)
-    .filter((e) => e.type === 'message')
-    .map((e): ThreadEntry => ({ ...e, role: 'viewer' }));
-  const claude = readThread(threadFile(state)).map((r): ThreadEntry => ({ ...r, role: 'claude' }));
+  const events = readEventsAfter(eventsFile(state), null);
+  const viewer = events.filter((e) => e.type === 'message').map((e): ThreadEntry => ({ ...e, role: 'viewer' }));
+  // a reply whose video was already asked for says so, so a reloaded page shows its button as pressed
+  const asked = new Set(events.filter((e) => e.type === 'make_video' && e.ref).map((e) => e.ref));
+  const claude = readThread(threadFile(state))
+    .map((r): ThreadEntry => (asked.has(r.id) ? { ...r, role: 'claude', video_asked: true } : { ...r, role: 'claude' }));
   return [...viewer, ...claude].sort((a, b) => timeOf(a) - timeOf(b));
 }
 

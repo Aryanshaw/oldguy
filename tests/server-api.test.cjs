@@ -367,3 +367,16 @@ test('POST /api/ack: closes an event; unknown event 404; bad id 400; a second ac
   assertCleanError(await call(srv, 'POST', '/api/ack', {}), 400, root);
   assert.equal(lines(path.join(slugDir, 'state', 'acks.jsonl')).length, 2);
 });
+
+test('state marks a reply video_asked once a make_video names it, so a reloaded page shows the button as asked', async (t) => {
+  const { srv } = await setup(t);
+  await call(srv, 'POST', '/api/message', { type: 'message', text: 'q' });
+  await call(srv, 'POST', '/api/reply', { in_reply_to: 'evt_1', text: 'a', offer_video: true });
+  await call(srv, 'POST', '/api/reply', { in_reply_to: 'evt_1', text: 'b', offer_video: true });
+  let thread = (await call(srv, 'GET', '/api/state')).json.thread;
+  assert.equal(thread.find((e) => e.id === 'rep_1').video_asked, undefined);
+  await call(srv, 'POST', '/api/message', { type: 'make_video', ref: 'rep_1' });
+  thread = (await call(srv, 'GET', '/api/state')).json.thread;
+  assert.equal(thread.find((e) => e.id === 'rep_1').video_asked, true);
+  assert.equal(thread.find((e) => e.id === 'rep_2').video_asked, undefined);
+});
