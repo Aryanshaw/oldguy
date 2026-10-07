@@ -1,12 +1,12 @@
 {
-  "name": "yap",
-  "description": "Ask how a feature of your codebase works and get a short narrated video, built from chapters that are fact-checked against the code, in a local player you can chat with.",
+  "name": "oldguy",
+  "description": "Ask the old guy. Ask how a feature of your codebase works and get a short narrated video, built from chapters that are fact-checked against the code, in a local player you can chat with.",
   "version": "0.1.0",
   "author": {
     "name": "Aryan Shaw"
   },
-  "homepage": "https://github.com/Aryanshaw/yap",
-  "repository": "https://github.com/Aryanshaw/yap",
+  "homepage": "https://github.com/Aryanshaw/oldguy",
+  "repository": "https://github.com/Aryanshaw/oldguy",
   "license": "MIT",
   "keywords": [
     "explainer",

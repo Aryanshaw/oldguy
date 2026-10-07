@@ -10,7 +10,7 @@ const read = (file) => JSON.parse(fs.readFileSync(path.join(ROOT, file), 'utf8')
 test('plugin, marketplace, package and getyap all carry the same version', () => {
   const versions = {
     '.claude-plugin/plugin.json': read('.claude-plugin/plugin.json').version,
-    '.claude-plugin/marketplace.json': read('.claude-plugin/marketplace.json').plugins.find((p) => p.name === 'yap').version,
+    '.claude-plugin/marketplace.json': read('.claude-plugin/marketplace.json').plugins.find((p) => p.name === 'oldguy').version,
     'package.json': read('package.json').version,
     'packages/getyap/package.json': read('packages/getyap/package.json').version,
   };
