@@ -26,12 +26,14 @@ const BINARY = /\.(png|webp|jpe?g|gif|mp4|wav|mp3|woff2?|ttf|ico)$/i;
 // - the subline, where "yap" is the verb, not the product
 // - links to the original design spec, whose file name is part of the historical record
 // - the rename notice and the owner's steps to retire the old npm installer
+// - the .gitignore entry that keeps old local .yap/ video folders out of git
 const ALLOWED = [
   /Claude yaps\. You watch\./,
   /2026-10-02-yap-design\.md/,
   /Renamed from Yap to oldguy/,
   /npm deprecate getyap/,
   /old installer, `getyap`/,
+  /^\.yap\/?$/,
 ];
 
 // Tracked files that should no longer name the product "yap".
