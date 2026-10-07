@@ -1,11 +1,11 @@
 {
-  "name": "yap",
+  "name": "oldguy",
   "version": "0.1.0",
   "license": "MIT",
   "private": true,
   "description": "Claude Code plugin that turns a topic into an explainer video; this CLI does the deterministic steps.",
   "bin": {
-    "yap": "bin/yap.cjs"
+    "oldguy": "bin/oldguy.cjs"
   },
   "scripts": {
     "test": "node --test \"tests/*.test.cjs\"",

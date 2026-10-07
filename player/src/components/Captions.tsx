@@ -38,7 +38,7 @@ export function Captions({ chapterId, offset, on }: { chapterId: string | null; 
     <div className="pointer-events-none absolute inset-x-0 bottom-[14%] flex justify-center px-4">
       <p
         aria-live="off"
-        className="max-w-[80%] whitespace-pre-line rounded-[6px] bg-yk-black px-3 py-1 text-center text-base font-bold text-yk-yellow"
+        className="max-w-[80%] whitespace-pre-line rounded-[6px] bg-og-black px-3 py-1 text-center text-base font-bold text-og-yellow"
       >
         {cue.text}
       </p>

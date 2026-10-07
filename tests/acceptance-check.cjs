@@ -1,5 +1,5 @@
 'use strict';
-// Acceptance check, run by hand after a real /yap run (NOT part of `npm test`: it needs real renders and ffprobe).
+// Acceptance check, run by hand after a real /oldguy run (NOT part of `npm test`: it needs real renders and ffprobe).
 // usage: source spikes/env.sh; node tests/acceptance-check.cjs <project-dir>
 // Prints pass/fail per check per chapter; exits 1 when any check fails.
 const fs = require('node:fs');
@@ -7,7 +7,7 @@ const path = require('node:path');
 const { execFileSync, spawnSync } = require('node:child_process');
 const { parseWav } = require('../lib/wav.mts');
 
-const YAP = path.join(__dirname, '..', 'bin', 'yap.cjs');
+const OLDGUY = path.join(__dirname, '..', 'bin', 'oldguy.cjs');
 const FFPROBE = process.env.FFPROBE || 'ffprobe';
 const FFMPEG = process.env.FFMPEG || 'ffmpeg';
 const REQUIRED_FILES = ['chapter.json', 'narration.txt', 'narration.wav', 'beats.json', 'captions.vtt', 'captions.json',
@@ -63,8 +63,8 @@ function checkChapter(dir, projectDir) {
   add('files present', missing.length === 0, missing.length ? `missing ${missing.join(', ')}` : 'all 9');
 
   // the claim audit, exactly as a user would run it
-  const audit = spawnSync('node', [YAP, 'audit', path.join(dir, 'chapter.json'), '--root', projectDir], { encoding: 'utf8' });
-  add('yap audit clean', audit.status === 0, audit.status === 0 ? 'exit 0' : `exit ${audit.status}: ${(audit.stdout + audit.stderr).trim()}`);
+  const audit = spawnSync('node', [OLDGUY, 'audit', path.join(dir, 'chapter.json'), '--root', projectDir], { encoding: 'utf8' });
+  add('oldguy audit clean', audit.status === 0, audit.status === 0 ? 'exit 0' : `exit ${audit.status}: ${(audit.stdout + audit.stderr).trim()}`);
 
   const html = fs.existsSync(path.join(dir, 'index.html')) ? fs.readFileSync(path.join(dir, 'index.html'), 'utf8') : '';
   const declared = dataDuration(html);
@@ -99,16 +99,16 @@ function checkChapter(dir, projectDir) {
   return out;
 }
 
-// Finds every chapter folder under <project>/.yap/<slug>/chapters and prints a pass/fail table.
+// Finds every chapter folder under <project>/.oldguy/<slug>/chapters and prints a pass/fail table.
 function main() {
   const projectDir = path.resolve(process.argv[2] || '.');
-  const yapDir = path.join(projectDir, '.yap');
-  const slugs = fs.readdirSync(yapDir).filter((d) => fs.existsSync(path.join(yapDir, d, 'chapters')));
+  const oldguyDir = path.join(projectDir, '.oldguy');
+  const slugs = fs.readdirSync(oldguyDir).filter((d) => fs.existsSync(path.join(oldguyDir, d, 'chapters')));
   let failed = 0;
   for (const slug of slugs) {
-    const top = ['script.md', 'sources.json'].map((f) => `${f} ${fs.existsSync(path.join(yapDir, slug, f)) ? 'present' : 'MISSING'}`);
+    const top = ['script.md', 'sources.json'].map((f) => `${f} ${fs.existsSync(path.join(oldguyDir, slug, f)) ? 'present' : 'MISSING'}`);
     console.log(`video ${slug}: ${top.join(', ')}`);
-    const chaptersDir = path.join(yapDir, slug, 'chapters');
+    const chaptersDir = path.join(oldguyDir, slug, 'chapters');
     for (const id of fs.readdirSync(chaptersDir).sort()) {
       console.log(`  chapter ${id}`);
       for (const c of checkChapter(path.join(chaptersDir, id), projectDir)) {

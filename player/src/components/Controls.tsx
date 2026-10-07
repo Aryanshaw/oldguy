@@ -71,19 +71,19 @@ export function Controls({
         type="button"
         aria-label={playing ? 'Pause' : 'Play'}
         onClick={player.toggle}
-        className="bd sh flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-yk-yellow text-lg text-yk-black active:translate-y-[2px] active:shadow-none"
+        className="bd sh flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-og-yellow text-lg text-og-black active:translate-y-[2px] active:shadow-none"
       >
         <span aria-hidden="true">{playing ? '❚❚' : '▶'}</span>
       </button>
-      <h2 className="min-w-0 flex-1 truncate font-black text-yk-black">{current?.title ?? ''}</h2>
-      <span className="rounded-[6px] bg-yk-black px-2 py-1 text-xs font-bold tabular-nums text-yk-cream">
+      <h2 className="min-w-0 flex-1 truncate font-black text-og-black">{current?.title ?? ''}</h2>
+      <span className="rounded-[6px] bg-og-black px-2 py-1 text-xs font-bold tabular-nums text-og-cream">
         {fmt(globalTime(chapters, player.position))} / {fmt(total(chapters))}
       </span>
       <button
         type="button"
         aria-pressed={captionsOn}
         onClick={onToggleCaptions}
-        className={`bd cursor-pointer rounded-[10px] px-3 py-1 text-xs font-black text-yk-black ${captionsOn ? 'bg-yk-yellow' : 'bg-yk-white'}`}
+        className={`bd cursor-pointer rounded-[10px] px-3 py-1 text-xs font-black text-og-black ${captionsOn ? 'bg-og-yellow' : 'bg-og-white'}`}
       >
         CC
       </button>

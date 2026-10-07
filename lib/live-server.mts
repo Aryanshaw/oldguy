@@ -1,4 +1,4 @@
-// Tells whether a yap server is really running for a folder. Used by `yap serve` and by startServer itself.
+// Tells whether an oldguy server is really running for a folder. Used by `oldguy serve` and by startServer itself.
 import fs from 'node:fs';
 import path from 'node:path';
 import { askServer, pidAlive, usableInfo } from './ask-server.mts';
@@ -14,7 +14,7 @@ function readInfo(slugDir: string): ServerInfo | null {
   try { return usableInfo(JSON.parse(fs.readFileSync(path.join(slugDir, 'state', 'server.json'), 'utf8'))); } catch { return null; }
 }
 
-// Asks the server on this port whether it is a yap server: GET /api/ping with the key. Resolves { pid } when it
+// Asks the server on this port whether it is an oldguy server: GET /api/ping with the key. Resolves { pid } when it
 // answers 200 {ok:true, pid} with a whole-number pid (anything else it says is not this server), { late: true } when it did not answer within pingMs, or null for any other answer.
 // One deadline covers the whole ping and the answer is capped at 4 KB, so a trickling or endless reply cannot hold us.
 async function ping(port: number, key: string, pingMs: number): Promise<PingAnswer> {
@@ -24,7 +24,7 @@ async function ping(port: number, key: string, pingMs: number): Promise<PingAnsw
   try { const j = JSON.parse(r.body) as { ok?: unknown; pid?: number }; return r.status === 200 && j.ok === true && Number.isInteger(j.pid) ? { pid: j.pid } : null; } catch { return null; }
 }
 
-// Returns { url, pid } of a yap server really running for this folder, null when the file is stale (missing, refused,
+// Returns { url, pid } of an oldguy server really running for this folder, null when the file is stale (missing, refused,
 // or answered by something that is not this server), or { busy: true } when its process is alive but silent for
 // totalMs. A live process that is only slow is never called stale: the ping is retried until totalMs has passed.
 async function liveServer(slugDir: string, { pingMs = 1000, totalMs = 5000 }: { pingMs?: number; totalMs?: number } = {}): Promise<LiveServer> {

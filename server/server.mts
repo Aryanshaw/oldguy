@@ -62,7 +62,7 @@ function renderPage(manifest: Manifest): string {
 // GET /: with the key in the query, remember it in a cookie and redirect so it leaves the address bar; otherwise the page.
 function handleHome({ res, url, state }: RouteContext): void {
   if (url.searchParams.has('key')) {
-    res.writeHead(302, { 'Set-Cookie': `yap_key_${state.port}=${state.key}; HttpOnly; SameSite=Strict; Path=/`, Location: '/' });
+    res.writeHead(302, { 'Set-Cookie': `oldguy_key_${state.port}=${state.key}; HttpOnly; SameSite=Strict; Path=/`, Location: '/' });
     res.end();
     return;
   }
@@ -72,7 +72,7 @@ function handleHome({ res, url, state }: RouteContext): void {
   res.end(index || renderPage(loadManifest(path.join(state.slugDir, 'manifest.json'))));
 }
 
-// GET /api/ping: tells a caller (the --detach check) this really is a yap server and which process runs it.
+// GET /api/ping: tells a caller (the --detach check) this really is an oldguy server and which process runs it.
 function handlePing({ res }: RouteContext): void {
   sendJson(res, 200, { ok: true, pid: process.pid });
 }
@@ -155,7 +155,7 @@ function answerError(res: ServerResponse, err: unknown): void {
   const e = err as { status?: unknown; message?: unknown; stack?: unknown } | null | undefined;
   const status = e ? e.status : undefined;
   if (e && typeof status === 'number' && Number.isInteger(status) && ((status >= 400 && status < 500) || status === 503)) return sendJson(res, status, { error: String(e.message).replace(/\s+/g, ' ') });
-  process.stderr.write(`yap server: ${e && e.stack ? e.stack : err}\n`);
+  process.stderr.write(`oldguy server: ${e && e.stack ? e.stack : err}\n`);
   sendJson(res, 500, { error: 'internal error' });
 }
 
@@ -281,7 +281,7 @@ function waitAtMost(promise: Promise<unknown>, ms: number): Promise<unknown> {
 // deps (all optional, for tests): routes replaces the route table; now is a clock in ms; pingMs is the stream ping
 // interval; fs is used to save the manifest; scan, intervalMs, setInterval and clearInterval steer the folder watcher; exec and ffmpeg take poster frames; posterWaitMs bounds how long close() waits for them and queueWaitMs how long it waits for queued manifest saves; setTimeout and clearTimeout drive the 15 s "Claude went quiet" timer; beforeSave is awaited between change and save (tests); logError receives unexpected save failures.
 async function startServer({ slugDir, key = crypto.randomBytes(16).toString('hex'), port = 0, deps = {} }: StartOptions): Promise<RunningServer> {
-  // One server per folder: refuse when state/server.json names a live yap server (a stale file is replaced below).
+  // One server per folder: refuse when state/server.json names a live oldguy server (a stale file is replaced below).
   const existing = await liveServer(slugDir);
   if (existing) throw Object.assign(new Error('a server for this folder is already running'), { alreadyRunning: true, url: 'url' in existing ? existing.url : undefined });
   ensureManifest(slugDir);
@@ -304,7 +304,7 @@ async function startServer({ slugDir, key = crypto.randomBytes(16).toString('hex
     logError: deps.logError || ((err: unknown) => {
       // a thrown Error has a stack; anything else is printed as it is
       const e = err as { stack?: unknown } | null | undefined;
-      process.stderr.write(`yap server: ${e && e.stack ? e.stack : err}\n`);
+      process.stderr.write(`oldguy server: ${e && e.stack ? e.stack : err}\n`);
     }),
   };
   server.on('request', makeListener(state, routes, createGuard({ key, port: actualPort })));

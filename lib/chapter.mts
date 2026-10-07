@@ -16,9 +16,9 @@ type ChapterSource = { id: string; file: string; lines: [number, number]; quote:
 type ChapterSentence = { text: string; kind: 'claim' | 'framing'; source_ids: string[] };
 // One scene piece shown while a sentence is spoken: the piece name, its params and the sentence index it starts on.
 type ChapterScene = { piece: string; params: unknown; beat: number };
-// The chapter.json that `yap scaffold` writes.
+// The chapter.json that `oldguy scaffold` writes.
 type ChapterSpec = { id: string; title: string; sources: ChapterSource[]; sentences: ChapterSentence[]; scene: ChapterScene[] };
-// What `yap scaffold` is handed: a spec that has not been checked yet.
+// What `oldguy scaffold` is handed: a spec that has not been checked yet.
 type ScaffoldInput = { root: string; id: unknown; title: unknown; sources: unknown; sentences: unknown; scene: unknown };
 // A scene piece placed in time: which piece, its params, when it starts and how long it lasts, and when every sentence
 // of the chapter starts (seconds; the flow piece shows its steps on later sentences).
@@ -225,8 +225,8 @@ function buildRootComposition({ id, durationS, pieces }: { id: unknown; duration
     `<script src="${GSAP_NAME}"></script>`,
     // the stage is a fixed 1920x1080 box the pieces are laid over
     '<style>',
-    'html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: var(--yk-black); }',
-    '#root { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: var(--yk-black); }',
+    'html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: var(--og-black); }',
+    '#root { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: var(--og-black); }',
     theme,
     '</style>',
     '</head>',

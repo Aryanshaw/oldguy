@@ -9,9 +9,9 @@ const { checkScene } = require("../lib/chapter.mts");
 // Sentences start at 0, 2, 4, 6 and 8 s; the piece runs 0..10 s.
 const BEATS = [0, 2, 4, 6, 8];
 const WIN = { startS: 0, durationS: 10, idPrefix: "p0", beatsS: BEATS };
-const LANES = [{ id: "you", label: "You", note: "in Claude Code" }, { id: "cli", label: "yap command" }];
+const LANES = [{ id: "you", label: "You", note: "in Claude Code" }, { id: "cli", label: "oldguy command" }];
 const STEPS = [
-  { lane: "you", label: "Type /yap", at: 0 },
+  { lane: "you", label: "Type /oldguy", at: 0 },
   { lane: "cli", label: "Audit", detail: "quotes vs real code", at: 2, kind: "ok" },
   { lane: "cli", label: "Wrong quote", at: 2, kind: "fail" },
   { lane: "you", label: "Watch", at: 4 },
@@ -30,13 +30,13 @@ function tweenAt(timeline, method, selector) {
 
 test("flow draws the header, one column per lane in order, and the steps numbered in story order", () => {
   const { html } = draw();
-  assert.match(html, /id="p0-root" class="yk-piece yk-flow"/);
+  assert.match(html, /id="p0-root" class="og-piece og-flow"/);
   assert.match(html, /01 · making a video[\s\S]*One request/);
   assert.ok(html.indexOf('id="p0-lane-0"') < html.indexOf('id="p0-lane-1"'));
-  assert.match(html, /class="yk-lane yk-lane-c1"[\s\S]*You[\s\S]*in Claude Code/);
+  assert.match(html, /class="og-lane og-lane-c1"[\s\S]*You[\s\S]*in Claude Code/);
   // step 3 (Wrong quote) sits in the second lane and keeps its story number
-  assert.match(html, /id="p0-step-2" class="yk-flow-step yk-kind-fail"><span class="yk-flow-num">3</);
-  assert.match(html, /id="p0-step-1" class="yk-flow-step yk-kind-ok"/);
+  assert.match(html, /id="p0-step-2" class="og-flow-step og-kind-fail"><span class="og-flow-num">3</);
+  assert.match(html, /id="p0-step-1" class="og-flow-step og-kind-ok"/);
   assert.ok(html.indexOf('id="p0-step-1"') > html.indexOf('id="p0-lane-1"'));
 });
 

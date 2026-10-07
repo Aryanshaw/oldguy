@@ -8,7 +8,7 @@ const { extractPoster } = require('../lib/poster.mts');
 
 // Makes a temp chapter folder and removes it when the test ends.
 function tempDir(t) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-poster-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-poster-'));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   return dir;
 }

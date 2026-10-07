@@ -1,4 +1,4 @@
-// The doctor: checks that every tool yap needs is present and says exactly how to fix what is not.
+// The doctor: checks that every tool oldguy needs is present and says exactly how to fix what is not.
 // Every outside call (running programs, files, environment, machine facts) is passed in, so tests run nothing real.
 import path from 'node:path';
 import realFs from 'node:fs';
@@ -6,7 +6,7 @@ import { renderCap } from './render-schedule.mts';
 import { hyperframesArgs } from './hyperframes.mts';
 import { nodeProblem } from './node-floor.cjs';
 
-// One line of the doctor's report: what was checked, whether it passed, whether yap needs it, and how to fix it if not.
+// One line of the doctor's report: what was checked, whether it passed, whether oldguy needs it, and how to fix it if not.
 type DoctorCheck = { name: string; ok: boolean; required: boolean; detail: string; fix: string };
 // The whole report, in the order the checks run.
 type DoctorReport = DoctorCheck[];
@@ -27,7 +27,7 @@ const MIN_FREE_DISK_GB = 1;
 const SLOW_MS = 120000;
 const QUICK_MS = 15000;
 
-// Builds one check result in the fixed shape the rest of yap (and --json) relies on.
+// Builds one check result in the fixed shape the rest of oldguy (and --json) relies on.
 function result(name: string, ok: boolean, required: boolean, detail: string, fix = ''): DoctorCheck {
   return { name, ok, required, detail, fix: ok ? '' : fix };
 }
@@ -43,7 +43,7 @@ async function run(exec: Exec, cmd: string, args: string[], timeout: number): Pr
   }
 }
 
-// Node must be new enough for the rest of yap; the sentence that says so is shared with the launcher.
+// Node must be new enough for the rest of oldguy; the sentence that says so is shared with the launcher.
 function checkNode(nodeVersion: string): DoctorCheck {
   const version = String(nodeVersion).replace(/^v/, '');
   const problem = nodeProblem(version, '');
@@ -93,7 +93,7 @@ async function onPath(exec: Exec, cmd: string): Promise<boolean> {
 }
 
 // The steps that make a fresh venv and install the packages, preferring uv, then a Python 3.10 to 3.12 on PATH;
-// null when neither is there, since yap never installs Python itself.
+// null when neither is there, since oldguy never installs Python itself.
 async function createVenvSteps(exec: Exec, venv: string, python: string): Promise<Step[] | null> {
   if (await onPath(exec, 'uv')) {
     return [{ cmd: 'uv', args: ['venv', '--python', '3.12', venv] }, { cmd: 'uv', args: ['pip', 'install', '--python', python, ...PACKAGES] }];
@@ -112,7 +112,7 @@ async function installSteps(exec: Exec, venv: string, python: string): Promise<S
 }
 
 const NO_PYTHON = 'Python 3.10 to 3.12 is needed to make the venv and none was found on PATH: install Python 3.12 or uv, '
-  + 'then re-run yap doctor';
+  + 'then re-run oldguy doctor';
 
 // The steps that repair a venv the doctor found broken (the caller has already seen it fail to import): add the
 // packages when its python runs, else remove whatever is there and start over. null when no Python can make one.
@@ -157,7 +157,7 @@ function kokoroModelPath(os: Pick<DoctorOs, 'homedir'>): string {
 // The Kokoro voice model must be downloaded in full (a partial file is far smaller than 300 MB).
 function checkModel({ fs, os }: Pick<DoctorDeps, 'fs' | 'os'>): DoctorCheck {
   const file = kokoroModelPath(os);
-  const fix = 'generate any narration once with `hyperframes tts` to download the Kokoro model, then re-run yap doctor';
+  const fix = 'generate any narration once with `hyperframes tts` to download the Kokoro model, then re-run oldguy doctor';
   if (!fs.existsSync(file)) return result('Kokoro model', false, true, `not found at ${file}`, fix);
   const mb = Math.round(fs.statSync(file).size / 1e6);
   const ok = mb * 1e6 >= MIN_MODEL_BYTES;
@@ -203,7 +203,7 @@ async function checkChrome(exec: Exec): Promise<DoctorCheck> {
   return result('Chrome', chrome.ok === true, false, String(chrome.detail || (chrome.ok ? 'found' : 'missing')), fix);
 }
 
-// Runs every check and returns the list of results; required ones decide whether yap can run at all.
+// Runs every check and returns the list of results; required ones decide whether oldguy can run at all.
 async function runDoctor({ exec, fs, env, os, nodeVersion, dataDir }: DoctorDeps): Promise<DoctorReport> {
   return [
     checkNode(nodeVersion),

@@ -1,6 +1,6 @@
 // Finds the plugin data folder (where the Python venv and the doctor's pass marker live). Claude Code gives the
-// SessionStart hook CLAUDE_PLUGIN_DATA but not Claude's own shell, so the hook writes it into .yap/session.json
-// and every yap command reads it back from there. The hook, the doctor and narrate all use this one rule.
+// SessionStart hook CLAUDE_PLUGIN_DATA but not Claude's own shell, so the hook writes it into .oldguy/session.json
+// and every oldguy command reads it back from there. The hook, the doctor and narrate all use this one rule.
 // A session file sits in the project tree, which may hold anyone's files, so a folder read from it is trusted only
 // inside Claude Code's own plugin data root: it decides which Python runs.
 import path from 'node:path';
@@ -45,23 +45,23 @@ function sessionDataDir(file: string, fs: FileReader, trust: Trust): string | nu
   }
 }
 
-// Walks up from cwd to the filesystem root and returns the first trusted data_dir in a .yap/session.json, or null.
+// Walks up from cwd to the filesystem root and returns the first trusted data_dir in a .oldguy/session.json, or null.
 function nearestSessionDataDir(cwd: string, fs: FileReader, trust: Trust): string | null {
   for (let dir = cwd; ; dir = path.dirname(dir)) {
-    const found = sessionDataDir(path.join(dir, '.yap', 'session.json'), fs, trust);
+    const found = sessionDataDir(path.join(dir, '.oldguy', 'session.json'), fs, trust);
     if (found) return found;
     if (path.dirname(dir) === dir) return null;
   }
 }
 
 // Picks the data folder: --data-dir, then a non-empty CLAUDE_PLUGIN_DATA (both set by the user or Claude Code, so
-// taken as given), then a trusted folder from the session file, then <cwd>/.yap.
+// taken as given), then a trusted folder from the session file, then <cwd>/.oldguy.
 // Returns null when none of those apply and cwd is not an absolute path (no folder can be trusted).
 function resolveDataDir({ flag, env, cwd, fs, homedir = os.homedir() }: DataDirInput): string | null {
   if (flag) return flag;
   if (env && env.CLAUDE_PLUGIN_DATA) return env.CLAUDE_PLUGIN_DATA;
   if (typeof cwd !== 'string' || !path.isAbsolute(cwd)) return null;
-  return nearestSessionDataDir(cwd, fs, { env, homedir }) || path.join(cwd, '.yap');
+  return nearestSessionDataDir(cwd, fs, { env, homedir }) || path.join(cwd, '.oldguy');
 }
 
 export { resolveDataDir, trustedDataDir };

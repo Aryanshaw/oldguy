@@ -251,7 +251,7 @@ describe('keyboard', () => {
     expect(cc).toHaveAttribute('aria-pressed', 'true');
     key('c');
     expect(cc).toHaveAttribute('aria-pressed', 'false');
-    expect(localStorage.getItem('yap.captions')).toBe('off');
+    expect(localStorage.getItem('oldguy.captions')).toBe('off');
     key('c');
     expect(cc).toHaveAttribute('aria-pressed', 'true');
   });

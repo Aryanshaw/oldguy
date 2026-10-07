@@ -19,7 +19,7 @@ function list(dir, base = dir) {
 }
 const hash = (file) => createHash('sha256').update(readFileSync(file)).digest('hex');
 
-const tmp = mkdtempSync(join(tmpdir(), 'yap-dist-'));
+const tmp = mkdtempSync(join(tmpdir(), 'oldguy-dist-'));
 const out = join(tmp, 'dist');
 let bad = [];
 try {

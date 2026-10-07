@@ -21,7 +21,7 @@ const SCENE = [
 
 // Makes an empty temp folder for one test and removes it when the test ends.
 function tempRoot(t) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-chapter-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-chapter-'));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   return dir;
 }
@@ -171,8 +171,8 @@ test('root composition: one 1920x1080 root with the id and the exact duration', 
 
 test('root composition: holds every piece html (escaped), with unique id prefixes p0, p1', () => {
   const html = buildRootComposition({ id: 'c', durationS: 9.5, pieces: PIECES });
-  assert.match(html, /id="p0-root" class="yk-piece yk-title"/);
-  assert.match(html, /id="p1-root" class="yk-piece yk-code-card"/);
+  assert.match(html, /id="p0-root" class="og-piece og-title"/);
+  assert.match(html, /id="p1-root" class="og-piece og-code-card"/);
   assert.match(html, /Jobs &lt;b&gt;run&lt;\/b&gt;/);
   assert.match(html, /tl\.fromTo\("#p1-root"/);
 });

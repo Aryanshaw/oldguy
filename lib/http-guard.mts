@@ -29,12 +29,12 @@ function sameKey(given: unknown, key: unknown): boolean {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-// Reads the key a request presents: header first, then the yap_key_<port> cookie (one name per server, so two
+// Reads the key a request presents: header first, then the oldguy_key_<port> cookie (one name per server, so two
 // servers on 127.0.0.1 do not overwrite each other), then the ?key= query. Returns '' when none, or when the
 // target cannot be parsed.
 function presentedKey(req: IncomingMessage, port: number): string {
-  if (typeof req.headers['x-yap-key'] === 'string') return req.headers['x-yap-key'];
-  const cookieName = `yap_key_${port}`;
+  if (typeof req.headers['x-oldguy-key'] === 'string') return req.headers['x-oldguy-key'];
+  const cookieName = `oldguy_key_${port}`;
   for (const part of String(req.headers.cookie || '').split(';')) {
     const [name, ...rest] = part.trim().split('=');
     if (name === cookieName) return rest.join('=');

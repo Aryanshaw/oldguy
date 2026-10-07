@@ -1,5 +1,5 @@
-// The Yap server lives only as long as the Claude Code session that started it. The SessionStart hook finds that
-// session's Claude Code process (findClaudePid) and records it; `yap serve` watches it (watchOwner) and shuts down
+// The oldguy server lives only as long as the Claude Code session that started it. The SessionStart hook finds that
+// session's Claude Code process (findClaudePid) and records it; `oldguy serve` watches it (watchOwner) and shuts down
 // cleanly once it is gone, so nothing keeps running after Claude Code stops.
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';

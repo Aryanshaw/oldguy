@@ -1,10 +1,10 @@
-// The `yap captions <beats-or-words.json> [--vtt <out.vtt>] [--json <out.json>]` command.
+// The `oldguy captions <beats-or-words.json> [--vtt <out.vtt>] [--json <out.json>]` command.
 import fs from 'node:fs';
 import { buildCaptions } from '../lib/captions.mts';
 import type { Word } from '../lib/beats.mts';
 import { parseFlags, guarded } from './args.mts';
 
-const USAGE = 'usage: yap captions <beats-or-words.json> [--vtt <out.vtt>] [--json <out.json>]';
+const USAGE = 'usage: oldguy captions <beats-or-words.json> [--vtt <out.vtt>] [--json <out.json>]';
 
 // Reads a list of {text, start, end} items (beats or words).
 function readItems(file: string): Word[] {

@@ -116,7 +116,7 @@ describe('ExportDialog', () => {
     await first.user.type(field(), '/keep/me');
     await first.user.click(exportBtn());
     await screen.findByText('Saved');
-    expect(localStorage.getItem('yap.exportDest')).toBe('/keep/me');
+    expect(localStorage.getItem('oldguy.exportDest')).toBe('/keep/me');
     cleanup();
     setup();
     expect(field()).toHaveValue('/keep/me');

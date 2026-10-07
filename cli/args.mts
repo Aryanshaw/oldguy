@@ -34,7 +34,7 @@ function guarded<T>(name: string, body: () => T): T | 2 {
     return body();
   } catch (err) {
     // the bodies throw Errors with a message
-    process.stderr.write(`yap ${name}: ${String((err as Error).message).replace(/\s*\n\s*/g, ' ')}\n`);
+    process.stderr.write(`oldguy ${name}: ${String((err as Error).message).replace(/\s*\n\s*/g, ' ')}\n`);
     return 2;
   }
 }

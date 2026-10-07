@@ -153,36 +153,36 @@ test("steps with 0 items returns an empty fragment", () => {
 test("steps wraps long labels instead of overflowing", () => {
   const long = "x".repeat(500);
   const html = pieces.steps({ items: [{ label: long, detail: long }] }, WIN).html;
-  assert.match(html, /class="[^"]*yk-wrap/);
+  assert.match(html, /class="[^"]*og-wrap/);
   const css = fs.readFileSync(path.join(kitDir, "theme.css"), "utf8");
-  assert.match(css, /\.yk-wrap\s*\{[^}]*max-width:[^}]*overflow-wrap:\s*anywhere/);
+  assert.match(css, /\.og-wrap\s*\{[^}]*max-width:[^}]*overflow-wrap:\s*anywhere/);
 });
 
 test("code-card marks exactly the highlighted lines, by data attribute and class", () => {
   const lines = [1, 2, 3, 4, 5].map((n) => ({ no: n, text: "l" + n, highlight: n === 2 || n === 4 }));
   const html = pieces["code-card"]({ lines }, WIN).html;
-  const rows = html.match(/<div class="yk-line[^>]*>/g);
+  const rows = html.match(/<div class="og-line[^>]*>/g);
   assert.equal(rows.length, 5);
   const hl = rows.filter((r) => /data-highlight="true"/.test(r));
   assert.equal(hl.length, 2);
-  assert.equal(rows.filter((r) => /yk-hl/.test(r)).length, 2);
-  assert.ok(hl.every((r) => /yk-hl/.test(r)));
+  assert.equal(rows.filter((r) => /og-hl/.test(r)).length, 2);
+  assert.ok(hl.every((r) => /og-hl/.test(r)));
 });
 
 test("code-card emits exactly the lines given, no extras, even for 200", () => {
   const lines = Array.from({ length: 200 }, (_, i) => ({ no: i + 1, text: "row" + i }));
   const html = pieces["code-card"]({ lines }, WIN).html;
-  assert.equal((html.match(/<div class="yk-line[ "]/g) || []).length, 200);
+  assert.equal((html.match(/<div class="og-line[ "]/g) || []).length, 200);
   const empty = pieces["code-card"]({ lines: [] }, WIN).html;
-  assert.equal((empty.match(/<div class="yk-line[ "]/g) || []).length, 0);
+  assert.equal((empty.match(/<div class="og-line[ "]/g) || []).length, 0);
 });
 
 test("code-card keeps leading spaces via white-space: pre, not nbsp", () => {
   const html = pieces["code-card"]({ lines: [{ no: 1, text: "    if (x) {\t}" }] }, WIN).html;
-  assert.match(html, /<span class="yk-code">    if \(x\) \{\t\}<\/span>/);
+  assert.match(html, /<span class="og-code">    if \(x\) \{\t\}<\/span>/);
   assert.doesNotMatch(html, /&nbsp;| |&#160;/);
   const css = fs.readFileSync(path.join(kitDir, "theme.css"), "utf8");
-  assert.match(css, /\.yk-code\s*\{[^}]*white-space:\s*pre\b/);
+  assert.match(css, /\.og-code\s*\{[^}]*white-space:\s*pre\b/);
 });
 
 test("timelines are absolute, non-negative and end inside the window", () => {
@@ -220,7 +220,7 @@ test("pieces are deterministic and default the prefix to the piece name", () => 
 
 test("theme.css has the tokens, no external urls, and states contrast ratios", () => {
   const css = fs.readFileSync(path.join(kitDir, "theme.css"), "utf8");
-  for (const t of ["--yk-yellow", "--yk-orange", "--yk-black", "--yk-text", "--yk-size-title", "--yk-size-body", "--yk-size-code"]) {
+  for (const t of ["--og-yellow", "--og-orange", "--og-black", "--og-text", "--og-size-title", "--og-size-body", "--og-size-code"]) {
     assert.ok(css.includes(t + ":"), t);
   }
   assert.doesNotMatch(css, /url\(|@import|https?:/);
@@ -255,5 +255,5 @@ test("code-card refuses a 200-character line and says to quote a shorter part, n
 
 test("code-card keeps tabs 4 columns wide on screen, matching the count", () => {
   const css = fs.readFileSync(path.join(kitDir, "theme.css"), "utf8");
-  assert.match(css, /\.yk-code \{[^}]*tab-size: 4;/);
+  assert.match(css, /\.og-code \{[^}]*tab-size: 4;/);
 });

@@ -4,7 +4,7 @@
 `gsap@3.14.2` (tarball integrity `sha512-P8/mMxVLU7o4+55+1TCnQrPmgjPKnwkzkXOK1asnR9Jg2lna4tEY5qBJjMmAaOBDDZWtlRjBXjLa0w53G/uBLA==`).
 Its sha256 is pinned in `tests/chapter.test.cjs`.
 
-`yap narrate` copies it into each chapter folder, and the chapter's `index.html` loads it from there
+`oldguy narrate` copies it into each chapter folder, and the chapter's `index.html` loads it from there
 (`<script src="gsap.min.js">`), so checking and rendering a chapter need no network. Before this, the page loaded it
 from `cdn.jsdelivr.net`, which failed wherever that host is blocked. It is a separate file rather than inlined
 because the Hyperframes lint scans inline scripts and flags GSAP's own `Math.random()` and `Date.now()`.

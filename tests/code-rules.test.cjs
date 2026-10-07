@@ -7,7 +7,7 @@ const path = require('node:path');
 
 const ROOT = path.join(__dirname, '..');
 
-// The lib files that import no other Yap module and are therefore converted first.
+// The lib files that import no other oldguy module and are therefore converted first.
 const LEAF_LIB = [
   'sentences', 'wav', 'beats', 'captions', 'build-record', 'render-schedule', 'audit',
   'hyperframes', 'data-dir', 'ask-server', 'http-guard', 'poster', 'sse',
@@ -29,7 +29,7 @@ test('the domain modules and the whole server folder are TypeScript, not .cjs', 
 });
 
 test('only the plain-JavaScript start files and the Node-floor file are .cjs under the source folders', () => {
-  const allowed = new Set(['bin/yap.cjs', 'hooks/session-start.cjs', 'hooks/session-end.cjs', 'lib/node-floor.cjs']);
+  const allowed = new Set(['bin/oldguy.cjs', 'hooks/session-start.cjs', 'hooks/session-end.cjs', 'lib/node-floor.cjs']);
   const found = [];
   for (const dir of ['bin', 'cli', 'hooks', 'lib', 'server', 'scene-kit']) {
     for (const f of fs.readdirSync(path.join(ROOT, dir))) if (f.endsWith('.cjs')) found.push(`${dir}/${f}`);

@@ -13,7 +13,7 @@ const INDEX = Buffer.from('<!doctype html><title>player</title><div id="root"></
 
 // A temp slug folder ("demo", title "Demo") with the given chapter ids, a temp player folder, and a started server.
 async function setup(t, { chapters = [], assets = {}, index = null } = {}) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-player-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-player-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const slugDir = path.join(root, 'demo');
   fs.mkdirSync(path.join(slugDir, 'chapters'), { recursive: true });
@@ -32,7 +32,7 @@ async function setup(t, { chapters = [], assets = {}, index = null } = {}) {
 function get(srv, url, { noKey = false } = {}) {
   return new Promise((resolve, reject) => {
     const headers = { host: `127.0.0.1:${srv.port}` };
-    if (!noKey) headers['x-yap-key'] = srv.key;
+    if (!noKey) headers['x-oldguy-key'] = srv.key;
     const r = http.request({ host: '127.0.0.1', port: srv.port, method: 'GET', path: url, agent: false, headers }, (res) => {
       const chunks = [];
       res.on('data', (c) => chunks.push(c));
@@ -51,7 +51,7 @@ function raw(srv, target) {
     s.on('data', (c) => { d += c; });
     s.on('close', () => resolve(d));
     s.on('error', () => resolve(d));
-    s.write(`GET ${target} HTTP/1.1\r\nHost: 127.0.0.1:${srv.port}\r\nx-yap-key: ${srv.key}\r\nConnection: close\r\n\r\n`);
+    s.write(`GET ${target} HTTP/1.1\r\nHost: 127.0.0.1:${srv.port}\r\nx-oldguy-key: ${srv.key}\r\nConnection: close\r\n\r\n`);
   });
 }
 const statusOf = (answer) => Number(/^HTTP\/1\.1 (\d+)/.exec(answer)?.[1]);
@@ -71,7 +71,7 @@ test('GET / with index.html returns its exact bytes; ?key= still redirects with 
   assert.deepEqual(r.body, INDEX);
   const k = await get(srv, `/?key=${srv.key}`);
   assert.equal(k.status, 302);
-  assert.match(k.headers['set-cookie'][0], new RegExp(`yap_key_${srv.port}=${srv.key}`));
+  assert.match(k.headers['set-cookie'][0], new RegExp(`oldguy_key_${srv.port}=${srv.key}`));
   assert.equal(k.headers.location, '/');
 });
 

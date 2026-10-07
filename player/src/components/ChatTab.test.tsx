@@ -66,9 +66,9 @@ describe('thread', () => {
   it('viewer entries are yellow bubbles, claude entries white cards', async () => {
     await setup([viewer('v1', 'hello?'), claude('c1', 'hi there')]);
     expect(screen.getByText('hello?').closest('[data-role]')).toHaveAttribute('data-role', 'viewer');
-    expect(screen.getByText('hello?').className).toMatch(/bg-yk-yellow/);
+    expect(screen.getByText('hello?').className).toMatch(/bg-og-yellow/);
     expect(screen.getByText('hi there').closest('[data-role]')).toHaveAttribute('data-role', 'claude');
-    expect(screen.getByText('hi there').parentElement?.className).toMatch(/bg-yk-white/);
+    expect(screen.getByText('hi there').parentElement?.className).toMatch(/bg-og-white/);
   });
 
   it('claude sources render as file:lines chips', async () => {
@@ -183,7 +183,7 @@ describe('composer', () => {
     await user.type(box, 'keep me');
     await user.click(screen.getByRole('button', { name: 'Ask' }));
     const err = await screen.findByText('Server said no');
-    expect(err.className).toMatch(/bg-yk-red/);
+    expect(err.className).toMatch(/bg-og-red/);
     expect(box).toHaveValue('keep me');
     expect(screen.getByRole('button', { name: 'Ask' })).toBeEnabled();
   });

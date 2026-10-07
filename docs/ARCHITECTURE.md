@@ -1,6 +1,6 @@
 # Architecture
 
-Yap is a Claude Code plugin. Claude follows the skill in `skills/yap/` and runs the `yap` command for the steps that must be exact (checking claims, timing narration, rendering, serving the finished chapters). This note says how the code is laid out and the rules that keep it that way. `tests/code-rules.test.cjs` enforces most of them.
+oldguy is a Claude Code plugin. Claude follows the skill in `skills/oldguy/` and runs the `oldguy` command for the steps that must be exact (checking claims, timing narration, rendering, serving the finished chapters). This note says how the code is laid out and the rules that keep it that way. `tests/code-rules.test.cjs` enforces most of them.
 
 ## Layers
 
@@ -11,8 +11,8 @@ Each folder may import only from the folders in its row (and from itself). A lay
 | `scene-kit/` | The small HTML/animation pieces a chapter is drawn from | itself |
 | `lib/` | Pure and domain modules: the chapter folder, manifest, events, audit, narration, rendering, export, the doctor | `scene-kit/` |
 | `server/` | The local web server (guard, routes, live stream, watcher glue) | `lib/`, `scene-kit/` |
-| `cli/` | One adapter per `yap` command: reads arguments, calls the modules, prints one result | `lib/`, `server/` |
-| `bin/`, `hooks/` | Start files: the `yap` command and the SessionStart hook | `cli/`, `lib/` |
+| `cli/` | One adapter per `oldguy` command: reads arguments, calls the modules, prints one result | `lib/`, `server/` |
+| `bin/`, `hooks/` | Start files: the `oldguy` command and the SessionStart hook | `cli/`, `lib/` |
 
 No two files import each other in a loop (a loop breaks loading an ES module from the `.cjs` tests).
 
@@ -21,9 +21,9 @@ No two files import each other in a loop (a loop breaks loading an ES module fro
 - All program code is TypeScript in ES modules (`.mts`). Node 22.18 or newer runs it directly by stripping the types; nothing is built or compiled. `typescript` is a dev tool only (`npm run check` runs `tsc --noEmit`, and `npm test` runs it first).
 - Only erasable TypeScript syntax is allowed (no `enum`, `namespace`, constructor parameter properties). No `any`, no `@ts-ignore`; a `@ts-expect-error` needs a reason on the same line. Parsed JSON is `unknown` and is narrowed by a check, not cast.
 - Imports name their extension (`./x.mts`). Type-only imports use `import type`.
-- Three files stay plain JavaScript (`.cjs`) because they must run on any Node: `bin/yap.cjs`, `hooks/session-start.cjs` and `lib/node-floor.cjs` (its types are in `lib/node-floor.d.cts`). The first two are launchers: they check the Node version and, if it is too old, print one plain sentence (`yap` exits 1, the hook exits 0 so a session still starts), then load the `.mts` file next to them. Every path the skill, the hooks, the tests and the child processes use points at the launchers and never changes.
+- Three files stay plain JavaScript (`.cjs`) because they must run on any Node: `bin/oldguy.cjs`, `hooks/session-start.cjs` and `lib/node-floor.cjs` (its types are in `lib/node-floor.d.cts`). The first two are launchers: they check the Node version and, if it is too old, print one plain sentence (`oldguy` exits 1, the hook exits 0 so a session still starts), then load the `.mts` file next to them. Every path the skill, the hooks, the tests and the child processes use points at the launchers and never changes.
 - Tests are `.cjs` files in `tests/` (flat, named `*.test.cjs`) and load the `.mts` modules with `require()`.
-- The Node floor is 22.18 because that is the first release that runs TypeScript with no flag and no warning. `yap doctor` checks it too.
+- The Node floor is 22.18 because that is the first release that runs TypeScript with no flag and no warning. `oldguy doctor` checks it too.
 
 ## Data shapes
 
@@ -45,7 +45,7 @@ The shapes other code depends on are exported as types from the module that owns
 - Comments say what a function does and why, in plain words, above every function and every non-obvious step.
 - Small files with one job; named exports only.
 - No runtime dependencies in any source folder. Only Node's own modules. The one vendored file, `scene-kit/vendor/gsap.min.js`, is not imported by the program: narrate copies it into each chapter folder for the page (see `scene-kit/vendor/README.md`).
-- No talk of what running Yap costs in any file the user can see.
+- No talk of what running oldguy costs in any file the user can see.
 
 ## How to add
 
@@ -53,7 +53,7 @@ The shapes other code depends on are exported as types from the module that owns
 
 **A route:** write the handler in `server/` taking a `RouteContext`, check every field of the body before using it, add a row to `API_ROUTES` in `server/api.mts` and its request and response types to the same file, and add tests that start a real server on port 0 (see `tests/server-api.test.cjs`). Every route sits behind the guard in `lib/http-guard.mts`; a new route needs nothing extra for that.
 
-**A command:** create `cli/<name>.mts` exporting a `run...` function that takes the argument list and returns the exit code (print one result line; send problems to stderr), add a row to the table in `bin/yap.mts`, and describe it in `skills/yap/SKILL.md` (the skill lint checks that every `yap <command>` it mentions exists).
+**A command:** create `cli/<name>.mts` exporting a `run...` function that takes the argument list and returns the exit code (print one result line; send problems to stderr), add a row to the table in `bin/oldguy.mts`, and describe it in `skills/oldguy/SKILL.md` (the skill lint checks that every `oldguy <command>` it mentions exists).
 
 ## Checks
 

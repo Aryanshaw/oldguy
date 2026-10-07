@@ -46,6 +46,8 @@ function writeChapter(ffmpeg, slugDir, spec) {
   fs.mkdirSync(dir, { recursive: true });
   makeClip(ffmpeg, path.join(dir, 'chapter.mp4'), spec.hz);
   makeWav(ffmpeg, path.join(dir, 'narration.wav'));
+  // chapters load GSAP from their own folder, and the build record fingerprints it (record version 3)
+  fs.copyFileSync(path.join(__dirname, '..', '..', 'scene-kit', 'vendor', 'gsap.min.js'), path.join(dir, 'gsap.min.js'));
   const text = `${spec.title} caption line.`;
   const chapter = {
     id: spec.id, title: spec.title,
@@ -72,10 +74,10 @@ async function startFixture() {
   const ffmpeg = findTool('ffmpeg', 'HYPERFRAMES_FFMPEG_PATH');
   if (!ffmpeg) throw new Error('ffmpeg is needed for the end-to-end test');
   process.env.HYPERFRAMES_FFMPEG_PATH = ffmpeg; // the server's poster and export steps use it
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-e2e-'));
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-e2e-'));
   let srv = null;
   try {
-    const slugDir = path.join(tmp, 'proj', '.yap', 'demo');
+    const slugDir = path.join(tmp, 'proj', '.oldguy', 'demo');
     fs.mkdirSync(path.join(slugDir, 'chapters'), { recursive: true });
     fs.writeFileSync(path.join(slugDir, 'script.md'), '# Demo\n\nA synthetic script for the end-to-end test.\n');
     fs.writeFileSync(path.join(slugDir, 'sources.json'), '[]\n');

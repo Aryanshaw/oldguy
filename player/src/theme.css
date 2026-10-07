@@ -6,58 +6,58 @@
 @import "@fontsource/archivo/latin-900.css";
 
 @theme {
-  --color-yk-yellow: #F6C945;
-  --color-yk-orange: #FF8A1F;
-  --color-yk-black: #14110A;
-  --color-yk-cream: #FFF1CC;
-  --color-yk-white: #FFFFFF;
-  --color-yk-red: #FF6B57;
+  --color-og-yellow: #F6C945;
+  --color-og-orange: #FF8A1F;
+  --color-og-black: #14110A;
+  --color-og-cream: #FFF1CC;
+  --color-og-white: #FFFFFF;
+  --color-og-red: #FF6B57;
   --font-sans: "Archivo", system-ui, sans-serif;
 }
 
 @utility bd {
-  border: 3px solid var(--color-yk-black);
+  border: 3px solid var(--color-og-black);
 }
 @utility sh {
-  box-shadow: 4px 4px 0 var(--color-yk-black);
+  box-shadow: 4px 4px 0 var(--color-og-black);
 }
 @utility sh-lg {
-  box-shadow: 8px 8px 0 var(--color-yk-black);
+  box-shadow: 8px 8px 0 var(--color-og-black);
 }
 
 body {
   margin: 0;
-  background: var(--color-yk-cream);
-  color: var(--color-yk-black);
+  background: var(--color-og-cream);
+  color: var(--color-og-black);
   font-family: var(--font-sans);
 }
 
-@keyframes yk-stripe-move {
+@keyframes og-stripe-move {
   to {
     background-position: -22.6px 0;
   }
 }
-.yk-stripes {
+.og-stripes {
   background: repeating-linear-gradient(-45deg, #ff8a1f 0 8px, #fff1cc 8px 16px);
   background-size: 200% 100%;
-  animation: yk-stripe-move 1.2s linear infinite;
+  animation: og-stripe-move 1.2s linear infinite;
 }
 @media (prefers-reduced-motion: reduce) {
-  .yk-stripes {
+  .og-stripes {
     animation: none;
   }
 }
 
 /* the timeline's horizontal scrollbar, in the page's black-on-cream look */
-.yk-track-scroll {
+.og-track-scroll {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-yk-black) transparent;
+  scrollbar-color: var(--color-og-black) transparent;
 }
-.yk-track-scroll::-webkit-scrollbar {
+.og-track-scroll::-webkit-scrollbar {
   height: 10px;
 }
-.yk-track-scroll::-webkit-scrollbar-thumb {
-  background: var(--color-yk-black);
+.og-track-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-og-black);
   border-radius: 999px;
-  border: 2px solid var(--color-yk-cream);
+  border: 2px solid var(--color-og-cream);
 }

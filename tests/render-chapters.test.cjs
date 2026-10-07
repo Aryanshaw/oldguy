@@ -17,7 +17,7 @@ const CLAIM = { text: 'It calls start.', kind: 'claim', source_ids: ['s1'] };
 
 // Makes a repo with app.js and an empty chapters folder, both removed after the test.
 function workspace(t) {
-  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-render-'));
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-render-'));
   t.after(() => fs.rmSync(base, { recursive: true, force: true }));
   const repo = path.join(base, 'repo');
   fs.mkdirSync(repo);
@@ -95,7 +95,7 @@ test('a chapter with no index.html is failed as not narrated and not rendered', 
   const { render, calls } = fakeRender();
   const results = await renderChapters(chapters, { root: repo, check: passCheck, cap: 1, render });
   assert.deepEqual(calls, []);
-  assert.deepEqual(results, [{ id: 'draft', status: 'failed', reason: 'not narrated yet (no index.html); run yap narrate first' }]);
+  assert.deepEqual(results, [{ id: 'draft', status: 'failed', reason: 'not narrated yet (no index.html); run oldguy narrate first' }]);
 });
 
 test('an unreadable chapter.json is failed with the reason, the others still render', async (t) => {
@@ -367,10 +367,10 @@ test('layout check: a failing check blocks the render, keeps the old video, and 
   const { repo, chapters } = workspace(t);
   const dir = addChapter(chapters, 'a');
   fs.writeFileSync(path.join(dir, 'chapter.mp4'), 'old video');
-  const { check, dirs } = fakeCheck({ code: 1, stdout: '\n  clipped_text: .yk-code overflows\nmore detail\n', stderr: 'later' });
+  const { check, dirs } = fakeCheck({ code: 1, stdout: '\n  clipped_text: .og-code overflows\nmore detail\n', stderr: 'later' });
   const { render, calls } = fakeRender();
   const [result] = await renderChapters(chapters, { root: repo, cap: 1, render, check });
-  assert.deepEqual(result, { id: 'a', status: 'failed', reason: 'layout check failed: clipped_text: .yk-code overflows' });
+  assert.deepEqual(result, { id: 'a', status: 'failed', reason: 'layout check failed: clipped_text: .og-code overflows' });
   assert.deepEqual(calls, []);
   assert.deepEqual(dirs, [dir]);
   assert.equal(fs.readFileSync(path.join(dir, 'chapter.mp4'), 'utf8'), 'old video');

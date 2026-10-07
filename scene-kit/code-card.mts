@@ -29,8 +29,8 @@ function readLine(line: unknown, i: number): CodeLine {
 
 // Write one line row; highlighted rows carry both a class and a data attribute.
 function lineHtml(l: CodeLine): string {
-  const mark = l.highlight ? ' yk-hl" data-highlight="true' : "";
-  return `<div class="yk-line${mark}"><span class="yk-no">${k.esc(l.no)}</span><span class="yk-code">${k.esc(l.text)}</span></div>`;
+  const mark = l.highlight ? ' og-hl" data-highlight="true' : "";
+  return `<div class="og-line${mark}"><span class="og-no">${k.esc(l.no)}</span><span class="og-code">${k.esc(l.text)}</span></div>`;
 }
 
 // A file name header over code lines that appear in order, then the highlighted ones pop.
@@ -44,17 +44,17 @@ function render(params: unknown, opts: unknown): Rendered {
   const t = k.plan(win);
 
   const html =
-    `<div id="${id}-root" class="yk-piece yk-code-card"><div class="yk-card">` +
-    `<div class="yk-file yk-wrap">${k.esc(file)}</div>` +
-    `<div id="${id}-lines" class="yk-lines">${lines.map(lineHtml).join("")}</div></div></div>`;
+    `<div id="${id}-root" class="og-piece og-code-card"><div class="og-card">` +
+    `<div class="og-file og-wrap">${k.esc(file)}</div>` +
+    `<div id="${id}-lines" class="og-lines">${lines.map(lineHtml).join("")}</div></div></div>`;
 
   const { durMs, staggerMs } = k.spread(Math.max(lines.length, 1), t.bodySpan);
   const tl = k.frameTweens(id, win, t);
-  tl.push(k.tween("from", `#${id}-root .yk-line`, k.vars("opacity: 0, xPercent: -4", durMs, staggerMs), t.bodyStart));
+  tl.push(k.tween("from", `#${id}-root .og-line`, k.vars("opacity: 0, xPercent: -4", durMs, staggerMs), t.bodyStart));
   // highlighted lines pop once every line is in, as a single tween (no stagger, so the end is fixed)
   if (lines.some((l) => l.highlight)) {
     const popAt = t.bodyStart + t.bodySpan;
-    tl.push(k.tween("from", `#${id}-root .yk-hl .yk-code`, k.vars("opacity: 0.35, scale: 1.02", Math.floor(win.durMs / 10)), popAt));
+    tl.push(k.tween("from", `#${id}-root .og-hl .og-code`, k.vars("opacity: 0.35, scale: 1.02", Math.floor(win.durMs / 10)), popAt));
   }
   return { html, ...k.finish(tl, t.endMs) };
 }

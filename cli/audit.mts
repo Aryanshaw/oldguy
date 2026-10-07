@@ -1,4 +1,4 @@
-// The `yap audit <chapter.json> --root <repo>` command: reads a chapter file and prints each failure.
+// The `oldguy audit <chapter.json> --root <repo>` command: reads a chapter file and prints each failure.
 import fs from 'node:fs';
 import { audit } from '../lib/audit.mts';
 import type { AuditSentence, Source } from '../lib/audit.mts';
@@ -28,14 +28,14 @@ function loadChapter(file: string): ChapterFile {
 function runAudit(args: string[]): number {
   const parsed = parseArgs(args);
   if (!parsed) {
-    process.stderr.write('usage: yap audit <chapter.json> --root <repo>\n');
+    process.stderr.write('usage: oldguy audit <chapter.json> --root <repo>\n');
     return 2;
   }
   let chapter: ChapterFile;
   try {
     chapter = loadChapter(parsed.chapter);
   } catch (err) {
-    process.stderr.write(`yap audit: cannot use chapter file ${parsed.chapter}: ${(err as Error).message}\n`);
+    process.stderr.write(`oldguy audit: cannot use chapter file ${parsed.chapter}: ${(err as Error).message}\n`);
     return 2;
   }
   const result = audit({ root: parsed.root, sources: chapter.sources, sentences: chapter.sentences, scene: chapter.scene });

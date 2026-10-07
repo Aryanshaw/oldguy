@@ -49,7 +49,7 @@ const problems: string[] = [];
 
 test.beforeAll(async () => {
   fixture = await startFixture();
-  exportDir = mkdtempSync(join(tmpdir(), 'yap-e2e-export-'));
+  exportDir = mkdtempSync(join(tmpdir(), 'oldguy-e2e-export-'));
 });
 
 test.afterAll(async () => {
@@ -261,6 +261,6 @@ test('the player plays, joins, asks, exports and notices the server stopping', a
     // Console noise from the dead connection is expected from here on.
     page.removeAllListeners('console');
     await fixture.stop();
-    await expect(page.getByText("Yap's server stopped.")).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByText("oldguy's server stopped.")).toBeVisible({ timeout: 60_000 });
   });
 });

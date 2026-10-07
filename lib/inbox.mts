@@ -1,5 +1,5 @@
 // Which viewer events still wait for Claude: every event that has neither a reply nor an ack, oldest first.
-// yap listen prints these, so an event is shown again after a restart until Claude has handled it, and never after.
+// oldguy listen prints these, so an event is shown again after a restart until Claude has handled it, and never after.
 import { readEventsAfter, readThread, readAcks } from './events.mts';
 import type { ViewerEvent } from './events.mts';
 

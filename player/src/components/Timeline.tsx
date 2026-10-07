@@ -20,16 +20,16 @@ export interface TimelineProps {
 type Look = 'played' | 'current' | 'upcoming' | 'rendering' | 'pending' | 'failed' | 'stale';
 
 const BASE =
-  'relative flex h-full w-full min-w-0 items-center gap-[6px] overflow-hidden rounded-[10px] bd px-[10px] text-left text-[12px] font-bold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-yk-orange';
+  'relative flex h-full w-full min-w-0 items-center gap-[6px] overflow-hidden rounded-[10px] bd px-[10px] text-left text-[12px] font-bold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-og-orange';
 
 const LOOK: Record<Look, string> = {
-  played: 'bg-yk-black text-yk-cream cursor-pointer',
-  current: 'bg-yk-white sh -translate-y-1 cursor-pointer',
-  upcoming: 'bg-yk-white cursor-pointer',
-  rendering: 'yk-stripes cursor-not-allowed',
-  pending: 'bg-yk-white border-dashed cursor-not-allowed',
-  failed: 'bg-yk-red cursor-pointer',
-  stale: 'bg-yk-white border-dashed border-[#8a8472] cursor-not-allowed',
+  played: 'bg-og-black text-og-cream cursor-pointer',
+  current: 'bg-og-white sh -translate-y-1 cursor-pointer',
+  upcoming: 'bg-og-white cursor-pointer',
+  rendering: 'og-stripes cursor-not-allowed',
+  pending: 'bg-og-white border-dashed cursor-not-allowed',
+  failed: 'bg-og-red cursor-pointer',
+  stale: 'bg-og-white border-dashed border-[#8a8472] cursor-not-allowed',
 };
 
 const LABEL: Partial<Record<Look, string>> = {
@@ -101,7 +101,7 @@ export function Timeline({ chapters, position, failReasons, broken = [], retried
 
   return (
     <TooltipProvider delayDuration={150}>
-      <div ref={scroller} data-track className="yk-track-scroll overflow-x-auto overflow-y-hidden pb-2">
+      <div ref={scroller} data-track className="og-track-scroll overflow-x-auto overflow-y-hidden pb-2">
         <div role="group" aria-label="Chapters" className="flex w-max min-w-full">
           {items.map(({ chapter: c, weight, start, followUp }, i) => {
             const isBroken = c.status === 'ready' && broken.includes(c.id);
@@ -149,12 +149,12 @@ export function Timeline({ chapters, position, failReasons, broken = [], retried
                 style={{ flexGrow: weight, flexShrink: 0, flexBasis: `${clipWidth(weight)}px` }}
                 className="relative flex flex-col"
               >
-                <div aria-hidden="true" className="relative h-[20px] border-b-2 border-yk-black/25">
+                <div aria-hidden="true" className="relative h-[20px] border-b-2 border-og-black/25">
                   {ticks.map(({ t, at }) => {
                     const major = t % scale.label === 0;
                     return (
                       <span key={t} className="absolute bottom-0" style={{ left: `${at * 100}%` }}>
-                        <span className={cn('absolute bottom-0 w-px bg-yk-black', major ? 'h-[8px]' : 'h-[4px] opacity-40')} />
+                        <span className={cn('absolute bottom-0 w-px bg-og-black', major ? 'h-[8px]' : 'h-[4px] opacity-40')} />
                         {major && (
                           <span className="absolute bottom-[9px] left-[3px] font-mono text-[10px] leading-none font-bold whitespace-nowrap">
                             {fmt(t)}
@@ -184,19 +184,19 @@ export function Timeline({ chapters, position, failReasons, broken = [], retried
                           <span
                             data-fill
                             aria-hidden="true"
-                            className="absolute inset-y-0 left-0 bg-yk-yellow"
+                            className="absolute inset-y-0 left-0 bg-og-yellow"
                             style={{ width: `${fill}%` }}
                           />
                         )}
                         <span className={cn('relative min-w-0 truncate', look === 'stale' && 'line-through')}>{c.title}</span>
                         {draft && (
-                          <span className="relative shrink-0 rounded-[4px] bg-yk-black px-[5px] text-[10px] text-yk-cream">draft</span>
+                          <span className="relative shrink-0 rounded-[4px] bg-og-black px-[5px] text-[10px] text-og-cream">draft</span>
                         )}
                         {(asked || LABEL[look]) && (
                           <span
                             className={cn(
                               'relative ml-auto shrink-0 whitespace-nowrap',
-                              look === 'rendering' && 'rounded-[4px] bg-yk-black px-[6px] py-px text-yk-cream',
+                              look === 'rendering' && 'rounded-[4px] bg-og-black px-[6px] py-px text-og-cream',
                             )}
                           >
                             {asked ? 'retry asked' : LABEL[look]}
@@ -218,10 +218,10 @@ export function Timeline({ chapters, position, failReasons, broken = [], retried
                   <span
                     data-playhead
                     aria-hidden="true"
-                    className="pointer-events-none absolute top-0 bottom-0 z-10 w-[2px] -translate-x-1/2 bg-yk-red"
+                    className="pointer-events-none absolute top-0 bottom-0 z-10 w-[2px] -translate-x-1/2 bg-og-red"
                     style={{ left: `calc(3px + (100% - 6px) * ${fill / 100})` }}
                   >
-                    <span className="absolute -top-px left-1/2 h-[8px] w-[10px] -translate-x-1/2 rounded-b-[3px] bg-yk-red" />
+                    <span className="absolute -top-px left-1/2 h-[8px] w-[10px] -translate-x-1/2 rounded-b-[3px] bg-og-red" />
                   </span>
                 )}
               </div>

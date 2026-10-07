@@ -16,7 +16,7 @@ const BYTES = Buffer.from('0123456789abcdefghijklmnopqrstuvwxyz'); // 36 bytes
 
 // Makes a temp slug folder (named "demo") and removes it when the test ends.
 function tempSlug(t) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-media-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-media-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const slugDir = path.join(root, 'demo');
   fs.mkdirSync(path.join(slugDir, 'chapters'), { recursive: true });
@@ -58,7 +58,7 @@ async function setup(t, rows = [['intro', 'ready']], deps = {}) {
 // One plain HTTP request returning the body as a Buffer.
 function get(srv, url, { method = 'GET', headers = {} } = {}) {
   return new Promise((resolve, reject) => {
-    const r = http.request({ host: '127.0.0.1', port: srv.port, method, path: url, agent: false, headers: { host: `127.0.0.1:${srv.port}`, 'x-yap-key': srv.key, ...headers } }, (res) => {
+    const r = http.request({ host: '127.0.0.1', port: srv.port, method, path: url, agent: false, headers: { host: `127.0.0.1:${srv.port}`, 'x-oldguy-key': srv.key, ...headers } }, (res) => {
       const chunks = [];
       res.on('data', (c) => chunks.push(c));
       res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body: Buffer.concat(chunks) }));
@@ -76,7 +76,7 @@ function raw(srv, target) {
     s.on('data', (c) => { d += c; });
     s.on('close', () => resolve(d));
     s.on('error', () => resolve(d));
-    s.write(`GET ${target} HTTP/1.1\r\nHost: 127.0.0.1:${srv.port}\r\nx-yap-key: ${srv.key}\r\nConnection: close\r\n\r\n`);
+    s.write(`GET ${target} HTTP/1.1\r\nHost: 127.0.0.1:${srv.port}\r\nx-oldguy-key: ${srv.key}\r\nConnection: close\r\n\r\n`);
   });
 }
 
@@ -207,7 +207,7 @@ test('a client that hangs up mid-video does not stop the server', async (t) => {
   fs.writeFileSync(path.join(slugDir, 'chapters', 'intro', 'chapter.mp4'), Buffer.alloc(30 * 1024 * 1024, 1));
   await new Promise((resolve) => {
     const s = net.connect(srv.port, '127.0.0.1', () => {
-      s.write(`GET /chapters/intro/video HTTP/1.1\r\nHost: 127.0.0.1:${srv.port}\r\nx-yap-key: ${srv.key}\r\n\r\n`);
+      s.write(`GET /chapters/intro/video HTTP/1.1\r\nHost: 127.0.0.1:${srv.port}\r\nx-oldguy-key: ${srv.key}\r\n\r\n`);
     });
     s.on('error', () => {});
     s.once('data', () => { s.destroy(); resolve(); });
@@ -234,7 +234,7 @@ test('a read stream that fails after the headers ends the response and the serve
   };
   const { srv } = await setup(t, [['intro', 'ready']], { createReadStream: failing });
   const outcome = await new Promise((resolve) => {
-    const r = http.request({ host: '127.0.0.1', port: srv.port, path: '/chapters/intro/video', agent: false, headers: { host: `127.0.0.1:${srv.port}`, 'x-yap-key': srv.key } }, (res) => {
+    const r = http.request({ host: '127.0.0.1', port: srv.port, path: '/chapters/intro/video', agent: false, headers: { host: `127.0.0.1:${srv.port}`, 'x-oldguy-key': srv.key } }, (res) => {
       res.on('data', () => {});
       res.on('end', () => resolve('end'));
       res.on('error', () => resolve('error'));
@@ -299,7 +299,7 @@ test('a file that really shrinks mid-response breaks the connection within a sec
   fs.writeFileSync(mp4, Buffer.alloc(40 * 1024 * 1024, 7));
   const closed = await new Promise((resolve, reject) => {
     const s = net.connect(srv.port, '127.0.0.1', () => {
-      s.write(`GET /chapters/intro/video HTTP/1.1\r\nHost: 127.0.0.1:${srv.port}\r\nx-yap-key: ${srv.key}\r\nConnection: keep-alive\r\n\r\n`);
+      s.write(`GET /chapters/intro/video HTTP/1.1\r\nHost: 127.0.0.1:${srv.port}\r\nx-oldguy-key: ${srv.key}\r\nConnection: keep-alive\r\n\r\n`);
     });
     s.on('error', () => {});
     // Hold the client back after the first bytes so the server's stream has not reached the end yet, then shrink the file.
@@ -348,7 +348,7 @@ async function hangUpStorm(t, count) {
   for (let i = 0; i < count; i++) {
     const s = net.connect(info.port, '127.0.0.1');
     s.on('error', () => {});
-    s.write(`GET /chapters/intro/video HTTP/1.1\r\nHost: 127.0.0.1:${info.port}\r\nx-yap-key: ${info.key}\r\n\r\n`);
+    s.write(`GET /chapters/intro/video HTTP/1.1\r\nHost: 127.0.0.1:${info.port}\r\nx-oldguy-key: ${info.key}\r\n\r\n`);
     s.end();
   }
   await new Promise((r) => setTimeout(r, 500));

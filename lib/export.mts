@@ -217,12 +217,12 @@ async function exportVideo({ manifest, slugDir, destDir, ffmpeg = 'ffmpeg', exec
   }
   const text = listText(included.map((c) => c.file));
   const base = fs.realpathSync(destDir);
-  const listDir = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-export-'));
+  const listDir = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-export-'));
   // ffmpeg writes into a fresh private folder (mode 0700) inside the chosen folder, so no existing name is ever followed.
   let work: string | null = null;
   try {
     try {
-      work = fs.mkdtempSync(path.join(base, '.yap-export-'));
+      work = fs.mkdtempSync(path.join(base, '.oldguy-export-'));
     } catch (err) {
       if (err && ['EACCES', 'EROFS', 'EPERM'].includes(String(codeOf(err)))) throw httpError(409, 'cannot write into that folder');
       throw err;
@@ -241,7 +241,7 @@ async function exportVideo({ manifest, slugDir, destDir, ffmpeg = 'ffmpeg', exec
 }
 
 // Checks the folder the viewer chose. It must be text, an absolute path without "..", an existing real folder (not a link),
-// and not the project's .yap folder (the parent of slugDir) or anything inside it. Throws a 400 whose message never shows the path.
+// and not the project's .oldguy folder (the parent of slugDir) or anything inside it. Throws a 400 whose message never shows the path.
 function checkDest(dest: unknown, slugDir: string): string {
   if (typeof dest !== 'string' || dest === '') throw httpError(400, 'dest must be a folder path');
   if (dest.includes('\0')) throw httpError(400, 'dest must be a folder path');
@@ -256,8 +256,8 @@ function checkDest(dest: unknown, slugDir: string): string {
   } catch {
     throw httpError(400, 'dest must be an existing folder (not a link)');
   }
-  const yapDir = fs.realpathSync(path.dirname(slugDir));
-  if (!leavesFolder(path.relative(yapDir, real))) throw httpError(400, 'dest must not be the project .yap folder or inside it');
+  const oldguyDir = fs.realpathSync(path.dirname(slugDir));
+  if (!leavesFolder(path.relative(oldguyDir, real))) throw httpError(400, 'dest must not be the project .oldguy folder or inside it');
   return real;
 }
 

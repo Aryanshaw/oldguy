@@ -14,7 +14,7 @@ function fakeReq({ method = 'GET', url = '/', headers = {} } = {}) {
 const guard = createGuard({ key: KEY, port: PORT });
 
 test('no key, wrong key and wrong-length key are refused with 403', () => {
-  for (const req of [fakeReq(), fakeReq({ url: '/?key=nope' }), fakeReq({ headers: { 'x-yap-key': 'b'.repeat(32) } }), fakeReq({ headers: { 'x-yap-key': 'short' } })]) {
+  for (const req of [fakeReq(), fakeReq({ url: '/?key=nope' }), fakeReq({ headers: { 'x-oldguy-key': 'b'.repeat(32) } }), fakeReq({ headers: { 'x-oldguy-key': 'short' } })]) {
     const r = guard.check(req);
     assert.equal(r.ok, false);
     assert.equal(r.status, 403);
@@ -22,31 +22,31 @@ test('no key, wrong key and wrong-length key are refused with 403', () => {
 });
 
 test('the key is accepted from the header, the cookie and the query', () => {
-  assert.equal(guard.check(fakeReq({ headers: { 'x-yap-key': KEY } })).ok, true);
-  assert.equal(guard.check(fakeReq({ headers: { cookie: `other=1; yap_key_${PORT}=${KEY}` } })).ok, true);
+  assert.equal(guard.check(fakeReq({ headers: { 'x-oldguy-key': KEY } })).ok, true);
+  assert.equal(guard.check(fakeReq({ headers: { cookie: `other=1; oldguy_key_${PORT}=${KEY}` } })).ok, true);
   // A cookie without the port in its name, or for another port, is ignored.
-  assert.equal(guard.check(fakeReq({ headers: { cookie: `yap_key=${KEY}` } })).ok, false);
-  assert.equal(guard.check(fakeReq({ headers: { cookie: `yap_key_${PORT + 1}=${KEY}` } })).ok, false);
+  assert.equal(guard.check(fakeReq({ headers: { cookie: `oldguy_key=${KEY}` } })).ok, false);
+  assert.equal(guard.check(fakeReq({ headers: { cookie: `oldguy_key_${PORT + 1}=${KEY}` } })).ok, false);
   assert.equal(guard.check(fakeReq({ url: `/?key=${KEY}` })).ok, true);
 });
 
 test('Host must be exactly 127.0.0.1:port or localhost:port, and is checked before the key', () => {
-  const withKey = (host) => fakeReq({ headers: { 'x-yap-key': KEY, host } });
+  const withKey = (host) => fakeReq({ headers: { 'x-oldguy-key': KEY, host } });
   assert.equal(guard.check(withKey(`127.0.0.1:${PORT}`)).ok, true);
   assert.equal(guard.check(withKey(`localhost:${PORT}`)).ok, true);
   assert.equal(guard.check(withKey(`LOCALHOST:${PORT}`)).ok, true);
   for (const bad of ['evil.example', `evil.example:${PORT}`, '127.0.0.1', `127.0.0.1:${PORT + 1}`, `127.0.0.1:${PORT}.evil.example`, `[::1]:${PORT}`]) {
     assert.equal(guard.check(withKey(bad)).status, 403, bad);
   }
-  assert.equal(guard.check({ method: 'GET', url: '/', headers: { 'x-yap-key': KEY } }).status, 403, 'missing Host');
+  assert.equal(guard.check({ method: 'GET', url: '/', headers: { 'x-oldguy-key': KEY } }).status, 403, 'missing Host');
   // A bad Host with a bad key gives the same answer as a bad Host with a good key.
   const a = guard.check(fakeReq({ headers: { host: 'evil.example' } }));
-  const b = guard.check(fakeReq({ headers: { host: 'evil.example', 'x-yap-key': KEY } }));
+  const b = guard.check(fakeReq({ headers: { host: 'evil.example', 'x-oldguy-key': KEY } }));
   assert.deepEqual(a, b);
 });
 
 test('POST needs an absent or own Origin; null and foreign origins are refused', () => {
-  const post = (origin) => fakeReq({ method: 'POST', headers: { 'x-yap-key': KEY, ...(origin === undefined ? {} : { origin }) } });
+  const post = (origin) => fakeReq({ method: 'POST', headers: { 'x-oldguy-key': KEY, ...(origin === undefined ? {} : { origin }) } });
   assert.equal(guard.check(post(undefined)).ok, true);
   assert.equal(guard.check(post(`http://127.0.0.1:${PORT}`)).ok, true);
   assert.equal(guard.check(post(`http://localhost:${PORT}`)).ok, true);
@@ -54,7 +54,7 @@ test('POST needs an absent or own Origin; null and foreign origins are refused',
     assert.equal(guard.check(post(bad)).status, 403, bad);
   }
   // A foreign Origin on GET does not matter.
-  assert.equal(guard.check(fakeReq({ headers: { 'x-yap-key': KEY, origin: 'https://evil.example' } })).ok, true);
+  assert.equal(guard.check(fakeReq({ headers: { 'x-oldguy-key': KEY, origin: 'https://evil.example' } })).ok, true);
 });
 
 // Starts a tiny server whose handler reads a JSON body and answers with the result or the error status.
@@ -141,7 +141,7 @@ test('a request target the URL parser rejects is refused, never thrown (guard un
     assert.equal(r.status, 403, String(url));
   }
   assert.equal(guard.check({ method: 'GET', url: '/', headers: null }).status, 403);
-  assert.equal(guard.check({ method: 'GET', url: '/', headers: { host: `127.0.0.1:${PORT}`, cookie: 7, 'x-yap-key': ['a'] } }).status, 403);
+  assert.equal(guard.check({ method: 'GET', url: '/', headers: { host: `127.0.0.1:${PORT}`, cookie: 7, 'x-oldguy-key': ['a'] } }).status, 403);
 });
 
 // Sends raw bytes to the port and resolves with {head, closed}: the status line (or '') and whether the server closed the socket.

@@ -1,4 +1,4 @@
-// The one way yap's own commands talk to the local server: plain http to 127.0.0.1 with the session key.
+// The one way oldguy's own commands talk to the local server: plain http to 127.0.0.1 with the session key.
 import http from 'node:http';
 
 // What askServer takes: where the server is, the session key, and the request to make.
@@ -46,7 +46,7 @@ function pidAlive(pid: number): boolean {
 function askServer({ port, key, method = 'GET', path, body, timeoutMs, maxBytes }: AskOptions): Promise<AskResult> {
   return new Promise((resolve) => {
     const payload = body === undefined ? undefined : JSON.stringify(body);
-    const headers: Record<string, string | number> = { host: `127.0.0.1:${port}`, 'x-yap-key': key };
+    const headers: Record<string, string | number> = { host: `127.0.0.1:${port}`, 'x-oldguy-key': key };
     if (payload !== undefined) { headers['content-type'] = 'application/json'; headers['content-length'] = Buffer.byteLength(payload); }
     let req: http.ClientRequest | undefined;
     let timer: ReturnType<typeof setTimeout> | undefined;

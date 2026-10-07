@@ -21,7 +21,7 @@ function sample() {
 const ids = (m) => m.chapters.map((c) => c.id);
 // Makes a temp folder and removes it after the test body.
 function withTmp(fn) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-manifest-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-manifest-'));
   try { return fn(dir); } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 }
 

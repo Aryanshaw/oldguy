@@ -89,7 +89,7 @@ describe('App', () => {
   it('a 403 shows the expired-link text', async () => {
     const { store } = make(Object.assign(new Error('x'), { status: 403 }));
     render(<App store={store} />);
-    expect(await screen.findByText('This link has expired. Open the link printed by Yap again.')).toBeInTheDocument();
+    expect(await screen.findByText('This link has expired. Open the link printed by oldguy again.')).toBeInTheDocument();
   });
   it('always shows the side panel, with no collapse button', async () => {
     const { store } = make(state([]));

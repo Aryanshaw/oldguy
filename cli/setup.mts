@@ -1,4 +1,4 @@
-// The `yap setup [--install <items>] [--json] [--data-dir <dir>]` command. Without --install it only prints the plan:
+// The `oldguy setup [--install <items>] [--json] [--data-dir <dir>]` command. Without --install it only prints the plan:
 // what is missing, how big it is, and the exact programs each item runs. With --install it runs only the named items,
 // then the doctor again. Nothing is installed unless the user agreed to that item.
 import realFs from 'node:fs';
@@ -11,12 +11,12 @@ import { planSetup, pickItems, runItems, stepLine } from '../lib/setup.mts';
 import type { DoctorCliDeps } from './doctor.mts';
 import type { SetupPlan } from '../lib/setup.mts';
 
-const USAGE = 'usage: yap setup [--install <item,item>] [--json] [--data-dir <dir>]';
+const USAGE = 'usage: oldguy setup [--install <item,item>] [--json] [--data-dir <dir>]';
 
 // Everything setup reaches outside itself for; tests pass a pretend machine.
 type SetupCliDeps = DoctorCliDeps & { platform: string; tmpDir: string; writeFile: (file: string, text: string) => void };
 
-// The machine yap really runs on.
+// The machine oldguy really runs on.
 function realDeps(): SetupCliDeps {
   return {
     exec: realExec, fs: realFs, os: realOs, env: process.env, nodeVersion: process.version, cwd: process.cwd(),
@@ -28,19 +28,19 @@ function realDeps(): SetupCliDeps {
 
 // The plan as text for the user: each item with its size and steps, then the manual ones, then the command to run.
 function formatPlan(plan: SetupPlan): string {
-  if (!plan.items.length && !plan.manual.length) return 'Everything Yap needs is installed.\n';
+  if (!plan.items.length && !plan.manual.length) return 'Everything oldguy needs is installed.\n';
   const out: string[] = [];
   if (plan.items.length) {
-    out.push('Yap can install these. Nothing is installed until you agree.', '');
+    out.push('oldguy can install these. Nothing is installed until you agree.', '');
     for (const item of plan.items) {
       out.push(`  ${item.id.padEnd(9)} ${item.what} (${item.size})`);
       if (item.note) out.push(`            ${item.note}`);
       for (const step of item.steps) out.push(`            runs: ${stepLine(step)}`);
     }
-    out.push('', `To install: yap setup --install ${plan.items.map((i) => i.id).join(',')}  (or name only the ones you want)`);
+    out.push('', `To install: oldguy setup --install ${plan.items.map((i) => i.id).join(',')}  (or name only the ones you want)`);
   }
   if (plan.manual.length) {
-    out.push('', 'Yap cannot install these for you:');
+    out.push('', 'oldguy cannot install these for you:');
     for (const m of plan.manual) out.push(`  ${m.name}${m.required ? '' : ' (optional)'}: ${m.why}`, `     fix: ${m.fix}`);
   }
   return `${out.join('\n')}\n`;
@@ -54,7 +54,7 @@ async function runSetupCli(args: string[], deps: SetupCliDeps = realDeps()): Pro
   try {
     ({ flags } = parseFlags(args.filter((a) => a !== '--json'), ['--data-dir', '--install']));
   } catch (err) {
-    deps.stderr(`yap setup: ${(err as Error).message}\n${USAGE}\n`);
+    deps.stderr(`oldguy setup: ${(err as Error).message}\n${USAGE}\n`);
     return 2;
   }
   // the venv lives in the same data folder the doctor and narrate use
@@ -68,7 +68,7 @@ async function runSetupCli(args: string[], deps: SetupCliDeps = realDeps()): Pro
   try {
     items = pickItems(plan, flags['--install']);
   } catch (err) {
-    deps.stderr(`yap setup: ${(err as Error).message}\n`);
+    deps.stderr(`oldguy setup: ${(err as Error).message}\n`);
     return 2;
   }
   const done = await runItems(items, { exec: deps.exec, writeFile: deps.writeFile, log: (line) => deps.stderr(`${line}\n`) });
@@ -80,7 +80,7 @@ async function runSetupCli(args: string[], deps: SetupCliDeps = realDeps()): Pro
   const ok = checks.every((c) => c.ok || !c.required);
   deps.stdout(formatText(checks));
   if (ok) deps.marker(dataDir);
-  deps.stdout(ok ? 'Setup done: yap doctor passes.\n' : 'Setup finished, but the doctor still fails (see above).\n');
+  deps.stdout(ok ? 'Setup done: oldguy doctor passes.\n' : 'Setup finished, but the doctor still fails (see above).\n');
   return ok ? 0 : 1;
 }
 

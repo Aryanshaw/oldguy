@@ -8,7 +8,7 @@ const { acquireSlot } = require('../lib/slots.mts');
 
 // A fresh slot folder for one test.
 function slotDir(t) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-slots-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-slots-'));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   return dir;
 }

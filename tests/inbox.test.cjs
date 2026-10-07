@@ -9,7 +9,7 @@ const { openEvents } = require('../lib/inbox.mts');
 
 // Makes a temp state folder with the three chat file paths, removed after the test.
 function files(t) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-inbox-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-inbox-'));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   return { eventsFile: path.join(dir, 'events.jsonl'), threadFile: path.join(dir, 'thread.jsonl'), acksFile: path.join(dir, 'acks.jsonl') };
 }

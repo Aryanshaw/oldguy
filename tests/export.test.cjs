@@ -11,7 +11,7 @@ const { newManifest, insertChapter, saveManifest } = require('../lib/manifest.mt
 const { sha256 } = require('../lib/build-record.mts');
 
 const BYTES = Buffer.from('MP4DATA');
-const TEMP_LISTS = () => fs.readdirSync(os.tmpdir()).filter((n) => n.startsWith('yap-export-'));
+const TEMP_LISTS = () => fs.readdirSync(os.tmpdir()).filter((n) => n.startsWith('oldguy-export-'));
 
 // Writes a chapter folder that passes the ready rule (mp4 + build.json + matching render.json).
 function makeChapter(slugDir, id, mp4 = BYTES) {
@@ -24,13 +24,13 @@ function makeChapter(slugDir, id, mp4 = BYTES) {
   fs.writeFileSync(path.join(dir, 'chapter.mp4'), mp4);
   return dir;
 }
-// A project: <root>/.yap/demo (slug folder) plus a separate <root>/out folder to export into.
+// A project: <root>/.oldguy/demo (slug folder) plus a separate <root>/out folder to export into.
 // rows are [id, status, quality?]; every row gets a ready folder unless its status is "pending".
 function project(t, rows, { slugName = 'demo', texts = true } = {}) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-exp-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-exp-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  const yap = path.join(root, '.yap');
-  const slugDir = path.join(yap, slugName);
+  const oldguy = path.join(root, '.oldguy');
+  const slugDir = path.join(oldguy, slugName);
   const destDir = path.join(root, 'out');
   fs.mkdirSync(path.join(slugDir, 'chapters'), { recursive: true });
   fs.mkdirSync(destDir);
@@ -44,7 +44,7 @@ function project(t, rows, { slugName = 'demo', texts = true } = {}) {
     fs.writeFileSync(path.join(slugDir, 'sources.json'), '{"sources":[]}\n');
   }
   saveManifest(path.join(slugDir, 'manifest.json'), manifest);
-  return { root, yap, slugDir, destDir, manifest };
+  return { root, oldguy, slugDir, destDir, manifest };
 }
 // A fake exec: records every call; writes bytes to the last argument, or fails with the given stderr for attempt numbers in `failOn`.
 function fakeExec({ failOn = [], stderr = 'boom\nConversion failed!' } = {}) {
@@ -82,7 +82,7 @@ test('argv is an array with the concat flags, the real ffmpeg name and a temp ou
   assert.deepEqual(args.slice(0, 7), ['-nostdin', '-y', '-f', 'concat', '-safe', '0', '-i']);
   assert.deepEqual(args.slice(8, 12), ['-c', 'copy', '-movflags', '+faststart']);
   assert.equal(path.dirname(path.dirname(args[12])), fs.realpathSync(p.destDir));
-  assert.match(path.basename(path.dirname(args[12])), /^\.yap-export-/);
+  assert.match(path.basename(path.dirname(args[12])), /^\.oldguy-export-/);
   assert.equal(args.length, 13);
 });
 
@@ -90,7 +90,7 @@ test('list file: a path with spaces and a single quote is written exactly, and t
   const p = project(t, [['a', 'ready']]);
   // Move the slug into a folder whose name has spaces and a single quote.
   const odd = path.join(p.root, "it's a folder");
-  fs.renameSync(p.yap, odd);
+  fs.renameSync(p.oldguy, odd);
   const slugDir = path.join(odd, 'demo');
   const before = TEMP_LISTS();
   const f = fakeExec();
@@ -104,7 +104,7 @@ test('list file: a path with spaces and a single quote is written exactly, and t
 test('a chapter path with a line break is refused and nothing runs', async (t) => {
   const p = project(t, [['a', 'ready']]);
   const odd = path.join(p.root, 'line\nbreak');
-  fs.renameSync(p.yap, odd);
+  fs.renameSync(p.oldguy, odd);
   const f = fakeExec();
   await assert.rejects(run(p, { slugDir: path.join(odd, 'demo'), exec: f.exec }), (e) => e.status === 409 && e.message === 'a chapter file path contains a line break, so it cannot be joined');
   assert.equal(f.calls.length, 0);
@@ -217,7 +217,7 @@ async function serve(t, p, deps = {}) {
   const post = (body, { raw } = {}) => new Promise((resolve, reject) => {
     const payload = raw !== undefined ? raw : JSON.stringify(body);
     const r = http.request({ host: '127.0.0.1', port: srv.port, method: 'POST', path: '/api/export', agent: false,
-      headers: { host: `127.0.0.1:${srv.port}`, 'x-yap-key': srv.key, 'content-type': 'application/json' } }, (res) => {
+      headers: { host: `127.0.0.1:${srv.port}`, 'x-oldguy-key': srv.key, 'content-type': 'application/json' } }, (res) => {
       let text = '';
       res.on('data', (c) => { text += c; });
       res.on('end', () => { let json; try { json = JSON.parse(text); } catch { /* not json */ } resolve({ status: res.statusCode, json, text }); });
@@ -279,10 +279,10 @@ test('route: bad dest values are 400 with a one-line message that does not echo 
   fs.writeFileSync(file, 'x');
   const link = path.join(p.root, 'link');
   fs.symlinkSync(p.destDir, link);
-  const inside = path.join(p.yap, 'demo', 'sub');
+  const inside = path.join(p.oldguy, 'demo', 'sub');
   fs.mkdirSync(inside);
   const cases = [
-    'relative/out', 'out', path.join(p.root, 'missing-dir'), file, link, p.yap, p.slugDir, inside,
+    'relative/out', 'out', path.join(p.root, 'missing-dir'), file, link, p.oldguy, p.slugDir, inside,
     p.destDir + '/../out', 42, null, ['x'], undefined, '',
   ];
   for (const dest of cases) {
@@ -338,16 +338,16 @@ test('I-1: an unsafe manifest slug is refused (409): nothing written anywhere, f
     await assert.rejects(run(p, { manifest: { ...p.manifest, slug }, exec: f.exec }), (e) => e.status === 409 && /slug/.test(e.message) && !e.message.includes(p.root), JSON.stringify(slug));
     assert.equal(f.calls.length, 0);
     assert.deepEqual(fs.readdirSync(p.destDir), []);
-    assert.deepEqual(fs.readdirSync(p.root).sort(), ['.yap', 'out']);
+    assert.deepEqual(fs.readdirSync(p.root).sort(), ['.oldguy', 'out']);
   }
 });
 
-test('I-2: a real folder named ..x inside .yap is refused, a sibling named .yapx is accepted', async (t) => {
+test('I-2: a real folder named ..x inside .oldguy is refused, a sibling named .oldguyx is accepted', async (t) => {
   const p = project(t, [['a', 'ready']]);
   const { post } = await serve(t, p, { exec: fakeExec().exec });
-  fs.mkdirSync(path.join(p.yap, '..x'));
-  assert.equal((await post({ dest: path.join(p.yap, '..x'), mode: 'drafts' })).status, 400);
-  const sib = path.join(p.root, '.yapx');
+  fs.mkdirSync(path.join(p.oldguy, '..x'));
+  assert.equal((await post({ dest: path.join(p.oldguy, '..x'), mode: 'drafts' })).status, 400);
+  const sib = path.join(p.root, '.oldguyx');
   fs.mkdirSync(sib);
   const ok = await post({ dest: sib, mode: 'drafts' });
   assert.equal(ok.status, 200, ok.text);
@@ -452,7 +452,7 @@ test('5: an export whose ffmpeg ignores the abort still publishes nothing once s
 test('7: the ffmpeg reason keeps 3/4 intact, drops a real folder name with spaces, and is capped at 200 characters', async (t) => {
   const p = project(t, [['a', 'ready']]);
   const spaced = path.join(p.root, 'My Project');
-  fs.symlinkSync(p.yap, spaced);
+  fs.symlinkSync(p.oldguy, spaced);
   const viaLink = path.join(spaced, 'demo');
   const real = fs.realpathSync(path.join(p.slugDir, 'chapters', 'a', 'chapter.mp4'));
   const reasonOf = async (stderr, slugDir = p.slugDir) => {
@@ -461,7 +461,7 @@ test('7: the ffmpeg reason keeps 3/4 intact, drops a real folder name with space
     return null;
   };
   assert.equal(await reasonOf('frame 3/4 done'), 'ffmpeg failed: frame 3/4 done');
-  const m = await reasonOf(`${path.join(fs.realpathSync(p.yap), 'demo', 'chapters', 'a', 'chapter.mp4')}: bad`, viaLink);
+  const m = await reasonOf(`${path.join(fs.realpathSync(p.oldguy), 'demo', 'chapters', 'a', 'chapter.mp4')}: bad`, viaLink);
   assert.equal(m, 'ffmpeg failed: chapter.mp4: bad');
   assert.ok(real.length > 0 && !m.includes('My Project'));
   const long = await reasonOf('x'.repeat(500));

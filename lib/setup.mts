@@ -1,4 +1,4 @@
-// yap setup: turns what the doctor found missing into install items, each with its size and the exact programs it
+// oldguy setup: turns what the doctor found missing into install items, each with its size and the exact programs it
 // runs, and runs only the items the user agreed to. Things it cannot install safely are listed as manual, with the
 // doctor's fix line. Every outside call is passed in, so tests run nothing real.
 import path from 'node:path';
@@ -13,7 +13,7 @@ type ItemId = (typeof ITEM_IDS)[number];
 type SetupStep = Step | { write: string; text: string };
 // One thing setup offers: what it is, roughly how big, what it runs, and anything the user should know first.
 type SetupItem = { id: ItemId; what: string; size: string; steps: SetupStep[]; note?: string };
-// A problem setup will not touch: the doctor's finding, its fix line, and whether Yap can run without it.
+// A problem setup will not touch: the doctor's finding, its fix line, and whether oldguy can run without it.
 type ManualItem = { name: string; why: string; fix: string; required: boolean };
 type SetupPlan = { items: SetupItem[]; manual: ManualItem[] };
 // The doctor's own dependencies, plus the platform and a scratch folder.
@@ -45,12 +45,12 @@ async function voiceItem(deps: SetupDeps, checks: DoctorCheck[]): Promise<SetupI
     const model = kokoroModelPath(deps.os);
     // a file cut short by an earlier download must go first, or Hyperframes keeps using it
     if (deps.fs.existsSync(model)) steps.push({ cmd: 'rm', args: [model] });
-    const text = path.join(deps.tmpDir, 'yap-setup-voice.txt');
-    steps.push({ write: text, text: 'Hello from Yap.\n' });
-    steps.push({ cmd: 'npx', args: hyperframesArgs(['tts', text, '-o', path.join(deps.tmpDir, 'yap-setup-voice.wav'), '--json']), env: { HYPERFRAMES_PYTHON: venvPython(deps.dataDir) } });
+    const text = path.join(deps.tmpDir, 'oldguy-setup-voice.txt');
+    steps.push({ write: text, text: 'Hello from oldguy.\n' });
+    steps.push({ cmd: 'npx', args: hyperframesArgs(['tts', text, '-o', path.join(deps.tmpDir, 'oldguy-setup-voice.wav'), '--json']), env: { HYPERFRAMES_PYTHON: venvPython(deps.dataDir) } });
   }
   const size = [venvBad && 'about 130 MB', modelBad && '353 MB'].filter(Boolean).join(' + ');
-  const parts = [venvBad && 'a Python venv in Yap\'s data folder with kokoro-onnx and soundfile', modelBad && 'the Kokoro voice model'].filter(Boolean);
+  const parts = [venvBad && 'a Python venv in oldguy\'s data folder with kokoro-onnx and soundfile', modelBad && 'the Kokoro voice model'].filter(Boolean);
   return { id: 'voice', what: `Voice: ${parts.join(', and ')}`, size, steps };
 }
 
@@ -95,7 +95,7 @@ function pickItems(plan: SetupPlan, list: string): SetupItem[] {
   if (!ids.length) throw new Error('name at least one item, for example --install voice');
   for (const id of ids) {
     if (!(ITEM_IDS as readonly string[]).includes(id)) throw new Error(`"${id.slice(0, 40)}" is not an item (items: ${ITEM_IDS.join(', ')})`);
-    if (!plan.items.some((i) => i.id === id)) throw new Error(`${id} is not needed on this machine (run yap setup to see what is)`);
+    if (!plan.items.some((i) => i.id === id)) throw new Error(`${id} is not needed on this machine (run oldguy setup to see what is)`);
   }
   // always in the fixed order, so the voice venv exists before anything that might use it
   return plan.items.filter((i) => ids.includes(i.id));

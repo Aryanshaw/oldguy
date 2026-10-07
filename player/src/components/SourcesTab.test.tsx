@@ -74,7 +74,7 @@ describe('SourcesTab', () => {
   it('survives a rejected getSources', async () => {
     mocked.mockRejectedValue(new Error('boom'));
     await mount();
-    expect((await screen.findByText('Could not load sources.')).className).toMatch(/bg-yk-red/);
+    expect((await screen.findByText('Could not load sources.')).className).toMatch(/bg-og-red/);
   });
 
   it('wraps a 300-character file path', async () => {

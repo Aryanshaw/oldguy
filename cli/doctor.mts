@@ -1,4 +1,4 @@
-// The `yap doctor [--json] [--data-dir <dir>]` command: runs the checks and prints them for people or for scripts.
+// The `oldguy doctor [--json] [--data-dir <dir>]` command: runs the checks and prints them for people or for scripts.
 import realFs from 'node:fs';
 import realOs from 'node:os';
 import { execFile } from 'node:child_process';
@@ -39,7 +39,7 @@ function realExec(cmd: string, args: string[], { timeout, env, maxBuffer = 10 * 
   });
 }
 
-// The machine yap really runs on; tests pass their own pretend one instead.
+// The machine oldguy really runs on; tests pass their own pretend one instead.
 function realDeps(): DoctorCliDeps {
   return {
     exec: realExec, fs: realFs, os: realOs, env: process.env, nodeVersion: process.version,
@@ -63,7 +63,7 @@ async function runDoctorCli(args: string[], deps: DoctorCliDeps = realDeps()): P
   try {
     ({ flags } = parseFlags(args.filter((a) => a !== '--json'), ['--data-dir']));
   } catch (err) {
-    deps.stderr(`yap doctor: ${(err as Error).message}\nusage: yap doctor [--json] [--data-dir <dir>]\n`);
+    deps.stderr(`oldguy doctor: ${(err as Error).message}\nusage: oldguy doctor [--json] [--data-dir <dir>]\n`);
     return 2;
   }
   // the venv and the pass marker live in the data folder, found the same way the hook and narrate find it

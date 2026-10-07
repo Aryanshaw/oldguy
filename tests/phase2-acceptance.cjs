@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 // Phase 2 acceptance, run by hand (not part of `npm test`): builds a small synthetic project with real H.264 clips,
-// starts the real `yap serve --detach`, and checks it over real HTTP. One line per check: PASS|FAIL <name>: <observed>.
+// starts the real `oldguy serve --detach`, and checks it over real HTTP. One line per check: PASS|FAIL <name>: <observed>.
 //
 //   source spikes/env.sh && node tests/phase2-acceptance.cjs          run every check, then stop the server and clean up
 //   source spikes/env.sh && node tests/phase2-acceptance.cjs --keep   build, start, print the URL and temp dir, leave it running
@@ -15,8 +15,8 @@ const { spawnSync, execFileSync } = require('node:child_process');
 const { buildRecord, sha256 } = require('../lib/build-record.mts');
 
 const REPO = path.join(__dirname, '..');
-const BIN = path.join(REPO, 'bin', 'yap.cjs');
-const PREFIX = 'yap-p2-accept-';
+const BIN = path.join(REPO, 'bin', 'oldguy.cjs');
+const PREFIX = 'oldguy-p2-accept-';
 const SLUG = 'demo';
 // Story order (deliberately not alphabetical). mid-flow is the stale one; alpha-setup is the one Step 4 plays with.
 const CHAPTERS = [
@@ -77,14 +77,14 @@ function pidAlive(pid) {
   try { process.kill(pid, 0); return true; } catch (err) { return err.code === 'EPERM'; }
 }
 
-// Runs the real yap CLI and returns { code, out, err }.
-function yap(args) {
+// Runs the real oldguy CLI and returns { code, out, err }.
+function oldguy(args) {
   const r = spawnSync(process.execPath, [BIN, ...args], { encoding: 'utf8', env: process.env, timeout: 30000 });
   return { code: r.status, out: (r.stdout || '').trim(), err: (r.stderr || '').trim() };
 }
 
 // The headers that carry the session key.
-const keyed = (extra = {}) => ({ 'x-yap-key': ctx.key, ...extra });
+const keyed = (extra = {}) => ({ 'x-oldguy-key': ctx.key, ...extra });
 
 // One HTTP request to the server with node:http. Resolves { status, headers, body (Buffer) }; rejects on a socket error or timeout.
 function httpRequest({ method = 'GET', path: target, headers = {}, body, timeoutMs = 10000 }) {
@@ -159,7 +159,7 @@ function rawFlood(bodyBytes, chunked) {
     sock.on('error', (e) => { error = e.code || e.message; });
     sock.on('close', finish);
     sock.on('connect', async () => {
-      const head = `POST /api/message HTTP/1.1\r\nHost: 127.0.0.1:${ctx.port}\r\nx-yap-key: ${ctx.key}\r\n` +
+      const head = `POST /api/message HTTP/1.1\r\nHost: 127.0.0.1:${ctx.port}\r\nx-oldguy-key: ${ctx.key}\r\n` +
         'Content-Type: application/json\r\n' +
         (chunked ? 'Transfer-Encoding: chunked\r\n' : `Content-Length: ${bodyBytes}\r\n`) + '\r\n';
       sock.write(head);
@@ -317,10 +317,10 @@ function writeChapter(slugDir, spec) {
   return { id: spec.id, title: spec.title, dir, mp4, duration };
 }
 
-// Builds <tmp>/proj/.yap/demo with script.md, sources.json, order.json and the four chapters.
+// Builds <tmp>/proj/.oldguy/demo with script.md, sources.json, order.json and the four chapters.
 function buildProject() {
   ctx.tmp = fs.mkdtempSync(path.join(os.tmpdir(), PREFIX));
-  ctx.slugDir = path.join(ctx.tmp, 'proj', '.yap', SLUG);
+  ctx.slugDir = path.join(ctx.tmp, 'proj', '.oldguy', SLUG);
   fs.mkdirSync(path.join(ctx.slugDir, 'chapters'), { recursive: true });
   fs.writeFileSync(path.join(ctx.slugDir, 'script.md'), '# Demo\n\nA synthetic script for the Phase 2 acceptance run.\n\n' +
     CHAPTERS.map((c) => `## ${c.title}\n\n${c.title} shows how the demo app handles this step.\n`).join('\n'));
@@ -330,10 +330,10 @@ function buildProject() {
   for (const spec of CHAPTERS) ctx.chapters[spec.id] = writeChapter(ctx.slugDir, spec);
 }
 
-// Starts the real server with `yap serve --detach` and reads state/server.json. Returns the printed URL and the time taken.
+// Starts the real server with `oldguy serve --detach` and reads state/server.json. Returns the printed URL and the time taken.
 function startServer() {
   ctx.startedAt = Date.now();
-  const r = yap(['serve', '--detach', '--dir', ctx.slugDir]);
+  const r = oldguy(['serve', '--detach', '--dir', ctx.slugDir]);
   const ms = Date.now() - ctx.startedAt;
   const info = readServerInfo(ctx.slugDir);
   if (info) Object.assign(ctx, { port: info.port, key: info.key, pid: info.pid });
@@ -375,14 +375,14 @@ async function step1(detach) {
   await check('1.key-in-query-302-cookie', async () => {
     const r = await httpRequest({ path: `/?key=${ctx.key}` });
     const cookies = [].concat(r.headers['set-cookie'] || []);
-    const want = `yap_key_${ctx.port}=${ctx.key}`;
+    const want = `oldguy_key_${ctx.port}=${ctx.key}`;
     const hit = cookies.find((c) => c.startsWith(want));
     if (hit) ctx.cookie = want;
     return [r.status === 302 && Boolean(hit) && r.headers.location === '/', `${r.status}, Location ${r.headers.location}, Set-Cookie "${cookies.join(' | ').replace(ctx.key, '<key>')}"`];
   });
   // Phase 3 replaced the Phase 2 placeholder chapter list with the built player page.
   await check('1.cookie-get-page-200-serves-player', async () => {
-    const headers = { cookie: ctx.cookie || `yap_key_${ctx.port}=${ctx.key}` };
+    const headers = { cookie: ctx.cookie || `oldguy_key_${ctx.port}=${ctx.key}` };
     const r = await httpRequest({ path: '/', headers });
     const html = r.body.toString('utf8');
     const built = fs.readFileSync(path.join(__dirname, '..', 'player', 'dist', 'index.html'), 'utf8');
@@ -396,10 +396,10 @@ async function step1(detach) {
 // Step 1b: a second start on the same folder. The foreground form is refused; --detach hands back the running one.
 async function step1b() {
   const before = fs.readFileSync(path.join(ctx.slugDir, 'state', 'server.json'), 'utf8');
-  const fg = yap(['serve', '--dir', ctx.slugDir]);
+  const fg = oldguy(['serve', '--dir', ctx.slugDir]);
   await check('1b.second-foreground-serve-refused', () => [fg.code !== 0 && fg.code !== null && /a server for this folder is already running/.test(fg.err),
     `exit ${fg.code}, stderr "${short(fg.err.replace(ctx.key, '<key>'), 160)}"`]);
-  const again = yap(['serve', '--detach', '--dir', ctx.slugDir]);
+  const again = oldguy(['serve', '--detach', '--dir', ctx.slugDir]);
   await check('1b.second-detach-prints-same-url', () => [again.code === 0 && again.out === `http://127.0.0.1:${ctx.port}/?key=${ctx.key}`,
     `exit ${again.code}, printed the running server's URL: ${again.out === `http://127.0.0.1:${ctx.port}/?key=${ctx.key}`}`]);
   await check('1b.first-server-untouched', async () => {
@@ -430,7 +430,7 @@ async function step2() {
   });
   await check('2.wrong-key-403', async () => {
     const wrong = ctx.key.replace(/^./, (c) => (c === 'a' ? 'b' : 'a'));
-    const a = await httpRequest({ path: '/api/state', headers: { 'x-yap-key': wrong } });
+    const a = await httpRequest({ path: '/api/state', headers: { 'x-oldguy-key': wrong } });
     const b = await httpRequest({ path: `/api/state?key=${wrong}` });
     return [a.status === 403 && b.status === 403, `header ${a.status}, query ${b.status}`];
   });
@@ -580,7 +580,7 @@ async function step4() {
     return [r.status === 200 && /^evt_\d+$/.test(evtId), `${r.status}, event id ${evtId}`];
   });
   mark = stream.events.length;
-  const reply = yap(['reply', '--in-reply-to', String(evtId), '--text', 'It starts at the setup because the app loads its config first.', '--source', 'src/app.js:10-12', '--dir', ctx.slugDir]);
+  const reply = oldguy(['reply', '--in-reply-to', String(evtId), '--text', 'It starts at the setup because the app loads its config first.', '--source', 'src/app.js:10-12', '--dir', ctx.slugDir]);
   await check('4.cli-reply-line', () => [reply.code === 0 && reply.out === 'reply rep_1 sent', `exit ${reply.code}, stdout "${reply.out}"${reply.err ? `, stderr "${reply.err}"` : ''}`]);
   ev = await waitEvent(stream, mark, (e) => e.event === 'reply', 3000);
   await check('4.reply-event-on-stream', () => [ev && ev.data.id === 'rep_1' && ev.data.role === 'claude' && ev.data.in_reply_to === evtId,
@@ -592,14 +592,14 @@ async function step4() {
   });
 
   // the chapter commands
-  const add = yap(['add-chapter', '--id', 'extra-topic', '--after', LIVE_ID, '--title', 'Extra', '--dir', ctx.slugDir]);
+  const add = oldguy(['add-chapter', '--id', 'extra-topic', '--after', LIVE_ID, '--title', 'Extra', '--dir', ctx.slugDir]);
   await check('4.cli-add-chapter', async () => {
     const ids = (await getState()).manifest.chapters.map((c) => c.id);
     const want = ['zeta-intro', 'alpha-setup', 'extra-topic', 'mid-flow', 'beta-wrap'];
     return [add.code === 0 && add.out === 'chapter extra-topic added at position 3' && ids.join() === want.join(),
       `exit ${add.code}, stdout "${add.out}"${add.err ? `, stderr "${add.err}"` : ''}; manifest ${ids.join(', ')}`];
   });
-  const set = yap(['set-status', '--id', 'extra-topic', '--status', 'failed', '--dir', ctx.slugDir]);
+  const set = oldguy(['set-status', '--id', 'extra-topic', '--status', 'failed', '--dir', ctx.slugDir]);
   await check('4.cli-set-status', async () => {
     const row = rowOf((await getState()).manifest, 'extra-topic');
     return [set.code === 0 && set.out === 'chapter extra-topic is failed' && row && row.status === 'failed',
@@ -607,7 +607,7 @@ async function step4() {
   });
 
   // moving chapters that are already on the page
-  const move = yap(['order', 'beta-wrap,zeta-intro,alpha-setup,mid-flow', '--dir', ctx.slugDir]);
+  const move = oldguy(['order', 'beta-wrap,zeta-intro,alpha-setup,mid-flow', '--dir', ctx.slugDir]);
   await check('4.cli-order-moves-page', async () => {
     const ids = (await getState()).manifest.chapters.map((c) => c.id);
     const want = ['beta-wrap', 'zeta-intro', 'alpha-setup', 'extra-topic', 'mid-flow'];
@@ -689,12 +689,12 @@ async function step5() {
     const msg = JSON.parse(r.body.toString('utf8')).error || '';
     return [r.status === 409 && READY_IDS.every((id) => msg.includes(id)), `${r.status} "${msg}"`];
   });
-  await check('5.dest-yap-folder-400', async () => {
+  await check('5.dest-oldguy-folder-400', async () => {
     const r = await httpRequest({ method: 'POST', path: '/api/export', headers: keyed(), body: { dest: path.dirname(ctx.slugDir), mode: 'drafts' } });
     return [r.status === 400, `${r.status} ${r.body.toString('utf8')}`];
   });
   await check('5.no-hidden-work-folder-left', () => {
-    const hidden = fs.readdirSync(dest).filter((n) => n.startsWith('.yap-export-'));
+    const hidden = fs.readdirSync(dest).filter((n) => n.startsWith('.oldguy-export-'));
     return [hidden.length === 0, hidden.length ? `left: ${hidden.join(', ')}` : `none; dest holds ${fs.readdirSync(dest).sort().join(', ')}`];
   });
 }
@@ -704,7 +704,7 @@ async function step6() {
   const id = RANGE_ID;
   const size = fs.statSync(ctx.chapters[id].mp4).size;
   const hostLine = `Host: 127.0.0.1:${ctx.port}\r\n`;
-  const keyLine = `x-yap-key: ${ctx.key}\r\n`;
+  const keyLine = `x-oldguy-key: ${ctx.key}\r\n`;
   await check('6.forged-host-403', async () => {
     const r = await httpRequest({ path: '/api/state', headers: keyed({ host: 'evil.example' }) });
     return [r.status === 403, `Host: evil.example with the right key -> ${r.status} ${r.body.toString('utf8')}`];
@@ -741,8 +741,8 @@ async function step6() {
     return [r.status === 403, `POST /api/heartbeat with Origin https://evil.example and the right key -> ${r.status}`];
   });
   await check('6.cookie-wrong-name-403', async () => {
-    const r = await httpRequest({ path: '/api/state', headers: { cookie: `yap_key=${ctx.key}` } });
-    return [r.status === 403, `Cookie yap_key=<key> only -> ${r.status}`];
+    const r = await httpRequest({ path: '/api/state', headers: { cookie: `oldguy_key=${ctx.key}` } });
+    return [r.status === 403, `Cookie oldguy_key=<key> only -> ${r.status}`];
   });
   await check('6.300-hangups-then-ok', async () => {
     const t0 = Date.now();
@@ -762,7 +762,7 @@ async function step6() {
 
 // Finds any server process still running for this slug folder (by its command line).
 function serversFor(slugDir) {
-  const r = spawnSync('pgrep', ['-f', `yap.cjs serve --dir ${slugDir}`], { encoding: 'utf8' });
+  const r = spawnSync('pgrep', ['-f', `oldguy.cjs serve --dir ${slugDir}`], { encoding: 'utf8' });
   return (r.stdout || '').split('\n').map(Number).filter((n) => Number.isInteger(n) && n > 1);
 }
 
@@ -797,7 +797,7 @@ function cleanup() {
 async function stopKept(dir) {
   const tmp = path.resolve(dir || '');
   if (!isOurTmp(tmp)) { console.error(`refusing: ${tmp} is not a ${PREFIX}* folder in ${os.tmpdir()}`); return 2; }
-  const slugDir = path.join(tmp, 'proj', '.yap', SLUG);
+  const slugDir = path.join(tmp, 'proj', '.oldguy', SLUG);
   const info = readServerInfo(slugDir);
   if (info) {
     Object.assign(ctx, { port: info.port, key: info.key });
@@ -821,7 +821,7 @@ async function keepRunning() {
   ctx.keep = true;
   buildProject();
   const d = startServer();
-  if (d.r.code !== 0 || !d.info) { console.error(`yap serve --detach failed: exit ${d.r.code} ${d.r.err}`); ctx.keep = false; cleanup(); return 1; }
+  if (d.r.code !== 0 || !d.info) { console.error(`oldguy serve --detach failed: exit ${d.r.code} ${d.r.err}`); ctx.keep = false; cleanup(); return 1; }
   const at = await waitForPosters(15000);
   console.log(`URL: ${d.info.url}`);
   console.log(`TMPDIR: ${ctx.tmp}`);
@@ -837,7 +837,7 @@ async function fullRun() {
   buildProject();
   observe('project built (4 clips via static ffmpeg)', `${Date.now() - tBuild} ms in ${ctx.tmp}`);
   const detach = startServer();
-  observe('time from `yap serve --detach` to the URL being printed', `${detach.ms} ms`);
+  observe('time from `oldguy serve --detach` to the URL being printed', `${detach.ms} ms`);
   if (detach.r.code !== 0 || !detach.info) {
     record('1.detach-prints-url', false, `exit ${detach.r.code}, stdout "${detach.r.out}", stderr "${detach.r.err}"`);
     return 1;

@@ -28,7 +28,7 @@ const NARRATED = ['beats.json', 'build.json', 'captions.json', 'captions.vtt', '
 
 // Scaffolds the spike-3 narration as a chapter in a temp folder removed after the test.
 function chapterDir(t) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-narrate-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-narrate-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   return scaffoldChapter({ root, id: 'how a job runs', title: 'How a job runs', sources: [], sentences: SENTENCES, scene: SCENE });
 }
@@ -131,7 +131,7 @@ test('narrate: the scene pieces land on their beats in index.html', async (t) =>
   await narrateChapter(dir, { ...fakeRun(), venvPython: PYTHON, whisperAvailable: true });
   const third = readJson(dir, 'beats.json').beats[2].start;
   const html = fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
-  assert.match(html, /id="p0-root" class="yk-piece yk-title"/);
+  assert.match(html, /id="p0-root" class="og-piece og-title"/);
   // the steps piece fades in at the third sentence's start (whole milliseconds, as the kit writes it)
   const fadeIn = html.split('\n').find((l) => l.startsWith('tl.fromTo("#p1-root"'));
   assert.ok(fadeIn.endsWith(`, ${Math.round(third * 1000) / 1000});`), fadeIn);

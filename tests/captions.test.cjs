@@ -9,7 +9,7 @@ const { beatsFromWords } = require('../lib/beats.mts');
 const { buildCaptions } = require('../lib/captions.mts');
 
 const FIX = path.join(__dirname, 'fixtures');
-const CLI = path.join(__dirname, '..', 'bin', 'yap.cjs');
+const CLI = path.join(__dirname, '..', 'bin', 'oldguy.cjs');
 const words = JSON.parse(fs.readFileSync(path.join(FIX, 'transcript.json'), 'utf8'));
 
 // Turns "HH:MM:SS.mmm" into seconds.
@@ -88,8 +88,8 @@ test('beats as input keep sentence boundaries and every word', () => {
   assert.deepEqual(cues.flatMap((c) => c.text.split(/\s+/)), sentences.join(' ').split(/\s+/));
 });
 
-test('yap beats | yap captions writes the vtt and json files', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-cap-'));
+test('oldguy beats | oldguy captions writes the vtt and json files', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-cap-'));
   try {
     const b = spawnSync('node', [CLI, 'beats', path.join(FIX, 'narration.txt'), '--duration', '9.301', '--words', path.join(FIX, 'transcript.json'), '--lead', '0.04'], { encoding: 'utf8' });
     assert.equal(b.status, 0, b.stderr);

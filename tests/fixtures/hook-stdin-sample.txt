@@ -1,12 +1,12 @@
 === SessionStart 17:22:38
-{"session_id":"a4d42837-cbe4-4253-b2e9-cfcbf35d5694","transcript_path":"/Users/aryanshaw/.claude/projects/-private-tmp-yap-s5-kNs8/a4d42837-cbe4-4253-b2e9-cfcbf35d5694.jsonl","cwd":"/private/tmp/yap-s5.kNs8","hook_event_name":"SessionStart","source":"startup"}
+{"session_id":"a4d42837-cbe4-4253-b2e9-cfcbf35d5694","transcript_path":"/Users/aryanshaw/.claude/projects/-private-tmp-oldguy-s5-kNs8/a4d42837-cbe4-4253-b2e9-cfcbf35d5694.jsonl","cwd":"/private/tmp/oldguy-s5.kNs8","hook_event_name":"SessionStart","source":"startup"}
 
-ROOT=/Users/aryanshaw/Documents/pracice/yap/spikes/05-install-hook/plugin
-DATA=/Users/aryanshaw/.claude/plugins/data/yap-hook-spike-inline
-PROJECT=/private/tmp/yap-s5.kNs8
+ROOT=/Users/aryanshaw/Documents/pracice/oldguy/spikes/05-install-hook/plugin
+DATA=/Users/aryanshaw/.claude/plugins/data/oldguy-hook-spike-inline
+PROJECT=/private/tmp/oldguy-s5.kNs8
 === SessionStart 17:22:52
-{"session_id":"a4d42837-cbe4-4253-b2e9-cfcbf35d5694","transcript_path":"/Users/aryanshaw/.claude/projects/-private-tmp-yap-s5-kNs8/a4d42837-cbe4-4253-b2e9-cfcbf35d5694.jsonl","cwd":"/private/tmp/yap-s5.kNs8","hook_event_name":"SessionStart","source":"resume","seconds_since_last_response":9,"context_tokens":38623,"prompt_cache_likely_expired":false,"estimated_cache_write_usd":0.1545}
+{"session_id":"a4d42837-cbe4-4253-b2e9-cfcbf35d5694","transcript_path":"/Users/aryanshaw/.claude/projects/-private-tmp-oldguy-s5-kNs8/a4d42837-cbe4-4253-b2e9-cfcbf35d5694.jsonl","cwd":"/private/tmp/oldguy-s5.kNs8","hook_event_name":"SessionStart","source":"resume","seconds_since_last_response":9,"context_tokens":38623,"prompt_cache_likely_expired":false,"estimated_cache_write_usd":0.1545}
 
-ROOT=/Users/aryanshaw/Documents/pracice/yap/spikes/05-install-hook/plugin
-DATA=/Users/aryanshaw/.claude/plugins/data/yap-hook-spike-inline
-PROJECT=/private/tmp/yap-s5.kNs8
+ROOT=/Users/aryanshaw/Documents/pracice/oldguy/spikes/05-install-hook/plugin
+DATA=/Users/aryanshaw/.claude/plugins/data/oldguy-hook-spike-inline
+PROJECT=/private/tmp/oldguy-s5.kNs8
