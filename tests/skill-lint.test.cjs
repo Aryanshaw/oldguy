@@ -15,7 +15,7 @@ const MAX_REFERENCE_LINES = 120;
 // Words the owner never wants in the skill text (whole words, any case).
 const BANNED_WORDS = /\b(cost|costs|price|pricing|usd|dollar|dollars|billing|token|tokens)\b/i;
 // Commands that do not exist yet and must not be promised.
-const MISSING_COMMANDS = /\byap (listen|export)\b/i;
+const MISSING_COMMANDS = /\byap (export)\b/i;
 
 // Reads one file as text; a missing file fails the test with its path.
 function readText(file) {

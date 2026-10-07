@@ -10,6 +10,7 @@ import { runScaffold } from '../cli/scaffold.mts';
 import { runNarrate } from '../cli/narrate.mts';
 import { runRender } from '../cli/render.mts';
 import { runServe } from '../cli/server.mts';
+import { runListen } from '../cli/listen.mts';
 import { runReply, runAddChapter, runSetStatus, runOrder, runAck } from '../cli/client.mts';
 
 // A command: what `--help` says about it, and the function that runs it (it returns the exit code, or nothing for 0).
@@ -27,6 +28,7 @@ const COMMANDS: Record<string, Command> = {
   narrate: { summary: 'make a chapter\'s narration audio, beats, captions and page', run: runNarrate },
   serve: { summary: 'start the local video player server (--detach to run in the background)', run: runServe },
   reply: { summary: 'answer the viewer in the player chat (--in-reply-to, --text, --source, --offer-video)', run: runReply },
+  listen: { summary: 'print open viewer questions as they arrive, for Claude Code\'s Monitor (heartbeats the page)', run: runListen },
   ack: { summary: 'mark a viewer event as handled when it gets no text reply: yap ack <evt_n>', run: runAck },
   'add-chapter': { summary: 'add a chapter to the story (--id, --after, --title, --parent, --reason, --question)', run: runAddChapter },
   'set-status': { summary: 'set a chapter\'s status (--id, --status)', run: runSetStatus },
