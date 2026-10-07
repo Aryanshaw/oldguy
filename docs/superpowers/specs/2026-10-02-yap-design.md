@@ -590,3 +590,13 @@ From `2026-10-07-phase-4-chat-bridge-design.md` section 9, word for word.
   New chapters are built by background subagents; Claude chooses their place and whether they run in parallel.
 - **A20 (4.3):** new route `POST /api/ack`; `make_video` events carry `ref`; replies may carry `offer_video`.
 - **A21 (lifetime):** the server lives only as long as the Claude Code session that started it.
+
+## 17. Amendments of 2026-10-07 (from Polish)
+
+- **A22 (4.11, installer):** there is no separate `npx yap-setup` package. `yap setup` prints what is missing (each
+  item with its size and the exact programs it runs) and `yap setup --install <items>` installs only the items the
+  user agreed to: `voice` (venv and Kokoro model), `captions` (whisper.cpp through Homebrew, macOS only) and `chrome`.
+  ffmpeg, Node and disk stay manual. The plugin installs with `/plugin marketplace add Aryanshaw/yap` then
+  `/plugin install yap@yap`. Hard rule 5 of the skill now allows `yap setup --install` after the user's explicit yes.
+- **A23 (A16, mascot):** the alarm clock is redrawn so it no longer reads as a bear, as a placeholder: the owner
+  plans an original character of their own for the logo and mascot (`docs/STATUS.md`).
