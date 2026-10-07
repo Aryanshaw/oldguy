@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <strong>2&ndash;3 minute videos &middot; every claim cites your code &middot; rendered on your machine</strong><br>
+  <strong>Let claude yap &middot; every claim cites your code &middot; rendered on your machine</strong><br>
   <sub>Short narrated chapters about how a feature of <em>your</em> codebase works, checked against the real lines before a word is recorded.</sub>
 </p>
 
