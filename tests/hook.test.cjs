@@ -146,17 +146,51 @@ test('finishes well under a second even if stdin never closes', (t, done) => {
   t.after(() => child.kill('SIGKILL'));
 });
 
-test('hooks.json wires one SessionStart command hook with a 5 second timeout', () => {
+test('hooks.json wires one SessionStart and one SessionEnd command hook, each with a 5 second timeout', () => {
   const cfg = JSON.parse(fs.readFileSync(path.join(ROOT, 'hooks', 'hooks.json'), 'utf8'));
-  const groups = cfg.hooks.SessionStart;
-  assert.equal(groups.length, 1);
-  assert.equal(groups[0].matcher, '');
-  assert.equal(groups[0].hooks.length, 1);
-  const hook = groups[0].hooks[0];
-  assert.equal(hook.type, 'command');
-  assert.equal(hook.command, 'node ${CLAUDE_PLUGIN_ROOT}/hooks/session-start.cjs');
-  assert.equal(typeof hook.timeout, 'number');
-  assert.equal(hook.timeout, 5);
+  assert.deepEqual(Object.keys(cfg.hooks).sort(), ['SessionEnd', 'SessionStart']);
+  for (const [event, script] of [['SessionStart', 'session-start.cjs'], ['SessionEnd', 'session-end.cjs']]) {
+    const groups = cfg.hooks[event];
+    assert.equal(groups.length, 1);
+    assert.equal(groups[0].matcher, '');
+    assert.equal(groups[0].hooks.length, 1);
+    const hook = groups[0].hooks[0];
+    assert.equal(hook.type, 'command');
+    assert.equal(hook.command, `node \${CLAUDE_PLUGIN_ROOT}/hooks/${script}`);
+    assert.equal(hook.timeout, 5);
+  }
+});
+
+const END_SCRIPT = path.join(ROOT, 'hooks', 'session-end.cjs');
+
+test('SessionEnd stops the live yap server of every video in the project and exits 0', async (t) => {
+  const cwd = tmp(t);
+  const slugDir = path.join(cwd, '.yap', 'demo');
+  fs.mkdirSync(path.join(slugDir, 'chapters'), { recursive: true });
+  const yap = path.join(ROOT, 'bin', 'yap.cjs');
+  const r = spawnSync(process.execPath, [yap, 'serve', '--dir', slugDir, '--detach'], { encoding: 'utf8', timeout: 20000 });
+  assert.equal(r.status, 0, r.stderr);
+  const file = path.join(slugDir, 'state', 'server.json');
+  const pid = JSON.parse(fs.readFileSync(file, 'utf8')).pid;
+  t.after(() => { try { process.kill(pid, 'SIGKILL'); } catch { /* stopped */ } });
+  const end = spawnSync(process.execPath, [END_SCRIPT], { input: JSON.stringify({ session_id: 's', cwd, reason: 'exit' }), encoding: 'utf8', timeout: 10000 });
+  assert.equal(end.status, 0, end.stderr);
+  const deadline = Date.now() + 8000;
+  while (fs.existsSync(file) && Date.now() < deadline) await new Promise((res) => setTimeout(res, 100));
+  assert.equal(fs.existsSync(file), false, 'the server shut down cleanly and removed server.json');
+});
+
+test('SessionEnd exits 0 and does nothing on garbage stdin, no .yap folder, or a stale server.json', (t) => {
+  for (const input of ['', 'not json', '[]', JSON.stringify({ cwd: 'relative/path' })]) {
+    assert.equal(spawnSync(process.execPath, [END_SCRIPT], { input, encoding: 'utf8', timeout: 10000 }).status, 0, input);
+  }
+  const cwd = tmp(t);
+  assert.equal(spawnSync(process.execPath, [END_SCRIPT], { input: JSON.stringify({ cwd }), encoding: 'utf8', timeout: 10000 }).status, 0);
+  const state = path.join(cwd, '.yap', 'demo', 'state');
+  fs.mkdirSync(state, { recursive: true });
+  // a stale file naming this test runner's own pid must never get it killed
+  fs.writeFileSync(path.join(state, 'server.json'), JSON.stringify({ pid: process.pid, port: 1, key: 'a'.repeat(32) }));
+  assert.equal(spawnSync(process.execPath, [END_SCRIPT], { input: JSON.stringify({ cwd }), encoding: 'utf8', timeout: 10000 }).status, 0);
 });
 
 // Counts the hint lines a run printed.
