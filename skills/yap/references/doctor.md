@@ -1,7 +1,7 @@
 # Doctor
 
 Purpose: make sure every tool Yap needs is present before any work starts, and tell the user exactly what to fix
-when something is missing. Yap never installs anything itself.
+when something is missing. Yap installs only what the user agrees to, through `yap setup`.
 
 ## When to run it
 
@@ -27,7 +27,7 @@ Required (any failure means stop):
 
 | Check | Passes when |
 |---|---|
-| Node | version 22 or newer |
+| Node | version 22.18 or newer |
 | ffmpeg | `ffmpeg -version` actually runs (not just exists on PATH) |
 | Python venv | the venv imports `kokoro_onnx` and `soundfile` |
 | Kokoro model | the voice model file is present and over 300 MB |
@@ -48,8 +48,18 @@ required check passed; 1 means at least one failed; 2 means bad usage.
 
 ## What to do with a failure
 
-1. Show the user the failed check and its `fix:` line, word for word.
-2. Stop. Do not run the fix yourself, do not install packages, do not download models.
-3. When the user says it is fixed, run `yap doctor` again.
+1. Run `yap setup`. It lists what it can install (each item with its size and the exact programs it runs) and what
+   the user has to fix by hand.
+2. Show the user that list word for word and ask which items to install. Do not install anything yet.
+3. After a clear yes, run `yap setup --install <only the items they agreed to>` (comma-separated, for example
+   `yap setup --install voice,chrome`). It runs those items, then the doctor again.
+4. For a manual item, show its `fix:` line and stop until the user says it is fixed, then run `yap doctor` again.
+5. Never run a package manager or a fix line yourself.
+
+| Item | What it installs |
+|---|---|
+| `voice` | a Python venv in Yap's data folder with kokoro-onnx and soundfile, and the Kokoro voice model |
+| `captions` | whisper.cpp through Homebrew (macOS only; elsewhere it is manual) |
+| `chrome` | the Chrome Hyperframes renders with |
 
 **Gate:** `yap doctor` exits 0.

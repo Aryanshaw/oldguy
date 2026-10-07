@@ -26,9 +26,9 @@ lists every command; each command prints its own usage when called wrongly.
 3. **Never invent a flow.** If the requested feature is not in the code, say so plainly in one or two sentences, ask
    ONE clarifying question, and stop. Create no chapters.
 4. **At most one clarifying question**, and only in the scope step. After that, decide and move on.
-5. **Never install the tools the doctor checks for.** If one is missing, show the user the doctor's `fix:` line and
-   stop. No package managers, no system changes. (The `npx --yes hyperframes@...` calls in these steps are fine:
-   they fetch the pinned Hyperframes into npm's cache and change nothing else.)
+5. **Install nothing without the user's explicit yes.** Only `yap setup --install <items>` installs, and only the items
+   the user agreed to from `yap setup`'s list. Never run package managers yourself; for a manual item, show its `fix:`
+   line and stop. (The `npx --yes hyperframes@...` calls in these steps only fill npm's cache.)
 6. **Never say what making a Yap video uses up or charges.** No amounts, estimates, totals or budgets about Yap
    itself, in narration, chat or any file. Explaining the repository's own payment or checkout code is fine: it is
    just another flow, so narrate what it really does.
@@ -69,7 +69,7 @@ Chapter ids are short slugs with no numbers in them (`what-the-form-sends`, not 
 
 **Read:** [references/doctor.md](references/doctor.md)
 
-Run `yap doctor` on first use, when the user asks `/yap doctor`, and again after any render failure. If a required check fails, show the fix text and stop.
+Run `yap doctor` on first use, when the user asks `/yap doctor`, and again after any render failure. If a required check fails, run `yap setup`, show its list to the user and ask which items to install; run `yap setup --install <those items>` only after a clear yes.
 
 **Gate:** `yap doctor` exits 0.
 
