@@ -7,3 +7,4 @@ player/node_modules
 player/test-results/
 player/playwright-report/
 .oldguy
+.yap
