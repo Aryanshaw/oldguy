@@ -5,10 +5,21 @@ Status: draft, awaiting approval
 
 ## Why
 
-Yap is used by someone new to a codebase who asks how a feature works. "yap" described the output (a lot of
-talking); "oldguy" describes the relationship: you're the new one, so you ask the old guy, the person who has been
-on the project forever. He rambles, but he knows the exact file and line. The name and the mascot now say the same
-thing. There are no users yet, so this is the cheapest the rename will ever be.
+"yap" described the output: a lot of talking. "oldguy" describes an archetype everyone knows: the old guy who
+can explain anything to anyone. He's the uncle at the barbecue, or the grandpa who makes a hard thing sound
+simple. He has seen enough of everything that he doesn't need to have been there.
+
+The archetype isn't tied to codebases, so it carries across every kind of video the product will make:
+
+- "Ask the old guy how checkout works."
+- "Ask the old guy what this paper actually says."
+- "Ask the old guy how this API works."
+
+He rambles, but every claim comes with receipts: a file and line, or a page and section. He is approachable for
+non-developers too, which a cold AI tool is not.
+
+The name and the mascot now say the same thing. There are no users yet, so this is the cheapest the rename will
+ever be.
 
 ## Decisions
 
@@ -62,6 +73,25 @@ his age making him wrong.
 | Player logo | `player/src/components/Logo.tsx` | mark: the head in a yellow circle; wordmark "oldguy" on the existing tilted yellow chip |
 | Small mark | inside `Logo.tsx` (`size="sm"`) and the favicon | reduced head: cap, mop, open mouth only, no glasses or pencil, so it reads at 32px |
 | Favicon | `player/index.html` | inline SVG of the small mark |
+
+**The character is fixed.** He looks and behaves exactly as on the concept board: dopey, scruffy, blabbering. Do
+not make him sharper, wiser or more polished to suit wider use. The joke is that this guy is the one who can
+explain anything.
+
+## The old guy and video templates
+
+oldguy is the brand of the tool that *makes* the videos. It is not necessarily a presence *in* them, in the same way
+Mailchimp's chimp never appears in your emails. This leaves room for templates beyond code explainers (research
+papers, documentation, release notes, product demos) and for viewers who are not developers.
+
+- **By default he is brand only.** The old guy appears in the plugin, the player chrome (logo, header, favicon), the
+  README and the install flow. Generated videos are clean: no mascot inside the chapters.
+- **Templates can opt in.** A template can declare that it features the old guy as host. A hosted video has a short
+  intro sting with the old guy and a corner avatar while the narration plays. Templates meant to be shown to
+  customers or outside audiences, such as release notes or product demos, do not opt in.
+- **Scope of this rename.** This rename only reserves the idea. It ships no template flag, sting or avatar. The
+  templates work, being designed in another session, defines how a template opts in. That work uses the mascot SVGs
+  from this rename.
 
 ## Code and repo changes
 
