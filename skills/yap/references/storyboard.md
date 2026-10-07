@@ -37,11 +37,11 @@ Each sentence is `claim` (about the code, with sources) or `framing` (greeting, 
 [verify.md](verify.md). Most sentences are claims. A chapter usually opens with one framing sentence and may close
 with one.
 
-## 5. Plan the pieces
+## 5. Plan the picture
 
-For each chapter, list the scene-kit pieces in order and the sentence index (`beat`, starting at 0) each appears
-with. Beats must go up; the first piece should start at beat 0 so the screen is never empty. Two to four pieces
-per chapter is plenty. See [scene-kit.md](scene-kit.md) for what each piece can show. Code card lines are at
+For each chapter, write down the one picture that makes its idea obvious and what changes on which sentence
+(`beat`, starting at 0): ready pieces in order, or a scene you will design. The first thing shows at beat 0 so the
+screen is never empty. See [visuals.md](visuals.md) for how to choose. If a code card is used, its lines are at
 most 68 columns: pick lines that fit, or cut a long one and end it with `…` (never wrap, never reword), and do not
 narrate the part that is cut off.
 
@@ -54,8 +54,8 @@ Under the top section, one block per chapter:
 sources: s1 app/todos.py 10-14 "todos.append(todo)"
 0 framing  Hi, let's see what happens when you add a todo!
 1 claim s1 The new todo is added to the list in memory.
-pieces: title@0 "What the form sends"; code-card@1 app/todos.py lines 10-14 highlight 12
+picture: design: the form, the request travelling to the server, the list gaining a row on 1
 words: 61
 ```
 
-**Gate:** Every chapter in `script.md` has a number-free id, a title, 50 to 100 words, one sentence per entry with a kind, no reference to another chapter, and pieces with rising beats from 0.
+**Gate:** Every chapter in `script.md` has a number-free id, a title, 50 to 100 words, one sentence per entry with a kind, no reference to another chapter, and a picture plan whose changes start at beat 0.

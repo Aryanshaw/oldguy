@@ -29,7 +29,7 @@ function project(t) {
   const dir = path.join(slugDir, 'chapters', 'a');
   fs.mkdirSync(dir, { recursive: true });
   fs.mkdirSync(path.join(root, 'out'));
-  const build = JSON.stringify({ version: 2, verified_against_commit: 'a'.repeat(40), sha256: {} });
+  const build = JSON.stringify({ version: 3, verified_against_commit: 'a'.repeat(40), sha256: {} });
   fs.writeFileSync(path.join(dir, 'chapter.json'), JSON.stringify({ id: 'a', title: 'a' }));
   fs.writeFileSync(path.join(dir, 'build.json'), build);
   fs.writeFileSync(path.join(dir, 'render.json'), JSON.stringify({ build_sha256: sha256(build) }));

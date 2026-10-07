@@ -305,6 +305,7 @@ function writeChapter(slugDir, spec) {
   write('captions.json', `${JSON.stringify(words.map((w, i) => ({ text: w, start: (i * duration) / words.length, end: ((i + 1) * duration) / words.length })))}\n`);
   const html = (extra) => `<!doctype html><html><body><div data-composition-id="${spec.id}" data-duration="${duration}">${spec.title}</div>${extra}</body></html>\n`;
   write('index.html', html(''));
+  write('gsap.min.js', '/* gsap */\n');
   const record = () => `${JSON.stringify(buildRecord(chapter, (name) => fs.readFileSync(path.join(dir, name)), null), null, 2)}\n`;
   write('build.json', record());
   write('render.json', `${JSON.stringify({ build_sha256: sha256(fs.readFileSync(path.join(dir, 'build.json'))) })}\n`);

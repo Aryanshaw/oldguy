@@ -79,7 +79,7 @@ test('every yap command mentioned is a real command in yap --help', () => {
 test('SKILL.md links every reference, every link resolves, and the required references exist', () => {
   const linked = new Set([...readText(SKILL).matchAll(/references\/([a-z-]+\.md)/g)].map((m) => m[1]));
   const present = new Set(fs.existsSync(REFS_DIR) ? fs.readdirSync(REFS_DIR) : []);
-  for (const name of ['scope.md', 'verify.md', 'storyboard.md', 'scene-kit.md', 'narrate.md', 'render.md', 'doctor.md']) {
+  for (const name of ['scope.md', 'verify.md', 'storyboard.md', 'visuals.md', 'narrate.md', 'render.md', 'doctor.md']) {
     assert.ok(present.has(name), `references/${name} is missing`);
   }
   for (const name of linked) assert.ok(present.has(name), `SKILL.md links references/${name}, which does not exist`);
@@ -162,7 +162,8 @@ test('SKILL.md runs chapters one at a time in story order and renders each with 
 const NEVER_END_TURN = 'Never end your turn while a render is running.';
 
 test('no skill file runs a render in the background, with &, or through run_in_background', () => {
-  for (const { file, text } of everySkillFile()) {
+  // instructions live in the markdown files; an example scene's CSS says background: as a style property
+  for (const { file, text } of everySkillFile().filter(({ file }) => file.endsWith('.md'))) {
     text.split('\n').forEach((line, i) => {
       const where = `${path.relative(SKILL_DIR, file)}:${i + 1}`;
       // The one allowed exception: the sentence about the server that `yap serve --detach` leaves running.

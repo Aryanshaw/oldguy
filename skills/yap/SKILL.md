@@ -53,10 +53,10 @@ lists every command; each command prints its own usage when called wrongly.
 .yap/<slug>/                 one folder per video, slug from the request (for example add-todo)
   script.md, order.json      the verified script (chapters, sentences, sources), and the story order
   sources.json               every quoted file, line range and quote
-  specs/<id>.json            the spec you hand to yap scaffold, one per chapter
+  specs/<id>.json            the spec you hand to yap scaffold, one per chapter (scenes/<id>.html: a designed scene)
   chapters/<id>/             made by scaffold: chapter.json, narration.txt
                              made by narrate: narration.wav, beats.json, captions.vtt, captions.json,
-                             index.html, build.json
+                             index.html, gsap.min.js, build.json
                              made by render: chapter.mp4, render.json (which build it was made from)
 ```
 
@@ -103,7 +103,7 @@ range and the exact quote on those lines.
 **Read:** [references/storyboard.md](references/storyboard.md)
 
 Split the script into chapters of 20 to 40 seconds (about 50 to 100 words). Each chapter has an id, a title, a list
-of sentences (each marked `claim` or `framing`) and the scene pieces it shows.
+of sentences (each marked `claim` or `framing`) and the picture it shows.
 
 Once the storyboard is settled, and before the first `yap scaffold`, run
 `yap order <id1>,<id2>,<id3> --dir .yap/<slug>` with the chapter ids (lower-case words joined by hyphens, never
@@ -114,14 +114,13 @@ sentence refers to another chapter, and the story order was written (`order writ
 
 ---
 
-## Step 4: Scenes
+## Step 4: Visuals
 
-**Read:** [references/scene-kit.md](references/scene-kit.md)
+**Read:** [references/visuals.md](references/visuals.md)
 
-Pick a scene-kit piece for each idea (`title`, `steps`, `code-card`, `callout`), fill in its params, tie it to the
-sentence it appears with (`beat`), and write `specs/<id>.json` for each chapter. Never invent layout.
+For each chapter, decide what the viewer must see to understand its idea (how it works, not how its code reads), then show it: a ready piece when one fits, or a scene you design, in `specs/<id>.json`.
 
-**Gate:** a spec file for every chapter in the storyboard.
+**Gate:** a spec file for every chapter in the storyboard, its picture chosen for that chapter's idea.
 
 ---
 
@@ -135,7 +134,8 @@ playable long before the last one is written. For each chapter:
 1. `yap scaffold .yap/<slug>/specs/<id>.json --root .yap/<slug>` (it prints the chapter folder).
 2. Run `yap audit` on the chapter's `chapter.json` with `--root <repo>`; it must exit 0. Then run `yap narrate`
    on the chapter folder, also with `--root <repo>` so it records the commit the chapter was verified against
-   (never two narrates at once), and check the printed seconds are 20 to 40.
+   (never two narrates at once), and check the printed seconds are 20 to 40. Then look at its snapshots
+   ([visuals.md](references/visuals.md) section 4) and redo the chapter if the picture is wrong.
 3. Run `yap render .yap/<slug>/chapters --root <repo> --only <id>` for that chapter in the foreground and wait
    for it to finish (hard rule 9). Only then move on to the next chapter. One render at a time.
 

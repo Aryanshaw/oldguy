@@ -26,7 +26,7 @@ function tempSlug(t) {
 function makeChapter(slugDir, id) {
   const dir = path.join(slugDir, 'chapters', id);
   fs.mkdirSync(dir, { recursive: true });
-  const build = JSON.stringify({ version: 2, verified_against_commit: 'a'.repeat(40), sha256: {} });
+  const build = JSON.stringify({ version: 3, verified_against_commit: 'a'.repeat(40), sha256: {} });
   fs.writeFileSync(path.join(dir, 'chapter.json'), JSON.stringify({ id, title: id }));
   fs.writeFileSync(path.join(dir, 'beats.json'), JSON.stringify({ durationS: 3, beats: [] }));
   fs.writeFileSync(path.join(dir, 'build.json'), build);

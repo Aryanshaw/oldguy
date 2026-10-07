@@ -15,9 +15,10 @@ type FingerprintedChapter = { sentences: unknown; scene: unknown };
 
 // The built files whose exact bytes are fingerprinted, besides the chapter's sentences and scene: everything narrate
 // writes that a viewer could see or hear, captions and beat timings included.
-const BUILT_FILES = ['narration.txt', 'narration.wav', 'beats.json', 'captions.vtt', 'captions.json', 'index.html'];
+const BUILT_FILES = ['narration.txt', 'narration.wav', 'beats.json', 'captions.vtt', 'captions.json', 'index.html', 'gsap.min.js'];
 // The record's shape; an older record lacks fingerprints for some built files, so it is never trusted.
-const RECORD_VERSION = 2;
+// Version 3 adds gsap.min.js, which version 2 chapters loaded from a CDN instead.
+const RECORD_VERSION = 3;
 const CHANGED = 'chapter changed after narrate: fix the spec, delete the chapter folder, then scaffold, audit and narrate again';
 
 // The sha256 of some bytes or text, as hex.
@@ -80,5 +81,5 @@ function buildChangedReason(dir: string, chapter: FingerprintedChapter): string 
   return same ? null : CHANGED;
 }
 
-export { buildRecord, buildChangedReason, sha256, COMMIT };
+export { buildRecord, buildChangedReason, sha256, COMMIT, RECORD_VERSION };
 export type { BuildRecord, BuildFingerprint, FingerprintedChapter };

@@ -2,11 +2,8 @@
 // Everything here is synchronous and read-only: it never writes, and a bad file never throws.
 import fs from 'node:fs';
 import path from 'node:path';
-import { sha256 } from './build-record.mts';
+import { sha256, RECORD_VERSION } from './build-record.mts';
 import { slugChapterId } from './chapter.mts';
-
-// The build.json version the current narrate writes; an older one is never trusted.
-const CURRENT_BUILD_VERSION = 2;
 
 // Whether a chapter's video is current: ready, stale (a video that no longer matches its build), rendering or pending (never failed).
 type ScanStatus = 'ready' | 'stale' | 'rendering' | 'pending';
@@ -114,7 +111,7 @@ function readBuild(dir: string, issues: string[]): BuildInfo {
     issues.push('build.json cannot be read');
     return { sha, commit: null, current: false };
   }
-  if (!record || fieldOf(record, 'version') !== CURRENT_BUILD_VERSION) {
+  if (!record || fieldOf(record, 'version') !== RECORD_VERSION) {
     issues.push('narrated with an older version');
     return { sha, commit: null, current: false };
   }

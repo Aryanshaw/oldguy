@@ -113,7 +113,7 @@ function renderWorkspace(t, { withBad = true } = {}) {
     fs.writeFileSync(path.join(chapters, id, 'narration.txt'), `${SPEC.sentences.map((s) => s.text).join(' ')}\n`);
     fs.writeFileSync(path.join(chapters, id, 'index.html'), '<!doctype html>');
     fs.writeFileSync(path.join(chapters, id, 'narration.wav'), 'RIFF');
-    for (const name of ['beats.json', 'captions.vtt', 'captions.json']) fs.writeFileSync(path.join(chapters, id, name), name);
+    for (const name of ['beats.json', 'captions.vtt', 'captions.json', 'gsap.min.js']) fs.writeFileSync(path.join(chapters, id, name), name);
     // the build record narrate would have written, so the build check passes
     const chapter = JSON.parse(fs.readFileSync(path.join(chapters, id, 'chapter.json'), 'utf8'));
     const record = buildRecord(chapter, (name) => fs.readFileSync(path.join(chapters, id, name)));

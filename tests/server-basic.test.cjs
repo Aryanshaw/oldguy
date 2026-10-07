@@ -181,7 +181,7 @@ test('placeholder page lists chapters escaped, video only for ready ones, no scr
   saveManifest(path.join(slugDir, 'manifest.json'), m);
   // A ready row needs a real ready folder: at start a ready row without one is marked failed.
   const dir = path.join(slugDir, 'chapters', 'intro');
-  const build = JSON.stringify({ version: 2, verified_against_commit: 'a'.repeat(40), sha256: {} });
+  const build = JSON.stringify({ version: 3, verified_against_commit: 'a'.repeat(40), sha256: {} });
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, 'chapter.json'), JSON.stringify({ id: 'intro', title: '<script>alert(1)</script>' }));
   fs.writeFileSync(path.join(dir, 'build.json'), build);

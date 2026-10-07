@@ -18,6 +18,15 @@ Pieces and their params:
   code-card  {"file": text, "lines": [{"no": number, "text": text, "highlight": true (optional)}]}
              each line is the repository line as it is, or its start cut at 68 columns ending in …
   callout    {"text": text, "pointTo": up|down|left|right (optional, default down)}
+  flow       {"kicker": text (optional), "heading": text (optional),
+              "lanes": [{"id": lane-id, "label": text, "note": text (optional)}] (2 to 5),
+              "steps": [{"lane": lane-id, "label": text, "detail": text (optional), "at": sentence index,
+                         "kind": ok|fail (optional)}] (1 to 14, at most 6 per lane)}
+             a diagram that stays up: each step appears with sentence "at" (from the piece's beat to before the
+             next piece's beat, never going back) and stays; the newest step and its lane light up
+  design     {"file": "scenes/<id>.html" (inside the --root folder; copied into chapter.json) or "html": text}
+             a scene you design: <style>, markup on a 1920x1080 stage, and one <script data-yap-timeline> of
+             tl.from/to/fromTo/set calls timed with beat(n), startS and endS; no scripts, handlers, src/href or url()
 "beat" is the 0-based index of the sentence a piece appears with; beats must go up. A piece stays on screen
 until the next piece's beat starts; the last one stays until the chapter ends.
 `;

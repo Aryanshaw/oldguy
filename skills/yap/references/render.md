@@ -49,9 +49,10 @@ npx --yes hyperframes@0.8.112 check .yap/<slug>/chapters/<id> --snapshots --at-t
 npx --yes hyperframes@0.8.112 snapshot .yap/<slug>/chapters/<id> --frames 10
 ```
 
-Open the PNGs and look: text cut off, two pieces on top of each other, a code card wider than the frame, an empty
-screen at the start. A problem means a param or beat is wrong (too many lines, a code line too long, too long a
-label, a late first beat): fix the spec and redo that chapter. Never patch `index.html`.
+Open the PNGs and look: text cut off, two things on top of each other, a code card wider than the frame, an empty
+screen at the start. A problem means a param, a beat or the designed scene is wrong (too many lines, a code line
+too long, too long a label, a late first beat, boxes placed over each other): fix the spec or the scene file and
+redo that chapter. Never patch `index.html`.
 
 ## 3. Confirm every chapter
 

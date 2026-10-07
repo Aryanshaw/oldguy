@@ -5,8 +5,8 @@ the audit approved.
 
 ## The house voice
 
-Polite, cheery and efficient: a friendly helper who likes explaining things. Short sentences. Plain words. Name the
-thing on screen ("this line", "the `add` function") rather than describing a picture. Say what happens and why,
+Polite, cheery and efficient: a friendly helper who likes explaining things. Short sentences. Plain words. Say what
+the system does: name a part by what it does before its code name, and name code only when it is on screen. Say what happens and why,
 once, and move on. No filler ("so basically", "as you can see"), no jokes at the code's expense, and nothing about
 what making the video uses up (the repository's own payment code is a flow like any other: explain it).
 Audience is a beginner: explain a term the first time it appears, in half a sentence.
@@ -36,8 +36,8 @@ cuts captions from the audited sentences, and builds the chapter page. On succes
 <id>: narrated, 31.2 s, 4 beats, timing words, commit 1a2b3c4
 ```
 
-and the folder gains `narration.wav`, `beats.json`, `captions.vtt`, `captions.json`, `index.html` and
-`build.json`. Run it once per chapter, in story order, right after that chapter's audit. As soon as it prints
+and the folder gains `narration.wav`, `beats.json`, `captions.vtt`, `captions.json`, `index.html`, `gsap.min.js`
+(the animation library the page loads, so rendering needs no network) and `build.json`. Run it once per chapter, in story order, right after that chapter's audit. As soon as it prints
 `narrated`, render that chapter (see [render.md](render.md)) in the foreground, wait for the render to finish, and
 only then move on to the next chapter. It takes a while per chapter; never run two narrates at once.
 
@@ -47,7 +47,7 @@ in the spec, then redo the chapter).
 ## The build record
 
 `build.json` holds fingerprints of the audited sentences, the scene, `narration.txt`, `narration.wav`,
-`beats.json`, `captions.vtt`, `captions.json` and `index.html`, and the commit the repository was on
+`beats.json`, `captions.vtt`, `captions.json`, `index.html` and `gsap.min.js`, and the commit the repository was on
 (`verified_against_commit`, null when `--root` is not a git repository). `yap render` compares them and refuses a
 chapter where anything changed after narrate. It is a safety net against mistakes (a stray edit, a half-finished redo), not a lock against someone who writes it by hand
 on purpose. You never write or edit `build.json` by hand.
@@ -66,4 +66,4 @@ the CLI messages and this list agree on the one path:
 `yap narrate` exits 1 with one line saying why. A sentence or scene problem: fix the spec and redo the chapter.
 A speech or timing tool problem: run `yap doctor`, show the fix text, stop.
 
-**Gate:** `yap narrate` printed `narrated` for every chapter, each 20 to 40 s, and each folder has the six generated files.
+**Gate:** `yap narrate` printed `narrated` for every chapter, each 20 to 40 s, and each folder has the seven generated files.

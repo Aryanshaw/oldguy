@@ -6,6 +6,8 @@ import * as title from '../scene-kit/title.mts';
 import * as steps from '../scene-kit/steps.mts';
 import * as codeCard from '../scene-kit/code-card.mts';
 import * as callout from '../scene-kit/callout.mts';
+import * as flow from '../scene-kit/flow.mts';
+import * as design from '../scene-kit/design.mts';
 import type { Rendered } from '../scene-kit/shared.mts';
 
 // One source a chapter cites: where it lives, which lines, and the exact text quoted from them.
@@ -18,13 +20,17 @@ type ChapterScene = { piece: string; params: unknown; beat: number };
 type ChapterSpec = { id: string; title: string; sources: ChapterSource[]; sentences: ChapterSentence[]; scene: ChapterScene[] };
 // What `yap scaffold` is handed: a spec that has not been checked yet.
 type ScaffoldInput = { root: string; id: unknown; title: unknown; sources: unknown; sentences: unknown; scene: unknown };
-// A scene piece placed in time: which piece, its params, when it starts and how long it lasts (seconds).
-type PieceWindow = { piece: string; params: unknown; startS: number; durationS: number };
+// A scene piece placed in time: which piece, its params, when it starts and how long it lasts, and when every sentence
+// of the chapter starts (seconds; the flow piece shows its steps on later sentences).
+type PieceWindow = { piece: string; params: unknown; startS: number; durationS: number; beatsS: number[] };
 // The timed sentences a chapter's pieces are laid against.
 type TimedBeat = { start: number };
 
 const KIT_DIR = path.join(import.meta.dirname, '..', 'scene-kit');
-const GSAP_URL = 'https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js';
+// GSAP 3.14.2 from the npm package, kept in the repo (see scene-kit/vendor/README.md). Narrate copies it into the
+// chapter folder and the page loads it from there, so checking and rendering a chapter need no network.
+const GSAP_NAME = 'gsap.min.js';
+const GSAP_FILE = path.join(KIT_DIR, 'vendor', GSAP_NAME);
 const MAX_ID_LENGTH = 60;
 
 // The scene pieces a chapter may use, by the name written in chapter.json.
@@ -33,6 +39,8 @@ const PIECES: Record<string, { render: (params: unknown, opts: unknown) => Rende
   steps,
   'code-card': codeCard,
   callout,
+  flow,
+  design,
 };
 
 // Turns a free-text id into a folder name: lower-case a-z0-9 words joined by single hyphens, never starting with a digit.
@@ -92,9 +100,13 @@ function checkScene(scene: unknown, sentenceCount: number): void {
       throw new Error(`scene[${i}]: beat must be a whole sentence index from 0 to ${sentenceCount - 1}, after the previous piece's beat`);
     }
     previousBeat = beat;
-    // a throwaway render lets the scene kit itself reject bad params (such as an unknown pointTo)
+    // a throwaway render lets the scene kit itself reject bad params (such as an unknown pointTo); sentence i "starts" at
+    // second i, and the window runs to the next piece's beat, so a flow step on a sentence outside its piece is refused
+    const next = (entries[i + 1] as ChapterScene | undefined)?.beat;
+    const endBeat = typeof next === 'number' && Number.isInteger(next) && next > beat && next <= sentenceCount ? next : sentenceCount;
+    const beatsS = Array.from({ length: sentenceCount }, (_, n) => n);
     try {
-      renderPiece(entry, { startS: 0, durationS: 1, idPrefix: 'check' });
+      renderPiece(entry, { startS: beat, durationS: endBeat - beat, idPrefix: 'check', beatsS });
     } catch (err) {
       // renderPiece only throws Error objects
       throw new Error(`scene[${i}]: ${(err as Error).message}`);
@@ -127,12 +139,39 @@ function checkSentences(sentences: unknown): string {
   return narration;
 }
 
+// Replaces each design piece's {"file": "scenes/x.html"} with the file's text as {"html": ...}, so chapter.json holds
+// the whole scene (and build.json fingerprints it). The file must sit inside the video folder.
+function inlineSceneFiles(scene: unknown, root: string): unknown {
+  if (!Array.isArray(scene)) return scene;
+  const entries: unknown[] = scene;
+  return entries.map((item, i) => {
+    // only a design entry with a "file" changes; checkScene checks every entry's shape right after
+    const entry = item as { piece?: unknown; params?: { file?: unknown; html?: unknown } } | null;
+    const params = entry && entry.piece === 'design' ? entry.params : undefined;
+    if (!params || params.file === undefined) return item;
+    const { file, ...rest } = params;
+    if (typeof file !== 'string' || !file) throw new Error(`scene[${i}]: design "file" must be a path inside ${root}`);
+    const base = path.resolve(root);
+    const full = path.resolve(base, file);
+    const rel = path.relative(base, full);
+    if (rel.startsWith('..') || path.isAbsolute(rel)) throw new Error(`scene[${i}]: design file ${file} is outside ${root}`);
+    let html: string;
+    try {
+      html = fs.readFileSync(full, 'utf8');
+    } catch {
+      throw new Error(`scene[${i}]: cannot read design file ${file}`);
+    }
+    return { ...entry, params: { ...rest, html } };
+  });
+}
+
 // Creates chapters/<slug>/ with chapter.json and narration.txt; checks everything first and never overwrites.
-function scaffoldChapter({ root, id, title, sources, sentences, scene }: ScaffoldInput): string {
+function scaffoldChapter({ root, id, title, sources, sentences, scene: given }: ScaffoldInput): string {
   const slug = slugChapterId(id);
   if (typeof title !== 'string' || !title.trim()) throw new Error('"title" must be non-empty text');
   if (!Array.isArray(sources)) throw new Error('"sources" must be a list');
   const narration = checkSentences(sentences);
+  const scene = inlineSceneFiles(given, root);
   // checkSentences just proved this is a non-empty list
   checkScene(scene, (sentences as unknown[]).length);
 
@@ -160,20 +199,22 @@ function roundUpTenth(seconds: number): number {
 
 // Gives each scene piece its time window: from its sentence's start to the next piece's start, the last to the end.
 function pieceWindows(scene: ChapterScene[], beats: TimedBeat[], durationS: number): PieceWindow[] {
+  const beatsS = beats.map((b) => b.start);
   return scene.map((entry, i) => {
     const startS = beats[entry.beat].start;
     const endS = i + 1 < scene.length ? beats[scene[i + 1].beat].start : durationS;
-    return { piece: entry.piece, params: entry.params, startS, durationS: Number((endS - startS).toFixed(3)) };
+    return { piece: entry.piece, params: entry.params, startS, durationS: Number((endS - startS).toFixed(3)), beatsS };
   });
 }
 
-// Builds the standalone chapter page: one 1920x1080 root, the theme, GSAP, and every piece on one paused timeline.
+// Builds the standalone chapter page: one 1920x1080 root, the theme, GSAP (from the copy beside index.html), and every piece
+// on one paused timeline.
 function buildRootComposition({ id, durationS, pieces }: { id: unknown; durationS: unknown; pieces: PieceWindow[] }): string {
   // the id lands in an attribute and a script, so only an already-slugged id is accepted
   if (typeof id !== 'string' || !/^[a-z][a-z0-9-]*$/.test(id)) throw new Error(`composition id "${id}" must be a slug (a-z, 0-9, hyphens)`);
   if (typeof durationS !== 'number' || !Number.isFinite(durationS) || durationS <= 0) throw new Error('composition duration must be a number of seconds above 0');
   const theme = fs.readFileSync(path.join(KIT_DIR, 'theme.css'), 'utf8');
-  const rendered = pieces.map((p, i) => renderPiece(p, { startS: p.startS, durationS: p.durationS, idPrefix: `p${i}` }));
+  const rendered = pieces.map((p, i) => renderPiece(p, { startS: p.startS, durationS: p.durationS, idPrefix: `p${i}`, beatsS: p.beatsS }));
   return [
     '<!doctype html>',
     '<html lang="en">',
@@ -181,7 +222,7 @@ function buildRootComposition({ id, durationS, pieces }: { id: unknown; duration
     '<meta charset="UTF-8" />',
     '<meta name="viewport" content="width=1920, height=1080" />',
     `<title>${id}</title>`,
-    `<script src="${GSAP_URL}"></script>`,
+    `<script src="${GSAP_NAME}"></script>`,
     // the stage is a fixed 1920x1080 box the pieces are laid over
     '<style>',
     'html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: var(--yk-black); }',
@@ -208,5 +249,6 @@ function buildRootComposition({ id, durationS, pieces }: { id: unknown; duration
 
 export {
   slugChapterId, scaffoldChapter, checkScene, checkSentences, checkNarrationText, buildRootComposition, pieceWindows, roundUpTenth, narrationSentences,
+  GSAP_NAME, GSAP_FILE,
 };
 export type { ChapterSource, ChapterSentence, ChapterScene, ChapterSpec, ScaffoldInput, PieceWindow, TimedBeat };

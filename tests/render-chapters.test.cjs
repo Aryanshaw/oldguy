@@ -37,7 +37,7 @@ function addChapter(chapters, id, { sources = [GOOD_SOURCE], narrated = true, na
   if (narrated) {
     fs.writeFileSync(path.join(dir, 'index.html'), '<!doctype html>');
     fs.writeFileSync(path.join(dir, 'narration.wav'), 'RIFF');
-    for (const name of ['beats.json', 'captions.vtt', 'captions.json']) fs.writeFileSync(path.join(dir, name), `${name} from narrate`);
+    for (const name of ['beats.json', 'captions.vtt', 'captions.json', 'gsap.min.js']) fs.writeFileSync(path.join(dir, name), `${name} from narrate`);
     const record = buildRecord(chapter, (name) => fs.readFileSync(path.join(dir, name)));
     fs.writeFileSync(path.join(dir, 'build.json'), JSON.stringify(record));
   }
@@ -549,8 +549,8 @@ test('a code-card line that differs from the repository fails the audit gate and
     { id: 'reworded', status: 'failed', reason: 'audit: scene[0] line 1: text differs from the repository line' });
 });
 
-test('build.json: beats.json, captions.vtt or captions.json edited after narrate is refused', async (t) => {
-  for (const name of ['beats.json', 'captions.vtt', 'captions.json']) {
+test('build.json: beats.json, captions.vtt, captions.json or gsap.min.js edited after narrate is refused', async (t) => {
+  for (const name of ['beats.json', 'captions.vtt', 'captions.json', 'gsap.min.js']) {
     const { repo, chapters, dir } = await narratedChapter(t);
     fs.appendFileSync(path.join(dir, name), name === 'captions.vtt' ? '\n99:00.000 --> 99:01.000\nUnchecked words\n' : ' ');
     const { result, called } = await renderOnce(repo, chapters);
@@ -559,8 +559,8 @@ test('build.json: beats.json, captions.vtt or captions.json edited after narrate
   }
 });
 
-test('build.json: a missing beats.json, captions.vtt or captions.json is refused', async (t) => {
-  for (const name of ['beats.json', 'captions.vtt', 'captions.json']) {
+test('build.json: a missing beats.json, captions.vtt, captions.json or gsap.min.js is refused', async (t) => {
+  for (const name of ['beats.json', 'captions.vtt', 'captions.json', 'gsap.min.js']) {
     const { repo, chapters, dir } = await narratedChapter(t);
     fs.rmSync(path.join(dir, name));
     const { result, called } = await renderOnce(repo, chapters);
@@ -569,13 +569,13 @@ test('build.json: a missing beats.json, captions.vtt or captions.json is refused
   }
 });
 
-test('build.json: an old record (version 1 or none) is refused even when its fingerprints still match', async (t) => {
+test('build.json: an old record (version 1, 2 or none) is refused even when its fingerprints still match', async (t) => {
   const { repo, chapters, dir } = await narratedChapter(t);
   const current = JSON.parse(fs.readFileSync(path.join(dir, 'build.json'), 'utf8'));
   // the version 1 shape: only the chapter text, narration.txt, narration.wav and index.html
   const old = { chapter: current.sha256.chapter, 'narration.txt': current.sha256['narration.txt'],
     'narration.wav': current.sha256['narration.wav'], 'index.html': current.sha256['index.html'] };
-  for (const record of [{ sha256: old }, { version: 1, sha256: old }, { version: 1, sha256: current.sha256 }]) {
+  for (const record of [{ sha256: old }, { version: 1, sha256: old }, { version: 1, sha256: current.sha256 }, { version: 2, sha256: current.sha256 }]) {
     fs.writeFileSync(path.join(dir, 'build.json'), JSON.stringify(record));
     const { result, called } = await renderOnce(repo, chapters);
     assert.equal(result.reason, CHANGED, JSON.stringify(record));

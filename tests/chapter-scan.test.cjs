@@ -20,7 +20,7 @@ function makeChapter(root, id, opts = {}) {
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, 'chapter.json'), JSON.stringify({ id, title: `Title ${id}` }));
   fs.writeFileSync(path.join(dir, 'beats.json'), JSON.stringify({ durationS: 12.5, beats: [] }));
-  const build = JSON.stringify({ version: opts.version ?? 2, verified_against_commit: COMMIT, sha256: {} });
+  const build = JSON.stringify({ version: opts.version ?? 3, verified_against_commit: COMMIT, sha256: {} });
   fs.writeFileSync(path.join(dir, 'build.json'), build);
   if (opts.mp4 !== false) fs.writeFileSync(path.join(dir, 'chapter.mp4'), 'video');
   if (opts.render !== false) fs.writeFileSync(path.join(dir, 'render.json'), JSON.stringify({ build_sha256: sha256(build) }));
@@ -111,10 +111,12 @@ test('chapter.mp4 symlinked to a file inside the folder is still ready', () => w
   assert.equal(scan(dir).status, 'ready');
 }));
 
-test('build.json version 1 is stale with the older-version issue', () => withTmp((root) => {
-  const c = scan(makeChapter(root, 'a', { version: 1 }));
-  assert.equal(c.status, 'stale');
-  assert.ok(c.issues.includes('narrated with an older version'));
+test('build.json version 1 or 2 is stale with the older-version issue', () => withTmp((root) => {
+  for (const [id, version] of [['a', 1], ['b', 2]]) {
+    const c = scan(makeChapter(root, id, { version }));
+    assert.equal(c.status, 'stale', `version ${version}`);
+    assert.ok(c.issues.includes('narrated with an older version'), `version ${version}`);
+  }
 }));
 
 test('durationS comes from beats.json; missing or bad gives null and an issue', () => withTmp((root) => {

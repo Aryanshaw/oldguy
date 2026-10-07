@@ -1,11 +1,12 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const {
-  slugChapterId, scaffoldChapter, buildRootComposition, pieceWindows, roundUpTenth, narrationSentences, checkNarrationText,
+  slugChapterId, scaffoldChapter, buildRootComposition, pieceWindows, roundUpTenth, narrationSentences, checkNarrationText, GSAP_NAME, GSAP_FILE,
 } = require('../lib/chapter.mts');
 
 const SOURCES = [{ id: 's1', file: 'app.js', lines: [1, 2], quote: 'start()' }];
@@ -150,8 +151,8 @@ test('pieceWindows: each piece runs from its beat start to the next piece, the l
     { piece: 'steps', params: { items: [] }, beat: 2 },
   ];
   assert.deepEqual(pieceWindows(scene, beats, 9.5), [
-    { piece: 'title', params: { heading: 'a' }, startS: 0.04, durationS: 4.96 },
-    { piece: 'steps', params: { items: [] }, startS: 5, durationS: 4.5 },
+    { piece: 'title', params: { heading: 'a' }, startS: 0.04, durationS: 4.96, beatsS: [0.04, 2, 5] },
+    { piece: 'steps', params: { items: [] }, startS: 5, durationS: 4.5, beatsS: [0.04, 2, 5] },
   ]);
 });
 
@@ -176,20 +177,29 @@ test('root composition: holds every piece html (escaped), with unique id prefixe
   assert.match(html, /tl\.fromTo\("#p1-root"/);
 });
 
-test('root composition: theme inlined, GSAP from the CDN, one paused timeline registered once', () => {
+test('root composition: theme inlined, GSAP from the copy beside the page, one paused timeline registered once', () => {
   const html = buildRootComposition({ id: 'c', durationS: 9.5, pieces: PIECES });
   const theme = fs.readFileSync(path.join(__dirname, '..', 'scene-kit', 'theme.css'), 'utf8');
   assert.ok(html.includes(theme), 'theme.css is inlined');
-  assert.ok(html.includes('<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>'));
+  assert.ok(html.includes('<script src="gsap.min.js"></script>'));
+  assert.ok(html.indexOf('src="gsap.min.js"') < html.indexOf('const tl = gsap.timeline'), 'GSAP loads before the timeline uses it');
   assert.ok(html.includes('const tl = gsap.timeline({ paused: true });'));
   assert.equal(html.match(/window\.__timelines\[/g).length, 1);
   assert.ok(html.includes('window.__timelines["c"] = tl;'));
 });
 
-test('root composition: no outside url other than the GSAP CDN', () => {
+test('root composition: no outside url, so a chapter checks and renders with no network', () => {
   const html = buildRootComposition({ id: 'c', durationS: 9.5, pieces: PIECES });
-  const urls = html.match(/https?:\/\/[^\s"')]+/g);
-  assert.deepEqual(urls, ['https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js']);
+  assert.equal(html.match(/https?:\/\//g), null);
+  const refs = [...html.matchAll(/\b(?:src|href)\s*=\s*["']([^"']*)["']/gi)].map((m) => m[1]);
+  assert.deepEqual(refs, ['gsap.min.js', 'narration.wav']);
+});
+
+test('vendored GSAP is the pinned 3.14.2 build from npm', () => {
+  const bytes = fs.readFileSync(GSAP_FILE);
+  assert.equal(GSAP_NAME, 'gsap.min.js');
+  assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'), 'c174bfce53a729418d57a8ad8625e7247c793a22fef8e2851e3cfa3de9cd8280');
+  assert.match(bytes.toString('utf8'), /^\/\*!\n \* GSAP 3\.14\.2\n/);
 });
 
 test('root composition: same input gives byte-identical output', () => {
