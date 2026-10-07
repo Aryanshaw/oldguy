@@ -1,12 +1,15 @@
 // The `yap narrate <chapter-dir> [--root <repo>] [--data-dir <dir>]` command: speech, beats, captions and index.html
 // for one chapter, recording the repository's commit when --root is given.
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { parseFlags } from './args.mts';
 import { narrateChapter } from '../lib/narrate.mts';
-import { venvPython, checkWhisper } from '../lib/doctor.mts';
+import { venvPython, checkWhisper, freeRamGb } from '../lib/doctor.mts';
 import { realExec } from './doctor.mts';
 import { resolveDataDir } from '../lib/data-dir.mts';
+import { withSlot } from '../lib/slots.mts';
+import { renderCap } from '../lib/render-schedule.mts';
 import type { ProgramResult } from '../lib/narrate.mts';
 import type { NarrateResult } from '../lib/narrate.mts';
 
@@ -22,6 +25,11 @@ function realRun(cmd: string, args: string[], env?: Record<string, string>): Pro
 function narratedLine(id: string, r: NarrateResult, rootGiven: boolean): string {
   const commit = r.commit ? `commit ${r.commit.slice(0, 7)}` : rootGiven ? 'not a git repo' : 'no commit recorded (no --root)';
   return `${id}: narrated, ${r.durationS} s, ${r.beats.length} beats, timing ${r.timing}, ${commit}`;
+}
+
+// Says, once, that the command is waiting for a free slot.
+function slotWaitLine(inUse: number): void {
+  process.stderr.write(`waiting for a free slot (${inUse} in use)\n`);
 }
 
 // Narrates the chapter; exit 0 = done, 1 = the pipeline failed (message on stderr), 2 = usage.
@@ -43,7 +51,9 @@ async function runNarrate(args: string[]): Promise<number> {
     // a render running beside narrate can make whisper slow to start; the doctor's 15 s would quietly drop word timing
     const whisperAvailable = (await checkWhisper(realExec, STEP_TIMEOUT_MS)).ok;
     const root = flags['--root'];
-    const r = await narrateChapter(positional[0], { run: realRun, venvPython: venvPython(dataDir), whisperAvailable, root });
+    // speech is heavy: wait for one of the machine's slots, so parallel chapter subagents cannot overload it
+    const r = await withSlot({ cap: renderCap(freeRamGb(os)), onWait: slotWaitLine },
+      () => narrateChapter(positional[0], { run: realRun, venvPython: venvPython(dataDir), whisperAvailable, root }));
     process.stdout.write(`${narratedLine(path.basename(path.resolve(positional[0])), r, Boolean(root))}\n`);
     return 0;
   } catch (err) {
