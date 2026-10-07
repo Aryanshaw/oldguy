@@ -27,6 +27,6 @@ Then run `svgo --multipass -p 2` (`-p 1` breaks the mug text and the glasses). L
 
 ## The favicon is hand-built
 
-A traced head turns to mush at 16–32px, so the favicon in `player/index.html` is a simplified hand-built mark: a
+A traced head turns to mush at 16–32px, so the favicon, `player/src/assets/favicon.svg`, is a simplified hand-built mark: a
 yellow disc, the cap, the mop, the beard and the open mouth. It has no glasses, pencil or headset. Keep it in step
 with the traced art if the character changes.

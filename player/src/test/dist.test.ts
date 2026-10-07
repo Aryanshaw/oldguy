@@ -7,7 +7,8 @@ const indexPath = join(dist, 'index.html');
 const built = existsSync(indexPath);
 const assetsDir = join(dist, 'assets');
 const NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,120}$/;
-const EXT = /\.(js|css|woff2|woff)$/;
+// The same extensions the server serves from /assets/ (server/player-routes.mts ASSET_TYPES).
+const EXT = /\.(js|css|woff2|woff|svg|png|jpg)$/;
 const FORBIDDEN = ['data:', 'blob:', 'http://', 'https://'];
 
 const assets = () => (existsSync(assetsDir) ? readdirSync(assetsDir) : []);
