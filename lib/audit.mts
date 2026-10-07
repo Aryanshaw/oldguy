@@ -108,6 +108,16 @@ function readRepoLines(root: string, file: string): Failed | { lines: string[] }
   return { lines: loaded.text.replace(/\r\n/g, '\n').replace(/\n$/, '').split('\n') };
 }
 
+// Checks a source cited in a chat reply: a real text file inside the root and a line range ("12" or "12-20") that
+// exists in it. Returns why it fails, or null. Replies carry no quote, so this is all that can be proved.
+function checkCitation(root: string, file: string, lines: string): string | null {
+  const m = /^(\d+)(?:-(\d+))?$/.exec(lines);
+  if (!m) return `invalid line range ${lines}`;
+  const loaded = readRepoLines(root, file);
+  if ('reason' in loaded) return loaded.reason;
+  return checkLineRange([Number(m[1]), Number(m[2] ?? m[1])], loaded.lines.length);
+}
+
 // Returns the reason one source fails (bad file, bad range, quote not there) or null if it holds.
 function checkSource(root: string, source: Source): string | null {
   const quote = normalise(typeof source.quote === 'string' ? source.quote : '');
@@ -196,5 +206,5 @@ function audit({ root, sources, sentences, scene = [] }: AuditInput): AuditResul
   return { ok: failures.length === 0, failures };
 }
 
-export { audit, escapesRoot };
+export { audit, escapesRoot, checkCitation };
 export type { Finding, AuditResult, AuditInput, Source, AuditSentence };

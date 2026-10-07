@@ -6,6 +6,7 @@ import { parseFlags, guarded } from './args.mts';
 import { askServer, pidAlive } from '../lib/ask-server.mts';
 import { resolveSlugDir, readInfo } from './server.mts';
 import { slugChapterId } from '../lib/chapter.mts';
+import { checkCitation } from '../lib/audit.mts';
 import { STATUSES } from '../lib/manifest.mts';
 import type { ChapterStatus } from '../lib/manifest.mts';
 import type { ReplyBody } from '../server/api.mts';
@@ -122,15 +123,24 @@ function readFlags(args: string[], allowed: string[], required: string[]): Recor
   return flags;
 }
 
-// `yap reply --in-reply-to <evt_n> --text <text> [--source <file>:<a>-<b> ...] [--offer-video]`: posts Claude's answer
-// to the viewer; --offer-video puts a "Make this a video" button under it.
+// `yap reply --in-reply-to <evt_n> --text <text> [--source <file>:<a>-<b> ...] [--offer-video] [--root <repo>]`: posts
+// Claude's answer to the viewer; --offer-video puts a "Make this a video" button under it. Each source is checked
+// against the repository at --root (default: the current folder) before anything is sent.
 function runReply(args: string[], opts?: ClientOpts): Promise<number> {
   return serverCommand('reply', (): Request<ReplyBody> => {
     const { sources, rest } = takeSources(args);
     // --offer-video takes no value, so it is taken out before the flags are parsed
     const offer = rest.includes('--offer-video');
-    const flags = readFlags(rest.filter((a) => a !== '--offer-video'), ['--dir', '--in-reply-to', '--text'], ['--in-reply-to', '--text']);
+    const flags = readFlags(rest.filter((a) => a !== '--offer-video'), ['--dir', '--root', '--in-reply-to', '--text'], ['--in-reply-to', '--text']);
     const body: ReplyBody = { in_reply_to: flags['--in-reply-to'], text: flags['--text'] };
+    // every source must be a real file and line range in the repository (--root, else the current folder): a chat
+    // answer cannot point the viewer at lines that do not exist
+    const root = flags['--root'] ?? process.cwd();
+    for (const text of sources) {
+      const { file, lines } = parseSource(text);
+      const problem = checkCitation(root, file, lines);
+      if (problem) throw new Error(`--source ${text}: ${problem}`);
+    }
     if (sources.length) body.sources = sources.map(parseSource);
     if (offer) body.offer_video = true;
     return { slugDir: resolveSlugDir(flags['--dir']), body };

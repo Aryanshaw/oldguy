@@ -57,7 +57,12 @@ const deadPort = () => new Promise((resolve) => { const s = net.createServer().l
 test('reply: sends the text with every --source, prints "reply rep_<n> sent", and the thread holds it', async (t) => {
   const { slugDir, srv } = await withServer(t);
   const evt = await viewerMessage(srv);
-  const r = await run(runReply, ['--dir', slugDir, '--in-reply-to', evt, '--text', 'It is in the loop.', '--source', 'src/a.js:3-9', '--source', 'src/b.js:12']);
+  // the cited files must exist in --root with those lines
+  const repo = path.dirname(slugDir);
+  fs.mkdirSync(path.join(repo, 'src'));
+  fs.writeFileSync(path.join(repo, 'src', 'a.js'), 'x\n'.repeat(9));
+  fs.writeFileSync(path.join(repo, 'src', 'b.js'), 'x\n'.repeat(12));
+  const r = await run(runReply, ['--dir', slugDir, '--root', repo, '--in-reply-to', evt, '--text', 'It is in the loop.', '--source', 'src/a.js:3-9', '--source', 'src/b.js:12']);
   assert.deepEqual([r.code, r.out, r.err], [0, 'reply rep_1 sent\n', '']);
   const [reply] = readThread(path.join(slugDir, 'state', 'thread.jsonl'));
   assert.equal(reply.in_reply_to, evt);
@@ -69,7 +74,9 @@ test('reply: sends the text with every --source, prints "reply rep_<n> sent", an
 test('reply: a source splits at the LAST colon, so a file name may hold a colon', async (t) => {
   const { slugDir, srv } = await withServer(t);
   const evt = await viewerMessage(srv);
-  const r = await run(runReply, ['--dir', slugDir, '--in-reply-to', evt, '--text', 'x', '--source', 'a:b.js:4']);
+  const repo = path.dirname(slugDir);
+  fs.writeFileSync(path.join(repo, 'a:b.js'), 'x\n'.repeat(4));
+  const r = await run(runReply, ['--dir', slugDir, '--root', repo, '--in-reply-to', evt, '--text', 'x', '--source', 'a:b.js:4']);
   assert.equal(r.code, 0, r.err);
   assert.deepEqual(readThread(path.join(slugDir, 'state', 'thread.jsonl'))[0].sources, [{ file: 'a:b.js', lines: '4' }]);
 });
@@ -479,4 +486,20 @@ test('reply --offer-video stores offer_video: true; add-chapter --question store
   const r = await run(runAddChapter, ['--dir', slugDir, '--id', 'what-if-it-fails', '--question', 'What if it fails?']);
   assert.equal(r.code, 0, r.err);
   assert.equal(manifest().chapters[0].question, 'What if it fails?');
+});
+
+test('reply: every --source must be a real file and line range in --root (default: the current folder); a wrong one sends nothing', async (t) => {
+  const { slugDir, srv } = await withServer(t);
+  const evt = await viewerMessage(srv);
+  const repo = path.dirname(slugDir);
+  fs.writeFileSync(path.join(repo, 'app.js'), 'a\nb\nc\n');
+  const bad = await run(runReply, ['--dir', slugDir, '--root', repo, '--in-reply-to', evt, '--text', 'x', '--source', 'app.js:2-9']);
+  assert.equal(bad.code, 2);
+  assert.match(bad.err, /app\.js:2-9.*past end of file \(3 lines\)/);
+  const missing = await run(runReply, ['--dir', slugDir, '--root', repo, '--in-reply-to', evt, '--text', 'x', '--source', 'nope.js:1']);
+  assert.equal(missing.code, 2);
+  assert.match(missing.err, /file not found/);
+  assert.equal(readThread(path.join(slugDir, 'state', 'thread.jsonl')).length, 0, 'nothing was sent');
+  const ok = await run(runReply, ['--dir', slugDir, '--root', repo, '--in-reply-to', evt, '--text', 'x', '--source', 'app.js:2-3']);
+  assert.equal(ok.code, 0, ok.err);
 });
