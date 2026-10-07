@@ -38,18 +38,14 @@ Checks nobody has done yet:
 Work to do:
 
 - **Browser test in CI.** `player/e2e` exists but CI does not run it; a job with real Chrome would also check
-  H.264 playback.
+  H.264 playback. Its fixture works again (it writes the vendored `gsap.min.js`), but the full run has not passed
+  yet: the cloud container's Chromium has no H.264, so it needs real Chrome.
 - **Demo video.** A video made by oldguy about oldguy. Postponed by the owner.
 - **Fact-check coverage.** The audit checks narration and code against the repository; titles, steps, callouts and
   framing text on screen are not checked yet.
 - **Deferred minor findings.** Each phase summary lists the small findings left on purpose; none blocks use.
-- **Publish the rename.** These are owner steps, after this branch merges:
-  - rename the GitHub repo to `Aryanshaw/oldguy`
-  - publish `packages/oldguy` to npm as `oldguy` (`cd packages/oldguy && npm publish`, which needs npm two-factor
-    authentication)
-  - run `npm deprecate getyap "renamed: use npx oldguy"`
-
-  The old installer, `getyap` 0.1.0, was checked from npm on an empty Claude Code config.
+- **The rename is published (2026-10-07).** The repo is `Aryanshaw/oldguy` and the installer is on npm as
+  `oldguy` 0.1.0 (`npx oldguy`). The old installer, `getyap` 0.1.0, is deprecated on npm and points to `npx oldguy`.
 - **Domain.** None yet; the homepage fields point at the GitHub repo.
 - **Releases.** Claude Code offers an update only when the version changes. To release, raise the same version in
   `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `package.json` and `packages/oldguy/package.json`
