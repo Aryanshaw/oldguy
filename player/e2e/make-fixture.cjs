@@ -46,6 +46,8 @@ function writeChapter(ffmpeg, slugDir, spec) {
   fs.mkdirSync(dir, { recursive: true });
   makeClip(ffmpeg, path.join(dir, 'chapter.mp4'), spec.hz);
   makeWav(ffmpeg, path.join(dir, 'narration.wav'));
+  // chapters load GSAP from their own folder, and the build record fingerprints it (record version 3)
+  fs.copyFileSync(path.join(__dirname, '..', '..', 'scene-kit', 'vendor', 'gsap.min.js'), path.join(dir, 'gsap.min.js'));
   const text = `${spec.title} caption line.`;
   const chapter = {
     id: spec.id, title: spec.title,
