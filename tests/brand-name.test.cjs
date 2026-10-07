@@ -19,11 +19,20 @@ const SKIP_PREFIXES = [
   'spikes/',
   '.claude/skills/',
 ];
-const SKIP_FILES = new Set(['package-lock.json', 'player/package-lock.json', 'packages/oldguy/package-lock.json']);
+const SKIP_FILES = new Set(['tests/brand-name.test.cjs', 'package-lock.json', 'player/package-lock.json', 'packages/oldguy/package-lock.json']);
 // Binary files and built player assets carry no reviewable text.
 const BINARY = /\.(png|webp|jpe?g|gif|mp4|wav|mp3|woff2?|ttf|ico)$/i;
-// The one sentence that keeps the old word: the subline, where "yap" is the verb, not the product.
-const SUBLINE = /Claude yaps\. You watch\./;
+// Lines that keep the old word on purpose:
+// - the subline, where "yap" is the verb, not the product
+// - links to the original design spec, whose file name is part of the historical record
+// - the rename notice and the owner's steps to retire the old npm installer
+const ALLOWED = [
+  /Claude yaps\. You watch\./,
+  /2026-10-02-yap-design\.md/,
+  /Renamed from Yap to oldguy/,
+  /npm deprecate getyap/,
+  /old installer, `getyap`/,
+];
 
 // Tracked files that should no longer name the product "yap".
 function checkedFiles() {
@@ -34,14 +43,14 @@ function checkedFiles() {
     .filter((f) => !(f.startsWith('player/dist/') && f !== 'player/dist/index.html'));
 }
 
-test('no shipped file or path still uses the old product name', { todo: 'until the rename lands' }, () => {
+test('no shipped file or path still uses the old product name', () => {
   const hits = [];
   for (const file of checkedFiles()) {
     if (/yap/i.test(file)) hits.push(`${file}: (path)`);
     const full = path.join(ROOT, file);
     if (!fs.existsSync(full)) continue;
     fs.readFileSync(full, 'utf8').split('\n').forEach((line, i) => {
-      if (/yap/i.test(line) && !SUBLINE.test(line)) hits.push(`${file}:${i + 1}: ${line.trim().slice(0, 120)}`);
+      if (/yap/i.test(line) && !ALLOWED.some((re) => re.test(line))) hits.push(`${file}:${i + 1}: ${line.trim().slice(0, 120)}`);
     });
   }
   assert.deepEqual(hits, [], `${hits.length} leftover "yap" mentions:\n${hits.join('\n')}`);
