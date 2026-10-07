@@ -104,3 +104,15 @@ test("scaffold copies a design scene file into chapter.json and refuses files ou
   assert.throws(() => scaffoldChapter(spec("scenes/missing.html", "missing")), /cannot read design file/);
   assert.equal(fs.existsSync(path.join(root, "chapters", "out")), false);
 });
+
+test("the worked example in the skill passes every design check", () => {
+  const html = fs.readFileSync(path.join(__dirname, "..", "skills", "yap", "examples", "journey.html"), "utf8");
+  const win = { startS: 0, durationS: 30, idPrefix: "p0", beatsS: [0, 4, 9, 14, 19, 24] };
+  const r = design.render({ html }, win);
+  assert.match(r.html, /class="yk-kicker"/);
+  assert.match(r.html, /class="yk-title"/);
+  assert.match(r.html, /class="yk-planned"/);
+  assert.match(r.timeline, /tl\.set\("#ex-planned, #ex \.lit, #ex-p1, #ex-p2, #ex-p3", \{opacity: 0\}, startS\)/);
+  const css = fs.readFileSync(path.join(__dirname, "..", "scene-kit", "theme.css"), "utf8");
+  for (const cls of ["yk-kicker", "yk-title", "yk-planned"]) assert.match(css, new RegExp(`\\.${cls} \\{`), cls);
+});

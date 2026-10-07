@@ -259,3 +259,15 @@
 
 /* design: a scene Claude lays out itself; the root is a plain 1920x1080 box it positions things in */
 .yk-design { display: block; }
+
+/* shared look for designed scenes: the chapter header (a small label over a big title) and the badge for work that
+   is planned but not built; every scene uses these so chapters match */
+.yk-kicker {
+  position: absolute; left: 96px; top: 64px;
+  font: 600 26px var(--yk-font-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--yk-yellow);
+}
+.yk-title { position: absolute; left: 96px; top: 104px; font: 900 64px var(--yk-font); color: var(--yk-text); }
+.yk-planned {
+  position: absolute; right: 96px; top: 76px; padding: 14px 28px;
+  border: 4px solid var(--yk-orange); font: 900 30px var(--yk-font); letter-spacing: 0.06em; color: var(--yk-orange);
+}

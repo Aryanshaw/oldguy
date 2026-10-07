@@ -1,7 +1,7 @@
 # Visuals
 
 Purpose: give each chapter the picture that makes its idea obvious to someone who has never seen this code. The
-viewer wants to see how the thing works (what moves where, what changes, what can go wrong), not to read the code.
+viewer wants to see how the thing works: what moves where, what changes, what can go wrong.
 
 ## 1. Decide what the viewer must see
 
@@ -17,15 +17,19 @@ glance? Then design for that. Some shapes that often fit (ideas, not a menu):
 
 Whatever the shape:
 
-- **Behaviour first.** Name a part by what it does. Show a code name only as a label the viewer will meet again.
-  Show real code only when the request is about the code itself, or in one short recap.
+- **Show what the idea needs.** Explain in plain words, and bring in whatever makes the idea clearer, whenever the
+  video needs it (not only when the viewer asked): real code, a config file, a command and what it prints, a log
+  line, a data row, a request and its reply, a folder tree, a number. Name a part by what it does first.
+- **Everything shown is real or clearly generic.** Code, values and file contents come from the repository with
+  where they came from (`add.js, line 12`), or are plainly examples (`step 1`, `"buy milk"`). Never invent anything
+  that looks like it is from the repository.
+- **Mark what is not built.** When a chapter shows planned or missing work, say so on screen: the `yk-planned`
+  badge, and dashed outlines in `--yk-orange` for planned parts beside solid ones for what exists.
 - **One picture that builds.** Keep the chapter's picture on screen and change only what the sentence talks about,
   so the viewer sees state pile up instead of slides swapping. The screen is never blank.
 - **Readable on a phone.** About seven things on screen at most, labels at least 32 px, nothing under 24 px.
-- **Chapters stand alone.** When chapters share a picture, each one draws it again from the start, with what came
-  before already shown, dimmed.
-- **Never invent code that looks real.** Code or values shown as an example are copied from the repository with
-  their file and line, or are clearly generic (`step 1`, not a made-up function).
+- **Chapters stand alone, and match.** When chapters share a picture, each draws it again from the start with what
+  came before shown dimmed. Every scene opens with the same header (section 3).
 
 ## 2. Ready pieces
 
@@ -44,24 +48,22 @@ lists every param.
 
 When no piece shows the idea well, design the scene: a `design` piece pointing at a file you write in the video
 folder, `{"piece": "design", "params": {"file": "scenes/<id>.html"}, "beat": 0}`. Scaffold copies the file into
-`chapter.json`. The file holds three things:
+`chapter.json`. Start from the worked example, [examples/journey.html](../examples/journey.html): a journey with
+a failure and a planned part, using every rule below. The file holds `<style>`, your markup on a 1920x1080 stage,
+and one `<script data-yap-timeline>`.
 
-```html
-<style> /* your styles; scope every rule under one id, for example #s */ </style>
-<div id="s"> ... your markup, positioned on a 1920x1080 stage ... </div>
-<script data-yap-timeline>
-tl.from("#s .box", {opacity: 0, y: 20, duration: 0.4}, beat(2));
-</script>
-```
-
+- **Shared look:** open with `<div class="yk-kicker">Topic · this chapter</div>` and
+  `<div class="yk-title">The one idea</div>` (no numbers in the label: chapters can move). Use the theme variables:
+  `--yk-yellow`, `--yk-orange`, `--yk-green`, `--yk-blue`, `--yk-pink`, `--yk-red`, `--yk-text`, `--yk-dim`,
+  `--yk-black`, `--yk-panel`, `--yk-line`, `--yk-font`, `--yk-font-mono`. Scope your own rules under one id.
 - **Timing:** `beat(n)` is when sentence `n` starts; `startS` and `endS` are the piece's window. Bring each thing in
   on the sentence that talks about it (`beat(n) + 0.3` is fine). Use only sentences from the piece's beat up to the
   next piece's beat.
+- **Hold back what comes later.** Anything that appears after the start is hidden first,
+  `tl.set("#later", {opacity: 0}, startS)`, then revealed on its beat with `tl.to`. A `tl.fromTo` shows its start
+  values from the very beginning of the chapter, so never use it to bring in something that should not be seen yet.
 - **Motion:** animate `x`, `y`, `scale`, `opacity` and colours. Never move things with `left`, `top`, `width` or
   `height`: it stutters in the recording and the check refuses it.
-- **Look:** use the theme variables so chapters match: `--yk-yellow`, `--yk-orange`, `--yk-green`, `--yk-blue`,
-  `--yk-pink`, `--yk-red`, `--yk-text`, `--yk-dim`, `--yk-black`, `--yk-panel`, `--yk-line`, `--yk-font`,
-  `--yk-font-mono`.
 - **Checked in code** (scaffold refuses otherwise): the timeline is only `tl.from`, `tl.to`, `tl.fromTo` and `tl.set`
   calls; the markup has no scripts, event handlers, images, links or `src`/`href`; styles have no `url()` or
   `@import`; the file is at most 100 KB.
@@ -69,16 +71,18 @@ tl.from("#s .box", {opacity: 0, y: 20, duration: 0.4}, beat(2));
 
 ## 4. Look before you trust it
 
-After narrating a chapter, look at it before rendering:
+After narrating a chapter, look at it before rendering. Take a frame about one second after each sentence starts:
+read the `start` of every beat in the chapter's `beats.json`, add 1, and pass the list:
 
 ```
 npx --yes hyperframes@0.8.112 check .yap/<slug>/chapters/<id>
-npx --yes hyperframes@0.8.112 snapshot .yap/<slug>/chapters/<id> --frames 10
+npx --yes hyperframes@0.8.112 snapshot .yap/<slug>/chapters/<id> --at 1,4.3,8.1
 ```
 
-The check finds overflowing text, poor contrast and bad motion. It does not see two boxes overlapping, a label
-over a border or a picture that does not say what the sentence says: open the PNGs and look. To fix anything, change
-the spec or the scene file and redo the chapter (see [render.md](render.md)); never patch `index.html`.
+The check finds overflowing text, poor contrast and bad motion. It does not see two boxes overlapping, a label on
+a border, something shown before its sentence or a picture that does not say what the sentence says: open
+`snapshots/contact-sheet.jpg` and look. To fix anything, change the spec or the scene file and redo the chapter
+(see [render.md](render.md)); never patch `index.html`.
 
 ## 5. The spec file
 
@@ -96,4 +100,4 @@ Each piece's `beat` is the sentence it appears with; beats rise from 0 and a pie
 Then scaffold it: `yap scaffold .yap/<slug>/specs/<id>.json --root .yap/<slug>` (the video folder, not the
 repository). It never overwrites a chapter: to redo one, delete its folder first.
 
-**Gate:** every chapter has a spec whose picture was chosen for its idea, `yap scaffold` exited 0 for it, and you looked at its snapshots before rendering.
+**Gate:** every chapter has a spec whose picture was chosen for its idea, `yap scaffold` exited 0 for it, and you looked at its snapshots, one per sentence, before rendering.
