@@ -192,3 +192,30 @@ test('an invalid injected clock gives a one-line Error', () => withTmp((dir) => 
   }
   assert.equal(fs.existsSync(f), false);
 }));
+
+test('make_video needs ref, the id of a reply; other types refuse ref', () => withTmp((dir) => {
+  const f = path.join(dir, 'events.jsonl');
+  assert.throws(() => E.appendEvent(f, { type: 'make_video' }), /ref is required/);
+  for (const ref of ['evt_1', 'rep_x', 'rep_', 12, '']) {
+    assert.throws(() => E.appendEvent(f, { type: 'make_video', ref }), /ref must look like rep_<number>/, String(ref));
+  }
+  const e = E.appendEvent(f, { type: 'make_video', ref: 'rep_3', context: ctx });
+  assert.equal(e.ref, 'rep_3');
+  assert.equal(E.readEventsAfter(f, null)[0].ref, 'rep_3');
+  assert.throws(() => E.appendEvent(f, { type: 'message', text: 'hi', ref: 'rep_1' }), /only make_video carries ref/);
+  assert.equal(E.appendEvent(f, { type: 'message', text: 'hi' }).ref, undefined);
+}));
+
+test('a reply may offer a video with offer_video: true; anything else is refused', () => withTmp((dir) => {
+  const events = path.join(dir, 'events.jsonl');
+  const thread = path.join(dir, 'thread.jsonl');
+  E.appendEvent(events, { type: 'message', text: 'why?' });
+  const plain = E.appendReply(thread, { in_reply_to: 'evt_1', text: 'because' }, { eventsFile: events });
+  assert.equal(plain.offer_video, undefined);
+  const offered = E.appendReply(thread, { in_reply_to: 'evt_1', text: 'see', offer_video: true }, { eventsFile: events });
+  assert.equal(offered.offer_video, true);
+  assert.equal(E.readThread(thread)[1].offer_video, true);
+  for (const bad of [false, 'true', 1, null]) {
+    assert.throws(() => E.appendReply(thread, { in_reply_to: 'evt_1', text: 'x', offer_video: bad }, { eventsFile: events }), /offer_video must be true when given/, String(bad));
+  }
+}));

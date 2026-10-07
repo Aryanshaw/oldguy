@@ -28,8 +28,8 @@ test('the domain modules and the whole server folder are TypeScript, not .cjs', 
   assert.deepEqual(server, []);
 });
 
-test('only the three plain-JavaScript start files and the Node-floor file are .cjs under the source folders', () => {
-  const allowed = new Set(['bin/yap.cjs', 'hooks/session-start.cjs', 'lib/node-floor.cjs']);
+test('only the plain-JavaScript start files and the Node-floor file are .cjs under the source folders', () => {
+  const allowed = new Set(['bin/yap.cjs', 'hooks/session-start.cjs', 'hooks/session-end.cjs', 'lib/node-floor.cjs']);
   const found = [];
   for (const dir of ['bin', 'cli', 'hooks', 'lib', 'server', 'scene-kit']) {
     for (const f of fs.readdirSync(path.join(ROOT, dir))) if (f.endsWith('.cjs')) found.push(`${dir}/${f}`);

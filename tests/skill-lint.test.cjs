@@ -15,7 +15,7 @@ const MAX_REFERENCE_LINES = 120;
 // Words the owner never wants in the skill text (whole words, any case).
 const BANNED_WORDS = /\b(cost|costs|price|pricing|usd|dollar|dollars|billing|token|tokens)\b/i;
 // Commands that do not exist yet and must not be promised.
-const MISSING_COMMANDS = /\byap (listen|export)\b/i;
+const MISSING_COMMANDS = /\byap (export)\b/i;
 
 // Reads one file as text; a missing file fails the test with its path.
 function readText(file) {
@@ -79,7 +79,7 @@ test('every yap command mentioned is a real command in yap --help', () => {
 test('SKILL.md links every reference, every link resolves, and the required references exist', () => {
   const linked = new Set([...readText(SKILL).matchAll(/references\/([a-z-]+\.md)/g)].map((m) => m[1]));
   const present = new Set(fs.existsSync(REFS_DIR) ? fs.readdirSync(REFS_DIR) : []);
-  for (const name of ['scope.md', 'verify.md', 'storyboard.md', 'visuals.md', 'narrate.md', 'render.md', 'doctor.md']) {
+  for (const name of ['scope.md', 'verify.md', 'storyboard.md', 'visuals.md', 'narrate.md', 'render.md', 'doctor.md', 'ask-loop.md']) {
     assert.ok(present.has(name), `references/${name} is missing`);
   }
   for (const name of linked) assert.ok(present.has(name), `SKILL.md links references/${name}, which does not exist`);

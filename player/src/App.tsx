@@ -18,7 +18,6 @@ function Page({ store, manifest, onExport }: { store: Store; manifest: Manifest;
   const chapters = manifest.chapters;
   const player = usePlayer(chapters);
   const [captionsOn, toggleCaptions] = useCaptionsPref();
-  const [panelOpen, setPanelOpen] = useState(true);
   const claudeConnected = useStore(store, (s) => s.claudeConnected);
   const failReasons = useStore(store, (s) => s.failReasons);
   const sent = useStore(store, (s) => s.sent);
@@ -29,7 +28,7 @@ function Page({ store, manifest, onExport }: { store: Store; manifest: Manifest;
       <Header title={manifest.title} connected={claudeConnected} onExport={onExport} />
       <div
         data-layout
-        className={`grid grid-cols-1 items-start gap-5 ${panelOpen ? 'min-[1000px]:grid-cols-[minmax(0,1fr)_360px]' : ''}`}
+        className="grid grid-cols-1 items-start gap-5 min-[1000px]:grid-cols-[minmax(0,1fr)_360px]"
       >
         <div className="flex min-w-0 flex-col gap-4">
           <VideoStage player={player} chapters={chapters} captionsOn={captionsOn} />
@@ -44,33 +43,23 @@ function Page({ store, manifest, onExport }: { store: Store; manifest: Manifest;
             onRetry={(id) => void store.press('retry_chapter', 'rt:' + id, { chapter_id: id, t: 0 }).catch(() => {})}
           />
         </div>
-        <div className="flex min-w-0 flex-col gap-2">
-          <button
-            type="button"
-            aria-expanded={panelOpen}
-            aria-controls="side-panel"
-            onClick={() => setPanelOpen((v) => !v)}
-            className="bd cursor-pointer self-end rounded-[10px] bg-yk-white px-3 py-1 text-xs font-black text-yk-black focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-yk-black"
-          >
-            {panelOpen ? 'Hide panel' : 'Show panel'}
-          </button>
-          {panelOpen && (
-            <aside id="side-panel" className="bd sh-lg flex flex-col gap-3 rounded-[14px] bg-yk-white p-3">
-              <Tabs defaultValue="chat" className="flex flex-col gap-3">
-                <TabsList>
-                  <TabsTrigger value="chat">Chat</TabsTrigger>
-                  <TabsTrigger value="sources">Sources</TabsTrigger>
-                </TabsList>
-                <TabsContent value="chat">
-                  <ChatTab store={store} position={player.position} chapters={chapters} />
-                </TabsContent>
-                <TabsContent value="sources">
-                  <SourcesTab store={store} position={player.position} chapters={chapters} />
-                </TabsContent>
-              </Tabs>
-            </aside>
-          )}
-        </div>
+        <aside
+          // a fixed height, so a long chat scrolls inside the panel and the question box stays on screen
+          className="bd sh-lg flex h-[min(760px,calc(100dvh-8rem))] min-h-[420px] flex-col gap-3 rounded-[14px] bg-yk-white p-3"
+        >
+          <Tabs defaultValue="chat" className="flex min-h-0 flex-1 flex-col gap-3">
+            <TabsList>
+              <TabsTrigger value="chat">Chat</TabsTrigger>
+              <TabsTrigger value="sources">Sources</TabsTrigger>
+            </TabsList>
+            <TabsContent value="chat" className="flex min-h-0 flex-1 flex-col">
+              <ChatTab store={store} position={player.position} chapters={chapters} />
+            </TabsContent>
+            <TabsContent value="sources" className="min-h-0 flex-1 overflow-y-auto">
+              <SourcesTab store={store} position={player.position} chapters={chapters} />
+            </TabsContent>
+          </Tabs>
+        </aside>
       </div>
     </div>
   );

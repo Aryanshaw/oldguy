@@ -15,9 +15,10 @@ type ChapterSync = { onChange: (diff: Diff) => Promise<void>; stop: () => void; 
 // The part of a "chapter" stream event that the sync fills in (the op is always "scan").
 type ScanNews = Omit<ChapterPayload, 'op'>;
 
-// Turns the folder's status into the row's status. An idle folder never wipes a failure that was reported earlier.
+// Turns the folder's status into the row's status. An idle folder (no video yet) never wipes a failure that was
+// reported earlier, nor a "rendering" set through the API while a chapter subagent is still making the chapter.
 function mapStatus(scanStatus: ScanStatus, rowStatus: ChapterStatus | null): ChapterStatus {
-  return scanStatus === 'pending' && rowStatus === 'failed' ? 'failed' : scanStatus;
+  return scanStatus === 'pending' && (rowStatus === 'failed' || rowStatus === 'rendering') ? rowStatus : scanStatus;
 }
 
 // A brand new row for a chapter folder the manifest does not know yet.

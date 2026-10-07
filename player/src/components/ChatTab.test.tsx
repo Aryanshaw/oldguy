@@ -86,15 +86,27 @@ describe('thread', () => {
 });
 
 describe('make this a video', () => {
-  it('posts once with the entry context and flips to Asked for a video', async () => {
+  it('is not shown under an answer Claude did not offer as a video', async () => {
+    await setup([claude('c1', 'got it'), claude('c2', 'no', { offer_video: false })]);
+    expect(screen.queryByRole('button', { name: 'Make this a video' })).toBeNull();
+  });
+
+  it('posts once with the entry context and the reply id as ref, then flips to Asked for a video', async () => {
     const ctx = { chapter_id: 'a', t: 3 };
-    const { postMessage, user } = await setup([claude('c1', 'answer', { context: ctx })]);
+    const { postMessage, user } = await setup([claude('c1', 'answer', { context: ctx, offer_video: true })]);
     await user.click(screen.getByRole('button', { name: 'Make this a video' }));
     const done = await screen.findByRole('button', { name: 'Asked for a video' });
     expect(done).toBeDisabled();
     await user.click(done);
     expect(postMessage).toHaveBeenCalledTimes(1);
-    expect(postMessage).toHaveBeenCalledWith({ type: 'make_video', context: ctx });
+    expect(postMessage).toHaveBeenCalledWith({ type: 'make_video', context: ctx, ref: 'c1' });
+  });
+
+  it('stays Asked for a video after a reload when the server says it was already asked', async () => {
+    const { postMessage } = await setup([claude('c1', 'answer', { offer_video: true, video_asked: true })]);
+    expect(screen.getByRole('button', { name: 'Asked for a video' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Make this a video' })).toBeNull();
+    expect(postMessage).not.toHaveBeenCalled();
   });
 });
 
@@ -125,7 +137,7 @@ describe('just text', () => {
 });
 
 describe('connection', () => {
-  const notice = "Claude isn't connected: run /yap resume in Claude Code";
+  const notice = "Claude isn't connected.";
   it('shows the notice and waiting for viewer messages newer than the last claude reply', async () => {
     await setup([viewer('v0', 'old'), claude('c1', 'r'), viewer('v1', 'new1'), viewer('v2', 'new2')], { connected: false });
     expect(screen.getByText(notice)).toBeInTheDocument();

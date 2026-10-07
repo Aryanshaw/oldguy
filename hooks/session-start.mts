@@ -2,44 +2,14 @@
 // `/yap doctor` until it has passed once. It must never break a session, so every path ends in exit 0.
 import fs from 'node:fs';
 import path from 'node:path';
-
-const READ_LIMIT_MS = 500;
-
-// The JSON Claude Code sends the hook on stdin (any field may be missing or of another type).
-type HookInput = Record<string, unknown>;
-
-// Reads all of stdin, but gives up after a short wait so a pipe that never closes cannot hang the session.
-function readStdin(): Promise<string> {
-  return new Promise<string>((resolve) => {
-    let text = '';
-    let done = false;
-    const finish = () => {
-      if (done) return;
-      done = true;
-      resolve(text);
-    };
-    const timer = setTimeout(finish, READ_LIMIT_MS);
-    process.stdin.setEncoding('utf8');
-    process.stdin.on('data', (chunk: string) => { text += chunk; });
-    process.stdin.on('end', () => { clearTimeout(timer); finish(); });
-    process.stdin.on('error', () => { clearTimeout(timer); finish(); });
-  });
-}
-
-// Turns the stdin text into a plain object, or null when it is not a JSON object.
-function parseInput(text: string): HookInput | null {
-  try {
-    const value: unknown = JSON.parse(text);
-    return value && typeof value === 'object' && !Array.isArray(value) ? (value as HookInput) : null;
-  } catch {
-    return null;
-  }
-}
+import { readStdin, parseInput } from './stdin.mts';
+import type { HookInput } from './stdin.mts';
 
 // Writes the session file through a temp file and a rename, so a reader never sees half a file.
 async function writeSessionFile(cwd: string, input: HookInput): Promise<void> {
   // loaded here, not at the top, so even a missing library file ends in the quiet exit 0
   const { trustedDataDir } = await import('../lib/data-dir.mts');
+  const { findClaudePid } = await import('../lib/owner.mts');
   const dir = path.join(cwd, '.yap');
   fs.mkdirSync(dir, { recursive: true });
   const record = {
@@ -47,6 +17,8 @@ async function writeSessionFile(cwd: string, input: HookInput): Promise<void> {
     transcript_path: input.transcript_path,
     cwd,
     source: input.source,
+    // the Claude Code process this session runs in; yap serve stops when it is gone (null when none was found)
+    claude_pid: findClaudePid(process.ppid),
     // Claude's own shell does not get CLAUDE_PLUGIN_DATA, so yap commands read the data folder from here;
     // only a folder inside Claude Code's plugin data root is recorded, since readers trust nothing else
     data_dir: trustedDataDir(process.env.CLAUDE_PLUGIN_DATA || null, { env: process.env }),

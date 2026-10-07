@@ -28,6 +28,8 @@ type _Checks = [
   Expect<Equal<Extract<StreamEvent, { event: 'reply' }>['data'], Reply & { role: 'claude' }>>,
   Expect<Equal<ThreadEntry['role'], 'viewer' | 'claude'>>,
   Expect<Equal<ViewerEvent['id'], string>>,
+  Expect<Equal<ViewerEvent['ref'], string | undefined>>,
+  Expect<Equal<Reply['offer_video'], true | undefined>>,
   // the API's request and response shapes
   Expect<Equal<ChaptersBody['op'], 'add' | 'reorder' | 'set'>>,
   Expect<Equal<StateResponse['manifest'], Manifest>>,

@@ -71,7 +71,7 @@ test('POST /api/message appends exactly one line and returns the event; state sh
   assert.equal(s.thread.length, 1);
   assert.equal(s.thread[0].role, 'viewer');
   assert.equal(s.thread[0].text, 'why?');
-  assert.equal((await call(srv, 'POST', '/api/message', { type: 'make_video' })).status, 200);
+  assert.equal((await call(srv, 'POST', '/api/message', { type: 'make_video', ref: 'rep_1' })).status, 200);
   assert.equal((await call(srv, 'GET', '/api/state')).json.thread.length, 1, 'button events are not shown in the thread');
 });
 
@@ -338,4 +338,45 @@ test('a broken manifest after start: message and heartbeat are stored and still 
   assert.equal(hb.status, 200);
   assert.equal(srv.state.lastHeartbeat !== null, true);
   assert.equal(lines(path.join(slugDir, 'state', 'thread.jsonl')).length, 1);
+});
+
+test('POST /api/message stores ref on make_video; POST /api/reply stores offer_video and state shows both', async (t) => {
+  const { srv, slugDir } = await setup(t);
+  await call(srv, 'POST', '/api/message', { type: 'message', text: 'what if it fails?' });
+  const rep = await call(srv, 'POST', '/api/reply', { in_reply_to: 'evt_1', text: 'it retries', offer_video: true });
+  assert.equal(rep.status, 200, rep.text);
+  assert.equal(rep.json.reply.offer_video, true);
+  const mv = await call(srv, 'POST', '/api/message', { type: 'make_video', ref: rep.json.reply.id });
+  assert.equal(mv.status, 200, mv.text);
+  assert.equal(mv.json.event.ref, 'rep_1');
+  assert.equal((await call(srv, 'POST', '/api/message', { type: 'make_video' })).status, 400);
+  const state = await call(srv, 'GET', '/api/state');
+  assert.equal(state.json.thread.find((e) => e.role === 'claude').offer_video, true);
+  assert.equal(JSON.parse(lines(path.join(slugDir, 'state', 'events.jsonl'))[1]).ref, 'rep_1');
+});
+
+test('POST /api/ack: closes an event; unknown event 404; bad id 400; a second ack is fine', async (t) => {
+  const { srv, slugDir, root } = await setup(t);
+  await call(srv, 'POST', '/api/message', { type: 'just_text' });
+  const ok = await call(srv, 'POST', '/api/ack', { event_id: 'evt_1' });
+  assert.equal(ok.status, 200, ok.text);
+  assert.deepEqual(Object.keys(ok.json.ack).sort(), ['event_id', 'id', 'ts']);
+  assert.equal((await call(srv, 'POST', '/api/ack', { event_id: 'evt_1' })).status, 200);
+  assertCleanError(await call(srv, 'POST', '/api/ack', { event_id: 'evt_7' }), 404, root);
+  assertCleanError(await call(srv, 'POST', '/api/ack', { event_id: 'x' }), 400, root);
+  assertCleanError(await call(srv, 'POST', '/api/ack', {}), 400, root);
+  assert.equal(lines(path.join(slugDir, 'state', 'acks.jsonl')).length, 2);
+});
+
+test('state marks a reply video_asked once a make_video names it, so a reloaded page shows the button as asked', async (t) => {
+  const { srv } = await setup(t);
+  await call(srv, 'POST', '/api/message', { type: 'message', text: 'q' });
+  await call(srv, 'POST', '/api/reply', { in_reply_to: 'evt_1', text: 'a', offer_video: true });
+  await call(srv, 'POST', '/api/reply', { in_reply_to: 'evt_1', text: 'b', offer_video: true });
+  let thread = (await call(srv, 'GET', '/api/state')).json.thread;
+  assert.equal(thread.find((e) => e.id === 'rep_1').video_asked, undefined);
+  await call(srv, 'POST', '/api/message', { type: 'make_video', ref: 'rep_1' });
+  thread = (await call(srv, 'GET', '/api/state')).json.thread;
+  assert.equal(thread.find((e) => e.id === 'rep_1').video_asked, true);
+  assert.equal(thread.find((e) => e.id === 'rep_2').video_asked, undefined);
 });

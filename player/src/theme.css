@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* dist/ is committed, so keep Tailwind from reading class names out of the previous build */
+@source not "../dist";
 @import "@fontsource/archivo/latin-500.css";
 @import "@fontsource/archivo/latin-700.css";
 @import "@fontsource/archivo/latin-900.css";
@@ -44,4 +46,18 @@ body {
   .yk-stripes {
     animation: none;
   }
+}
+
+/* the timeline's horizontal scrollbar, in the page's black-on-cream look */
+.yk-track-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-yk-black) transparent;
+}
+.yk-track-scroll::-webkit-scrollbar {
+  height: 10px;
+}
+.yk-track-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-yk-black);
+  border-radius: 999px;
+  border: 2px solid var(--color-yk-cream);
 }

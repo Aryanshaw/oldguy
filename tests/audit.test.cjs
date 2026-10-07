@@ -249,3 +249,21 @@ test('cli exits 2 on unreadable or malformed chapter.json and on missing argumen
     assert.equal(noShape.status, 2);
   });
 });
+
+test('checkCitation: a chat source must name a real file inside the root and lines that exist in it', () => {
+  const { checkCitation } = require('../lib/audit.mts');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-cite-'));
+  try {
+    fs.mkdirSync(path.join(root, 'src'));
+    fs.writeFileSync(path.join(root, 'src', 'a.js'), 'one\ntwo\nthree\n');
+    assert.equal(checkCitation(root, 'src/a.js', '2'), null);
+    assert.equal(checkCitation(root, 'src/a.js', '1-3'), null);
+    assert.match(checkCitation(root, 'src/a.js', '3-4'), /past end of file \(3 lines\)/);
+    assert.match(checkCitation(root, 'src/a.js', '3-2'), /invalid line range/);
+    assert.match(checkCitation(root, 'src/missing.js', '1'), /file not found/);
+    assert.match(checkCitation(root, '../outside.js', '1'), /outside root|not found/);
+    assert.match(checkCitation(root, 'src', '1'), /not a regular file/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

@@ -6,6 +6,7 @@ import { renderChapters, renderArgs, checkArgs } from '../lib/render-chapters.mt
 import { renderCap } from '../lib/render-schedule.mts';
 import { freeRamGb } from '../lib/doctor.mts';
 import { realExec } from './doctor.mts';
+import { withSlot } from '../lib/slots.mts';
 import type { ChapterOutcome, CheckResult, Folder } from '../lib/render-chapters.mts';
 
 // What the command line asked for.
@@ -18,8 +19,11 @@ const CHECK_TIMEOUT_MS = 10 * 60 * 1000;
 const RENDER_MAX_BUFFER = 256 * 1024 * 1024;
 
 // Renders one chapter for real; a failed render becomes an error carrying the last line Hyperframes printed.
+// Recording is heavy, so it waits for one of the machine's slots (shared with narrate and with other yap processes).
 async function realRender({ dir }: Folder): Promise<void> {
-  const r = await realExec('npx', renderArgs(dir), { timeout: RENDER_TIMEOUT_MS, maxBuffer: RENDER_MAX_BUFFER });
+  const onWait = (inUse: number) => { process.stderr.write(`waiting for a free slot (${inUse} in use)\n`); };
+  const r = await withSlot({ cap: renderCap(freeRamGb(os)), onWait },
+    () => realExec('npx', renderArgs(dir), { timeout: RENDER_TIMEOUT_MS, maxBuffer: RENDER_MAX_BUFFER }));
   if (r.code !== 0) {
     const last = String(r.stderr || '').trim().split('\n').pop();
     throw new Error(`hyperframes render failed: ${last || (r.timedOut ? 'timed out' : `exit code ${r.code}`)}`);

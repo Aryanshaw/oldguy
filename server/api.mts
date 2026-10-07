@@ -1,10 +1,10 @@
 // The JSON API the player and Claude's CLI use: state, live stream, chat, replies, chapter changes and the heartbeat.
 import path from 'node:path';
-import { appendEvent, readEventsAfter, appendReply, readThread } from '../lib/events.mts';
+import { appendEvent, readEventsAfter, appendReply, readThread, appendAck } from '../lib/events.mts';
 import { loadManifest, insertChapter, reorderChapters, setChapterFields } from '../lib/manifest.mts';
 import { scanChapter } from '../lib/chapter-scan.mts';
 import { handleExport } from './export-route.mts';
-import type { EventContext, EventType, Reply, SourceRef, ThreadEntry, ViewerEvent } from '../lib/events.mts';
+import type { Ack, EventContext, EventType, Reply, SourceRef, ThreadEntry, ViewerEvent } from '../lib/events.mts';
 import type { Manifest, ManifestRow, NewRow } from '../lib/manifest.mts';
 import type { ChapterPayload, StatePayload, StreamData, StreamEventName } from '../lib/sse.mts';
 import type { JsonObject } from '../lib/http-guard.mts';
@@ -12,9 +12,11 @@ import type { ExportResult } from '../lib/export.mts';
 import type { Route, RouteContext, ServerState } from './types.mts';
 
 // What a client sends to POST /api/message.
-type MessageBody = { type: EventType; text?: string; context?: EventContext };
+type MessageBody = { type: EventType; text?: string; context?: EventContext; ref?: string };
 // What a client sends to POST /api/reply.
-type ReplyBody = { in_reply_to: string; text: string; sources?: SourceRef[] };
+type ReplyBody = { in_reply_to: string; text: string; sources?: SourceRef[]; offer_video?: true };
+// What a client sends to POST /api/ack: the event Claude has handled without a text reply.
+type AckBody = { event_id: string };
 // The chapter fields POST /api/chapters may change with op "set".
 type SettableFields = Partial<Pick<ManifestRow, 'status' | 'quality' | 'title' | 'placement_reason' | 'question'>>;
 // What a client sends to POST /api/chapters: add a chapter, put all of them in a new order, or change one.
@@ -29,6 +31,7 @@ type StateResponse = StatePayload;
 // What POST /api/message, /api/reply, /api/chapters and /api/export answer on success.
 type MessageResponse = { event: ViewerEvent };
 type ReplyResponse = { reply: Reply };
+type AckResponse = { ack: Ack };
 type ChaptersResponse = { manifest: Manifest };
 type ExportResponse = ExportResult;
 // A change to the manifest: gets the loaded manifest, returns the new one (it may throw an Error that carries a status).
@@ -62,6 +65,7 @@ function tell<E extends StreamEventName>(state: ServerState, event: E, makeData:
 // Where the chat files live.
 const eventsFile = (state: ServerState): string => path.join(state.slugDir, 'state', 'events.jsonl');
 const threadFile = (state: ServerState): string => path.join(state.slugDir, 'state', 'thread.jsonl');
+const acksFile = (state: ServerState): string => path.join(state.slugDir, 'state', 'acks.jsonl');
 const manifestFile = (state: ServerState): string => path.join(state.slugDir, 'manifest.json');
 
 // The injected clock in milliseconds (tests move it by hand).
@@ -82,10 +86,12 @@ function timeOf(entry: { ts: string }): number {
 
 // Builds the chat list the browser shows: viewer messages and Claude's replies in time order, events first on a tie.
 function buildThread(state: ServerState): ThreadEntry[] {
-  const viewer = readEventsAfter(eventsFile(state), null)
-    .filter((e) => e.type === 'message')
-    .map((e): ThreadEntry => ({ ...e, role: 'viewer' }));
-  const claude = readThread(threadFile(state)).map((r): ThreadEntry => ({ ...r, role: 'claude' }));
+  const events = readEventsAfter(eventsFile(state), null);
+  const viewer = events.filter((e) => e.type === 'message').map((e): ThreadEntry => ({ ...e, role: 'viewer' }));
+  // a reply whose video was already asked for says so, so a reloaded page shows its button as pressed
+  const asked = new Set(events.filter((e) => e.type === 'make_video' && e.ref).map((e) => e.ref));
+  const claude = readThread(threadFile(state))
+    .map((r): ThreadEntry => (asked.has(r.id) ? { ...r, role: 'claude', video_asked: true } : { ...r, role: 'claude' }));
   return [...viewer, ...claude].sort((a, b) => timeOf(a) - timeOf(b));
 }
 
@@ -113,10 +119,11 @@ function handleStream({ res, state }: RouteContext): void {
 
 // POST /api/message: stores a viewer event (type, text, context) and tells the other open tabs.
 async function handleMessage({ req, res, state, sendJson, readJsonBody }: RouteContext): Promise<void> {
-  const { type, text, context } = await readJsonBody(req);
+  const { type, text, context, ref } = await readJsonBody(req);
   const input: Record<string, unknown> = { type };
   if (text !== undefined) input.text = text;
   if (context !== undefined) input.context = context;
+  if (ref !== undefined) input.ref = ref;
   const event = lib(() => appendEvent(eventsFile(state), input, { now: clockDate(state) }));
   tell(state, 'state', () => buildState(state));
   sendJson(res, 200, { event });
@@ -124,12 +131,24 @@ async function handleMessage({ req, res, state, sendJson, readJsonBody }: RouteC
 
 // POST /api/reply: stores Claude's answer to an event and streams it to the open tabs.
 async function handleReply({ req, res, state, sendJson, readJsonBody }: RouteContext): Promise<void> {
-  const { in_reply_to, text, sources } = await readJsonBody(req);
+  const { in_reply_to, text, sources, offer_video } = await readJsonBody(req);
   const input: Record<string, unknown> = { in_reply_to, text };
   if (sources !== undefined) input.sources = sources;
+  if (offer_video !== undefined) input.offer_video = offer_video;
   const reply = lib(() => appendReply(threadFile(state), input, { eventsFile: eventsFile(state), now: clockDate(state) }));
   tell(state, 'reply', () => ({ ...reply, role: 'claude' }));
   sendJson(res, 200, { reply });
+}
+
+// POST /api/ack: records that Claude handled an event that gets no text reply (a button press), so yap listen stops
+// showing it. An unknown event is a 404; a malformed id a 400.
+async function handleAck({ req, res, state, sendJson, readJsonBody }: RouteContext): Promise<void> {
+  const { event_id } = await readJsonBody(req);
+  if (typeof event_id === 'string' && /^evt_\d+$/.test(event_id) && !readEventsAfter(eventsFile(state), null).some((e) => e.id === event_id)) {
+    throw httpError(404, `${event_id} is not a known event`);
+  }
+  const ack = lib(() => appendAck(acksFile(state), event_id, { eventsFile: eventsFile(state), now: clockDate(state) }));
+  sendJson(res, 200, { ack });
 }
 
 // Stops the "Claude went quiet" timer, if one is armed (close() uses this too).
@@ -253,13 +272,14 @@ const API_ROUTES: Route[] = [
   { method: 'GET', pattern: '/api/stream', handler: handleStream },
   { method: 'POST', pattern: '/api/message', handler: handleMessage },
   { method: 'POST', pattern: '/api/reply', handler: handleReply },
+  { method: 'POST', pattern: '/api/ack', handler: handleAck },
   { method: 'POST', pattern: '/api/chapters', handler: handleChapters },
   { method: 'POST', pattern: '/api/heartbeat', handler: handleHeartbeat },
   { method: 'POST', pattern: '/api/export', handler: handleExport },
 ];
 
 export { API_ROUTES, clearHeartbeatTimer };
-export type {
+export type { AckBody, AckResponse,
   MessageBody, ReplyBody, ChaptersBody, ExportBody, SettableFields, StateResponse, MessageResponse, ReplyResponse,
   ChaptersResponse, ExportResponse,
 };
