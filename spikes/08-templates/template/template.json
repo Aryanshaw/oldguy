@@ -1,0 +1,19 @@
+{
+  "id": "peter-and-stewie",
+  "title": "Peter and Stewie (spike: stand-in art)",
+  "description": "Stewie asks, Peter explains, gameplay runs behind.",
+  "shapes": ["9:16"],
+  "default_shape": "9:16",
+  "speakers": [
+    { "id": "stewie", "voice": "bm_george", "side": "left" },
+    { "id": "peter", "voice": "am_adam", "side": "right" }
+  ],
+  "pace": {
+    "voice_speed": { "stewie": 1.15, "peter": 1.1 },
+    "line_gap_ms": 120,
+    "max_words_per_line": 12,
+    "captions": "word",
+    "visual_beat": "keyword",
+    "chapter_seconds": [30, 60]
+  }
+}
