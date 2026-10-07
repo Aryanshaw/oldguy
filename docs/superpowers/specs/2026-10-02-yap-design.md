@@ -579,3 +579,14 @@ Amendments A10 to A17 come from the Phase 3 spec (`2026-10-03-phase-3-player-des
   tilted "yap" block. The alarm-clock mascot stays a corner badge and needs a redraw
   before release; the current drawing reads as a bear. Not blocking Phase 3.
 - **A17, parent spec section 4.3.** Add the two routes of point 1 to the endpoint table.
+
+## 16. Amendments of 2026-10-07 (from Phase 4)
+
+From `2026-10-07-phase-4-chat-bridge-design.md` section 9, word for word.
+
+- **A18 (4.5):** the bridge is `yap listen` under Monitor, printing open events then following; open = no reply and
+  no ack. The headless fallback (step 4) and the `/yap resume` message are removed.
+- **A19 (4.6):** ask first: text always, a chapter only on "Make this a video", which Claude offers per answer.
+  New chapters are built by background subagents; Claude chooses their place and whether they run in parallel.
+- **A20 (4.3):** new route `POST /api/ack`; `make_video` events carry `ref`; replies may carry `offer_video`.
+- **A21 (lifetime):** the server lives only as long as the Claude Code session that started it.

@@ -105,7 +105,7 @@ chapter id, its duration and whether every step passed.
 
 **Changed**
 
-- **Events:** `make_video` carries `ref`, the id of the reply it is about (`rpl_…`), checked like other fields.
+- **Events:** `make_video` carries `ref`, the id of the reply it is about (`rep_N`), checked like other fields.
 - **Replies:** optional `offer_video: true`. `yap reply --offer-video` sets it.
 - **Player:** "Make this a video" shows only under replies with `offer_video: true`, and the click sends `ref`. The
   not-connected notice changes from "run /yap resume" to "Claude isn't connected." `player/dist/` is rebuilt.
