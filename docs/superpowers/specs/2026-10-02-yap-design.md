@@ -600,3 +600,9 @@ From `2026-10-07-phase-4-chat-bridge-design.md` section 9, word for word.
   `/plugin install yap@yap`. Hard rule 5 of the skill now allows `yap setup --install` after the user's explicit yes.
 - **A23 (A16, mascot):** the alarm clock is redrawn so it no longer reads as a bear, as a placeholder: the owner
   plans an original character of their own for the logo and mascot (`docs/STATUS.md`).
+- **A24 (updates A22):** the terminal installer exists after all, as the npm package `getyap` (after the planned
+  domain getyap.dev), built in `packages/getyap/`. `npx getyap` installs or updates the plugin through
+  `claude plugin marketplace add|update` and `claude plugin install|update`, then shows `yap setup`'s list from the
+  installed plugin as a terminal checklist and installs only the ticked items (`--yes` takes all). It is plain
+  JavaScript because Node does not run TypeScript from `node_modules`. `yap setup` stays the route from inside
+  Claude Code.

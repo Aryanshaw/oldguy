@@ -41,7 +41,7 @@ function formatPlan(plan: SetupPlan): string {
   }
   if (plan.manual.length) {
     out.push('', 'Yap cannot install these for you:');
-    for (const m of plan.manual) out.push(`  ${m.name}: ${m.why}`, `     fix: ${m.fix}`);
+    for (const m of plan.manual) out.push(`  ${m.name}${m.required ? '' : ' (optional)'}: ${m.why}`, `     fix: ${m.fix}`);
   }
   return `${out.join('\n')}\n`;
 }

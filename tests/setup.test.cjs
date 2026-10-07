@@ -109,13 +109,14 @@ test('captions: Homebrew on macOS, manual on Linux; chrome is fetched by Hyperfr
   assert.deepEqual(mac.items[1].steps, [{ cmd: 'npx', args: [...HF, 'browser', 'ensure'] }]);
   const linux = await planSetup(machine({ offPath: ['whisper-cli'] }).deps);
   assert.deepEqual(linux.items, []);
-  assert.equal(linux.manual[0].name, 'whisper-cli (optional)');
+  assert.equal(linux.manual[0].name, 'whisper-cli');
+  assert.equal(linux.manual[0].required, false);
 });
 
 test('a broken ffmpeg or a full disk is manual, with the doctor fix line', async () => {
   const plan = await planSetup(machine({ offPath: ['ffmpeg'], freeDiskGb: 0.2 }).deps);
   assert.deepEqual(plan.manual.map((x) => x.name), ['ffmpeg', 'Free disk']);
-  assert.ok(plan.manual.every((x) => x.fix.length > 0));
+  assert.ok(plan.manual.every((x) => x.fix.length > 0 && x.required === true));
 });
 
 test('pickItems: fixed order, unknown or unneeded items are refused', async () => {

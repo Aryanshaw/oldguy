@@ -13,8 +13,8 @@ type ItemId = (typeof ITEM_IDS)[number];
 type SetupStep = Step | { write: string; text: string };
 // One thing setup offers: what it is, roughly how big, what it runs, and anything the user should know first.
 type SetupItem = { id: ItemId; what: string; size: string; steps: SetupStep[]; note?: string };
-// A problem setup will not touch: the doctor's finding and its fix line.
-type ManualItem = { name: string; why: string; fix: string };
+// A problem setup will not touch: the doctor's finding, its fix line, and whether Yap can run without it.
+type ManualItem = { name: string; why: string; fix: string; required: boolean };
 type SetupPlan = { items: SetupItem[]; manual: ManualItem[] };
 // The doctor's own dependencies, plus the platform and a scratch folder.
 type SetupDeps = DoctorDeps & { platform: string; tmpDir: string };
@@ -38,7 +38,7 @@ async function voiceItem(deps: SetupDeps, checks: DoctorCheck[]): Promise<SetupI
   const steps: SetupStep[] = [];
   if (venvBad) {
     const repair = await venvRepairSteps(deps);
-    if (!repair) return { name: 'Python venv', why: 'no Python 3.10 to 3.12 and no uv on PATH', fix: NO_PYTHON };
+    if (!repair) return { name: 'Python venv', why: 'no Python 3.10 to 3.12 and no uv on PATH', fix: NO_PYTHON, required: true };
     steps.push(...repair);
   }
   if (modelBad) {
@@ -59,7 +59,7 @@ async function captionsItem(deps: SetupDeps, checks: DoctorCheck[]): Promise<Set
   const whisper = checks.find((c) => c.name === 'whisper-cli');
   if (!whisper || whisper.ok) return null;
   if (deps.platform !== 'darwin' || !(await onPath(deps.exec, 'brew'))) {
-    return { name: 'whisper-cli (optional)', why: whisper.detail, fix: 'build whisper.cpp (https://github.com/ggml-org/whisper.cpp) so whisper-cli is on PATH, or skip it: captions stay sentence-level' };
+    return { name: 'whisper-cli', why: whisper.detail, fix: 'build whisper.cpp (https://github.com/ggml-org/whisper.cpp) so whisper-cli is on PATH, or skip it: captions stay sentence-level', required: false };
   }
   return {
     id: 'captions', what: 'Word-by-word captions: whisper.cpp through Homebrew', size: 'whisper.cpp, then 487 MB for the small.en model',
@@ -84,7 +84,7 @@ async function planSetup(deps: SetupDeps): Promise<SetupPlan> {
     if ('id' in found) plan.items.push(found); else plan.manual.push(found);
   }
   for (const c of checks) {
-    if (!c.ok && c.required && !OWN.includes(c.name)) plan.manual.push({ name: c.name, why: c.detail, fix: c.fix });
+    if (!c.ok && c.required && !OWN.includes(c.name)) plan.manual.push({ name: c.name, why: c.detail, fix: c.fix, required: true });
   }
   return plan;
 }

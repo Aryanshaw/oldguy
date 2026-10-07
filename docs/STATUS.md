@@ -26,8 +26,8 @@ Checks nobody has done yet:
   watch real chapters on a real screen and say whether it is visible (`docs/phase-3/SUMMARY.md` section 5.1).
 - **Listening.** Nobody has listened end to end for audio dropouts at a chapter join or narration out of sync.
 - **A 16 GB machine.** Renders were measured on 8 GB only.
-- **An install from GitHub.** The marketplace install was tested from a local folder (`claude plugin marketplace
-  add <folder>`), not yet from `Aryanshaw/yap` on a clean machine.
+- **An install on a fresh personal machine.** The install from GitHub (`Aryanshaw/yap`) was tested in a cloud
+  container with an empty Claude Code config, through `npx getyap`; not yet on a real macOS laptop.
 - **Phase 4 paths covered only by unit tests:** re-arming `yap listen` after the Monitor's 30-minute limit, and
   finding the Claude Code process on macOS.
 
@@ -41,7 +41,12 @@ Work to do:
 - **Fact-check coverage.** The audit checks narration and code against the repository; titles, steps, callouts and
   framing text on screen are not checked yet.
 - **Deferred minor findings.** Each phase summary lists the small findings left on purpose; none blocks use.
-- **Domain.** Not chosen yet.
+- **Domain and npm.** The domain will be getyap.dev (to buy). The terminal installer `npx getyap` is built in
+  `packages/getyap/` and tested from a packed tarball, but not published. To publish: `npm login`, then
+  `cd packages/getyap && npm publish`. Until then, the README's `npx getyap` line does not work yet.
+- **Releases.** Claude Code offers an update only when the version changes. To release, raise the same version in
+  `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `package.json` and `packages/getyap/package.json`
+  (`tests/versions.test.cjs` fails if they differ), merge, and publish getyap again.
 
 ## Left for later on purpose (v2 or never)
 
