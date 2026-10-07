@@ -29,7 +29,7 @@ An event stays open until it has a reply or an ack, so handle every one.
 |---|---|
 | `message` | Read the code it needs (its `context` says which chapter and second the viewer was on), then answer with `yap reply --in-reply-to <id> --text "…" --source <file>:<lines>` (one `--source` per place you used; each is checked against the code, so run it from the repository root or pass `--root`). Add `--offer-video` only when a chapter would explain it better (see section 3). The reply closes the event. |
 | `make_video` | `yap ack <id>`. Find the reply its `ref` names, then: `yap add-chapter --id <new-id> --title "…" --question "<the viewer's question>"` and `yap set-status --id <new-id> --status rendering` (the page shows "Making a chapter for: …"). Dispatch a chapter subagent (section 4). |
-| `just_text` | `yap ack <id>`. Stop the subagent building that chapter, delete its folder (`rm -r .yap/<slug>/chapters/<id>`) and its spec, and run `yap order <the remaining ids> --dir .yap/<slug>`. The question already has its text answer. |
+| `just_text` | `yap ack <id>`. Stop the subagent building that chapter, delete its folder (`rm -r .yap/<slug>/chapters/<id>`, if it was made) and its spec, then `yap remove-chapter --id <id> --dir .yap/<slug>` (the page drops "Making a chapter for…"). The question already has its text answer. |
 | `retry_chapter` | `yap ack <id>`, then dispatch a fresh chapter subagent for that chapter id. |
 | `export` | `yap ack <id>`: export runs on its own route. |
 
@@ -60,7 +60,7 @@ finish first. Otherwise dispatch at once; several subagents may run together. Na
 slot on their own, so the machine is never overloaded.
 
 **When a subagent reports back,** review before showing it: the render line said `ready`, the audit passed, and its
-snapshots were looked at. Then place it where it fits the story: `yap order <all ids in the new story order> --dir .yap/<slug>`, and
+snapshots were looked at. Then place it where it fits the story: `yap order <id>,<id>,... --dir .yap/<slug>` (every id, comma-separated, in the new story order), and
 `yap set-status --id <id> --status ready`. If it failed after the redo path, `yap set-status --id <id> --status
 failed` and tell the viewer in one reply; clicking the failed chapter asks for a retry.
 

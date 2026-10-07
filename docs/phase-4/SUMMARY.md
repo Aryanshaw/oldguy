@@ -42,6 +42,12 @@ On the 7-chapter video `how-yap-works-v2`:
   screen as the chat grew. Fixed with a bounded panel height (evidence 3).
 - **Owner review of the page:** the "Hide panel" button took its own row and pushed the side panel below the video's
   top line. The button was removed (the panel is always shown) and both columns now start on the same line.
+- **"Just text" left a ghost chapter** (second live run, after the PR merged): `/api/chapters` had no way to remove a
+  chapter, so after "Just text" the page showed "Making a chapter for…" forever. Added op `remove` and
+  `yap remove-chapter --id` (refused while the chapter's folder exists); the skill's just-text steps use it, and now
+  say that `yap order` takes comma-separated ids. Re-run on the fixed code: the question was answered in 6.9 s,
+  "Make this a video" → "Making a chapter for…" → "Just text" → gone, 8 chapters after a reload; a question asked while
+  nobody was listening was printed first when `yap listen` restarted and was answered (evidence 6–7).
 - **"Making a chapter for…" vanished** once the subagent created the chapter folder: the watcher reset `rendering` to
   `pending`. Fixed in `mapStatus`, with a test.
 

@@ -11,7 +11,7 @@ const { loadManifest } = require('../lib/manifest.mts');
 const { readOrder } = require('../lib/chapter-scan.mts');
 const { readEventsAfter, readThread } = require('../lib/events.mts');
 const { askServer } = require('../lib/ask-server.mts');
-const { runReply, runAddChapter, runSetStatus, runOrder, runAck } = require('../cli/client.mts');
+const { runReply, runAddChapter, runSetStatus, runRemoveChapter, runOrder, runAck } = require('../cli/client.mts');
 
 const NO_SERVER = 'no server is running: start it with `yap serve --detach`\n';
 
@@ -502,4 +502,18 @@ test('reply: every --source must be a real file and line range in --root (defaul
   assert.equal(readThread(path.join(slugDir, 'state', 'thread.jsonl')).length, 0, 'nothing was sent');
   const ok = await run(runReply, ['--dir', slugDir, '--root', repo, '--in-reply-to', evt, '--text', 'x', '--source', 'app.js:2-3']);
   assert.equal(ok.code, 0, ok.err);
+});
+
+test('remove-chapter: removes an added row and says so; refuses one with a folder or an unknown id; no --id exits 2', async (t) => {
+  const { slugDir, manifest } = await withServer(t, ['intro']);
+  await run(runAddChapter, ['--dir', slugDir, '--id', 'extra', '--question', 'why?']);
+  const ok = await run(runRemoveChapter, ['--dir', slugDir, '--id', 'extra']);
+  assert.deepEqual([ok.code, ok.out, ok.err], [0, 'chapter extra removed\n', '']);
+  assert.deepEqual(manifest().chapters.map((c) => c.id), ['intro']);
+  const gone = await run(runRemoveChapter, ['--dir', slugDir, '--id', 'extra']);
+  assert.equal(gone.code, 1);
+  assert.match(gone.err, /no chapter "extra"/);
+  const folder = await run(runRemoveChapter, ['--dir', slugDir, '--id', 'intro']);
+  assert.deepEqual([folder.code, folder.err], [1, 'delete the folder chapters/intro first\n']);
+  assert.equal((await run(runRemoveChapter, ['--dir', slugDir])).code, 2);
 });

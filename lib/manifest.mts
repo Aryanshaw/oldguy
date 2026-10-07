@@ -186,6 +186,14 @@ function reorderChapters(m: Manifest, ids: string[]): Manifest {
   return { ...m, chapters: ids.map((id) => m.chapters.find((c) => c.id === id) as ManifestRow) };
 }
 
+// Takes one chapter out of the story; a chapter that another names as its parent stays.
+function removeChapter(m: Manifest, id: string): Manifest {
+  if (!m.chapters.some((c) => c.id === id)) throw new Error(`no chapter "${show(id)}"`);
+  const child = m.chapters.find((c) => c.parent_id === id);
+  if (child) throw new Error(`chapter "${show(id)}" is the parent of "${show(child.id)}"; remove that one first`);
+  return assertValid({ ...m, chapters: m.chapters.filter((c) => c.id !== id) });
+}
+
 // Changes some fields of one chapter; unknown fields, the id, and invalid values are refused.
 function setChapterFields(m: Manifest, id: string, patch: Partial<ManifestRow>): Manifest {
   const idx = m.chapters.findIndex((c) => c.id === id);
@@ -240,5 +248,5 @@ function loadManifest(file: string): Manifest {
   return obj as Manifest;
 }
 
-export { STATUSES, newManifest, validateManifest, insertChapter, reorderChapters, setChapterFields, timeline, saveManifest, loadManifest };
+export { STATUSES, newManifest, validateManifest, insertChapter, reorderChapters, removeChapter, setChapterFields, timeline, saveManifest, loadManifest };
 export type { ChapterStatus, Quality, ManifestRow, Manifest, NewRow, TimelineEntry, ManifestFs };
