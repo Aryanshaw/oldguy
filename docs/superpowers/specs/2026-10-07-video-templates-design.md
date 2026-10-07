@@ -325,7 +325,24 @@ Each step has its own plan and ships on its own.
 - **A27 (4.7):** the player shows the template and shape, offers Remake as…, and plays 9:16 and 1:1 video.
 - **A28 (4.3):** new viewer event `remake` with `template` and `shape`.
 
-## 13. Not in this spec
+## 13. Spike results (`spikes/08-templates/`)
+
+A one-chapter spike (stand-in art, 9:16) ran the design on the real pipeline:
+- the audit passed unchanged with speaker lines and failed broken copies
+- two Kokoro voices were joined with the template's gaps
+- `hyperframes check` passed
+- the render came out 1080x1920 in 29 s for 22 s of video
+- sampled frames matched the timing (caption word, speaker, slot prop, source chip)
+
+Changes it calls for:
+
+- **Narrate speaks a chapter's lines in one Python process** (Kokoro loaded once), not one `hyperframes tts` call per
+  line. Measured: about 10 s per call.
+- **Stages keep captions and source chips on a backing plate** or in a clear band.
+- **A keyword prop whose word falls in the last third of its line appears at the line's start.**
+- **The first run with whisper measures how far estimated word times drift.**
+
+## 14. Not in this spec
 
 - Voice cloning: the stock voices only approximate the characters.
 - A cast option, per-chapter templates, user-adjustable pace, and a video editor in the player.

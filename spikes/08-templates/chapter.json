@@ -1,0 +1,25 @@
+{
+  "id": "wrong-lines",
+  "title": "Why Claude can't cite a wrong line",
+  "sources": [
+    { "id": "s1", "file": "cli/client.mts", "lines": [141, 141], "quote": "const problem = checkCitation(root, file, lines);" },
+    { "id": "s2", "file": "cli/client.mts", "lines": [142, 142], "quote": "if (problem) throw new Error(`--source ${text}: ${problem}`);" },
+    { "id": "s3", "file": "lib/audit.mts", "lines": [97, 97], "quote": "if (end > lineCount) return `lines ${start}-${end} past end of file (${lineCount} lines)`;" }
+  ],
+  "sentences": [
+    { "speaker": "stewie", "kind": "framing", "source_ids": [], "text": "So when Claude answers in the chat, does it just make up line numbers?" },
+    { "speaker": "peter", "kind": "claim", "source_ids": ["s1"], "text": "Nope, every source goes through a citation check first." },
+    { "speaker": "stewie", "kind": "framing", "source_ids": [], "text": "And if the line does not exist?" },
+    { "speaker": "peter", "kind": "claim", "source_ids": ["s2"], "text": "Then the whole reply is refused, with the reason." },
+    { "speaker": "stewie", "kind": "framing", "source_ids": [], "text": "What counts as a bad line, smart guy?" },
+    { "speaker": "peter", "kind": "claim", "source_ids": ["s3"], "text": "A line range that runs past the end of the file." },
+    { "speaker": "stewie", "kind": "framing", "source_ids": [], "text": "Huh, so no more invented sources." },
+    { "speaker": "peter", "kind": "claim", "source_ids": ["s2"], "text": "Exactly, a wrong line never reaches your screen." }
+  ],
+  "slot": [
+    { "line": 1, "prop": "check", "label": "citation check", "on": "check" },
+    { "line": 3, "prop": "refused", "label": "REPLY REFUSED", "on": "refused" },
+    { "line": 5, "prop": "file", "label": "lines 90-95 past end of file (50 lines)", "on": "end" },
+    { "line": 7, "prop": "ok", "label": "only real lines", "on": "never" }
+  ]
+}
