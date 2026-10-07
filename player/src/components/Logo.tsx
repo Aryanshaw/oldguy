@@ -1,17 +1,11 @@
+import { Mascot } from './Mascot';
+
+// The oldguy logo: the old guy's head next to the wordmark on a tilted yellow chip.
 export function Logo({ size = 'lg' }: { size?: 'sm' | 'lg' }) {
   const small = size === 'sm';
   return (
     <div className={small ? 'flex items-center gap-3' : 'flex items-center gap-[18px]'}>
-      <svg viewBox="0 0 100 100" className={small ? 'w-10' : 'w-[84px]'} aria-hidden="true">
-        <path
-          d="M16 10h68a10 10 0 0 1 10 10v42a10 10 0 0 1-10 10H46L22 92V72h-6A10 10 0 0 1 6 62V20a10 10 0 0 1 10-10z"
-          fill="#F6C945"
-          stroke="#14110A"
-          strokeWidth="6"
-          strokeLinejoin="round"
-        />
-        <path d="M40 25l30 16-30 16z" fill="#14110A" stroke="#14110A" strokeWidth="4" strokeLinejoin="round" />
-      </svg>
+      <Mascot className={small ? 'w-11 shrink-0' : 'w-[96px] shrink-0'} />
       <span
         className={
           small

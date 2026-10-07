@@ -90,16 +90,17 @@ The chosen direction is **B's layout and icon, plus A's mug and grubbiness**.
 - **Small sizes.** The glasses on the cap and the pencil turn to mush at 32px, which is why there is a separate small
   mark.
 
-**Shipped assets.** Each one is hand-built SVG in the existing palette, with thick `#14110A` outlines and flat fills:
+**Shipped assets.** *Amended during implementation (2026-10-07):* the large art is **traced** from the concept
+boards with VTracer and minified with SVGO, not redrawn by hand, so it stays faithful to the concept. Only the favicon
+is hand-built. `docs/assets/brand/README.md` records how the art was made and how to redo it.
 
 | Asset | Path | Notes |
 |---|---|---|
-| Mascot, light | `docs/assets/mascot.svg` | bust (head and cap), replaces the clock |
-| Mascot, dark | `docs/assets/mascot-dark.svg` | same bust tuned for dark backgrounds, as today |
-| Player logo | `player/src/components/Logo.tsx` | mark: the head in a yellow circle; wordmark "oldguy" on the existing tilted yellow chip |
-| Small mark | inside `Logo.tsx` (`size="sm"`) and the favicon | reduced head: cap, mop, open mouth only, no glasses or pencil, so it reads at 32px |
-| Favicon | `player/index.html` | inline SVG of the small mark |
-| Full body | `docs/assets/oldguy-full.svg` | finger-raised pose with the mug, from Body A; used by the README and, later, by templates that feature him as host |
+| Mascot | `docs/assets/mascot.svg` | head in the yellow disc, traced from board B. It replaces the clock and reads on both light and dark, so the separate `mascot-dark.svg` is gone |
+| Player mark | `player/src/assets/oldguy-mark.svg` | the same traced head, used by `Mascot.tsx` |
+| Player logo | `player/src/components/Logo.tsx` | the mascot as the mark, with the "oldguy" wordmark on the existing tilted yellow chip. The header no longer shows a second mascot |
+| Favicon | `player/index.html` | inline hand-built small mark: disc, cap, mop, beard and open mouth only, so it reads at 16–32px |
+| Full body | `docs/assets/oldguy-full.svg` | Body A traced: finger raised, "LEGACY CODE FUEL" mug, socks and sandals. Used by the README, and later by templates that feature him as host |
 
 **The character is fixed.** He looks and behaves exactly as on the concept board: dopey, scruffy, blabbering. Do
 not make him sharper, wiser or more polished to suit wider use. The joke is that this guy is the one who can

@@ -12,7 +12,7 @@ describe('Header', () => {
     expect(screen.getByRole('heading', { name: 'How the cache works' })).toBeInTheDocument();
     expect(screen.getByText('Ask the old guy. Claude yaps. You watch.')).toBeInTheDocument();
   });
-  it('shows the alarm-clock mascot as decoration, hidden from screen readers', () => {
+  it('shows the old guy mascot as decoration, hidden from screen readers', () => {
     const { container } = render(<Header title="T" connected onExport={() => {}} />);
     const mascot = container.querySelector('[data-mascot]');
     expect(mascot).not.toBeNull();
