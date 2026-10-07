@@ -207,7 +207,7 @@ test('set status ready is refused (409) unless the files prove it right now', as
   assert.equal(loadManifest(path.join(slugDir, 'manifest.json')).chapters[0].status, 'pending');
   const dir = path.join(slugDir, 'chapters', 'a');
   fs.mkdirSync(dir, { recursive: true });
-  const build = JSON.stringify({ version: 2, verified_against_commit: 'a'.repeat(40), sha256: {} });
+  const build = JSON.stringify({ version: 3, verified_against_commit: 'a'.repeat(40), sha256: {} });
   fs.writeFileSync(path.join(dir, 'chapter.json'), JSON.stringify({ id: 'a', title: 'a' }));
   fs.writeFileSync(path.join(dir, 'beats.json'), JSON.stringify({ durationS: 3, beats: [] }));
   fs.writeFileSync(path.join(dir, 'build.json'), build);

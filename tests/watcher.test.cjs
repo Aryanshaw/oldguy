@@ -118,8 +118,8 @@ const { startServer } = require('../server/server.mts');
 const { newManifest, insertChapter, saveManifest, loadManifest } = require('../lib/manifest.mts');
 const { sha256 } = require('../lib/build-record.mts');
 
-const BUILD = JSON.stringify({ version: 2, verified_against_commit: 'c'.repeat(40), sha256: {} });
-const BUILD2 = JSON.stringify({ version: 2, verified_against_commit: 'd'.repeat(40), sha256: {} });
+const BUILD = JSON.stringify({ version: 3, verified_against_commit: 'c'.repeat(40), sha256: {} });
+const BUILD2 = JSON.stringify({ version: 3, verified_against_commit: 'd'.repeat(40), sha256: {} });
 
 // Makes a temp slug folder named "demo" with a chapters folder.
 function tempSlug(t) {

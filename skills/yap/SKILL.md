@@ -56,7 +56,7 @@ lists every command; each command prints its own usage when called wrongly.
   specs/<id>.json            the spec you hand to yap scaffold, one per chapter
   chapters/<id>/             made by scaffold: chapter.json, narration.txt
                              made by narrate: narration.wav, beats.json, captions.vtt, captions.json,
-                             index.html, build.json
+                             index.html, gsap.min.js, build.json
                              made by render: chapter.mp4, render.json (which build it was made from)
 ```
 

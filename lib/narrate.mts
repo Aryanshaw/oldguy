@@ -5,7 +5,7 @@ import path from 'node:path';
 import { parseWav, padWav } from './wav.mts';
 import { beatsFromDuration, beatsFromWords } from './beats.mts';
 import { buildCaptions } from './captions.mts';
-import { checkScene, checkSentences, checkNarrationText, narrationSentences, roundUpTenth, pieceWindows, buildRootComposition } from './chapter.mts';
+import { checkScene, checkSentences, checkNarrationText, narrationSentences, roundUpTenth, pieceWindows, buildRootComposition, GSAP_NAME, GSAP_FILE } from './chapter.mts';
 import { hyperframesArgs } from './hyperframes.mts';
 import { buildRecord, COMMIT } from './build-record.mts';
 import type { Beat, Word } from './beats.mts';
@@ -24,7 +24,7 @@ type NarrateResult = { durationS: number; timing: 'words' | 'sentence-share'; be
 const LEAD_MS = 40;
 const TAIL_MS = 120;
 // The files a finished narration leaves in the chapter folder; build.json goes last so a half-finished move never matches it.
-const OUTPUTS = ['narration.wav', 'beats.json', 'captions.vtt', 'captions.json', 'index.html', 'build.json'];
+const OUTPUTS = ['narration.wav', 'beats.json', 'captions.vtt', 'captions.json', 'index.html', GSAP_NAME, 'build.json'];
 
 // Reads the `error` from a `--json` summary on stdout, where Hyperframes reports failures; null when there is none.
 function jsonError(stdout: string | undefined): string | null {
@@ -101,6 +101,8 @@ async function buildOutputs(
   fs.writeFileSync(path.join(work, 'captions.vtt'), captions.vtt);
   fs.writeFileSync(path.join(work, 'captions.json'), `${JSON.stringify(captions.json, null, 2)}\n`);
   fs.writeFileSync(path.join(work, 'index.html'), buildRootComposition({ id: chapter.id, durationS, pieces }));
+  // the page loads GSAP from beside it, so the chapter folder renders with no network
+  fs.copyFileSync(GSAP_FILE, path.join(work, GSAP_NAME));
   return { durationS, timing, beats, captions };
 }
 

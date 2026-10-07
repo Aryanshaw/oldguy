@@ -24,7 +24,7 @@ const SCENE = [
   { piece: 'steps', params: { items: [{ label: 'plan' }, { label: 'run' }] }, beat: 2 },
 ];
 const SCAFFOLDED = ['chapter.json', 'narration.txt'];
-const NARRATED = ['beats.json', 'build.json', 'captions.json', 'captions.vtt', 'chapter.json', 'index.html', 'narration.txt', 'narration.wav'];
+const NARRATED = ['beats.json', 'build.json', 'captions.json', 'captions.vtt', 'chapter.json', 'gsap.min.js', 'index.html', 'narration.txt', 'narration.wav'];
 
 // Scaffolds the spike-3 narration as a chapter in a temp folder removed after the test.
 function chapterDir(t) {
@@ -235,8 +235,8 @@ test('narrate writes build.json with sha256 of the chapter text and every built 
   const dir = chapterDir(t);
   await narrateChapter(dir, { ...fakeRun(), venvPython: PYTHON, whisperAvailable: false });
   const record = JSON.parse(fs.readFileSync(path.join(dir, 'build.json'), 'utf8'));
-  assert.equal(record.version, 2);
-  const files = ['beats.json', 'captions.json', 'captions.vtt', 'index.html', 'narration.txt', 'narration.wav'];
+  assert.equal(record.version, 3);
+  const files = ['beats.json', 'captions.json', 'captions.vtt', 'gsap.min.js', 'index.html', 'narration.txt', 'narration.wav'];
   assert.deepEqual(Object.keys(record.sha256).sort(), ['chapter', ...files].sort());
   for (const name of files) {
     const actual = crypto.createHash('sha256').update(fs.readFileSync(path.join(dir, name))).digest('hex');

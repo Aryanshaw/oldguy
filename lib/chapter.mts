@@ -24,7 +24,10 @@ type PieceWindow = { piece: string; params: unknown; startS: number; durationS: 
 type TimedBeat = { start: number };
 
 const KIT_DIR = path.join(import.meta.dirname, '..', 'scene-kit');
-const GSAP_URL = 'https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js';
+// GSAP 3.14.2 from the npm package, kept in the repo (see scene-kit/vendor/README.md). Narrate copies it into the
+// chapter folder and the page loads it from there, so checking and rendering a chapter need no network.
+const GSAP_NAME = 'gsap.min.js';
+const GSAP_FILE = path.join(KIT_DIR, 'vendor', GSAP_NAME);
 const MAX_ID_LENGTH = 60;
 
 // The scene pieces a chapter may use, by the name written in chapter.json.
@@ -167,7 +170,8 @@ function pieceWindows(scene: ChapterScene[], beats: TimedBeat[], durationS: numb
   });
 }
 
-// Builds the standalone chapter page: one 1920x1080 root, the theme, GSAP, and every piece on one paused timeline.
+// Builds the standalone chapter page: one 1920x1080 root, the theme, GSAP (from the copy beside index.html), and every piece
+// on one paused timeline.
 function buildRootComposition({ id, durationS, pieces }: { id: unknown; durationS: unknown; pieces: PieceWindow[] }): string {
   // the id lands in an attribute and a script, so only an already-slugged id is accepted
   if (typeof id !== 'string' || !/^[a-z][a-z0-9-]*$/.test(id)) throw new Error(`composition id "${id}" must be a slug (a-z, 0-9, hyphens)`);
@@ -181,7 +185,7 @@ function buildRootComposition({ id, durationS, pieces }: { id: unknown; duration
     '<meta charset="UTF-8" />',
     '<meta name="viewport" content="width=1920, height=1080" />',
     `<title>${id}</title>`,
-    `<script src="${GSAP_URL}"></script>`,
+    `<script src="${GSAP_NAME}"></script>`,
     // the stage is a fixed 1920x1080 box the pieces are laid over
     '<style>',
     'html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: var(--yk-black); }',
@@ -208,5 +212,6 @@ function buildRootComposition({ id, durationS, pieces }: { id: unknown; duration
 
 export {
   slugChapterId, scaffoldChapter, checkScene, checkSentences, checkNarrationText, buildRootComposition, pieceWindows, roundUpTenth, narrationSentences,
+  GSAP_NAME, GSAP_FILE,
 };
 export type { ChapterSource, ChapterSentence, ChapterScene, ChapterSpec, ScaffoldInput, PieceWindow, TimedBeat };

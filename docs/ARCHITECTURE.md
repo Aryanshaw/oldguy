@@ -44,7 +44,7 @@ The shapes other code depends on are exported as types from the module that owns
 - Anything that touches the clock, the disk, the network or another program is passed in (`deps`), so tests run nothing real.
 - Comments say what a function does and why, in plain words, above every function and every non-obvious step.
 - Small files with one job; named exports only.
-- No runtime dependencies in any source folder. Only Node's own modules.
+- No runtime dependencies in any source folder. Only Node's own modules. The one vendored file, `scene-kit/vendor/gsap.min.js`, is not imported by the program: narrate copies it into each chapter folder for the page (see `scene-kit/vendor/README.md`).
 - No talk of what running Yap costs in any file the user can see.
 
 ## How to add
