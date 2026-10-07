@@ -1,12 +1,12 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
-const { main, parseArgs, nodeOk, dataDir, chooseItems } = require('../packages/getyap/lib.cjs');
+const { main, parseArgs, nodeOk, dataDir, chooseItems } = require('../packages/oldguy/lib.cjs');
 
 const HOME = '/home/u';
-const INSTALL = '/home/u/.claude/plugins/cache/yap/yap/0.1.0';
-const YAP = path.join(INSTALL, 'bin', 'yap.cjs');
-const DATA = '/home/u/.claude/plugins/data/yap-yap';
+const INSTALL = '/home/u/.claude/plugins/cache/oldguy/oldguy/0.1.0';
+const OLDGUY = path.join(INSTALL, 'bin', 'oldguy.cjs');
+const DATA = '/home/u/.claude/plugins/data/oldguy-oldguy';
 const OK = { code: 0, stdout: '', stderr: '' };
 const PLAN = {
   items: [
@@ -36,11 +36,11 @@ function machine(over = {}) {
       const line = [cmd, ...args].join(' ');
       calls.push(line);
       if (cmd === 'claude' && args[0] === '--version') return over.noClaude ? { code: -1, stderr: 'ENOENT' } : OK;
-      if (line === 'claude plugin marketplace list --json') return { code: 0, stdout: JSON.stringify(over.market ? [{ name: 'yap' }] : []) };
-      if (line === 'claude plugin list --json') return { code: 0, stdout: JSON.stringify(installed ? [{ id: 'yap@yap', version: '0.1.0', installPath: INSTALL }] : []) };
-      if (line === 'claude plugin install yap@yap' || line === 'claude plugin update yap@yap') { installed = true; return OK; }
+      if (line === 'claude plugin marketplace list --json') return { code: 0, stdout: JSON.stringify(over.market ? [{ name: 'oldguy' }] : []) };
+      if (line === 'claude plugin list --json') return { code: 0, stdout: JSON.stringify(installed ? [{ id: 'oldguy@oldguy', version: '0.1.0', installPath: INSTALL }] : []) };
+      if (line === 'claude plugin install oldguy@oldguy' || line === 'claude plugin update oldguy@oldguy') { installed = true; return OK; }
       if (cmd === 'claude') return OK;
-      if (args[0] === YAP && args[1] === 'setup') return { code: 0, stdout: JSON.stringify(over.plan || PLAN) };
+      if (args[0] === OLDGUY && args[1] === 'setup') return { code: 0, stdout: JSON.stringify(over.plan || PLAN) };
       return { code: 127, stderr: 'not found' };
     },
   };
@@ -58,7 +58,7 @@ test('parseArgs and nodeOk', () => {
 
 test('the data folder follows CLAUDE_CONFIG_DIR, else ~/.claude', () => {
   assert.equal(dataDir({}, HOME), DATA);
-  assert.equal(dataDir({ CLAUDE_CONFIG_DIR: '/cfg' }, HOME), '/cfg/plugins/data/yap-yap');
+  assert.equal(dataDir({ CLAUDE_CONFIG_DIR: '/cfg' }, HOME), '/cfg/plugins/data/oldguy-oldguy');
   assert.equal(dataDir({ CLAUDE_CONFIG_DIR: 'relative' }, HOME), DATA);
 });
 
@@ -76,8 +76,8 @@ test('an old Node or a missing claude stops before anything runs', async () => {
 test('first run: adds the marketplace from GitHub and installs the plugin', async () => {
   const m = machine({ argv: ['--plugin-only'] });
   assert.equal(await main(m.deps), 0);
-  assert.ok(m.calls.includes('claude plugin marketplace add Aryanshaw/yap'));
-  assert.ok(m.calls.includes('claude plugin install yap@yap'));
+  assert.ok(m.calls.includes('claude plugin marketplace add Aryanshaw/oldguy'));
+  assert.ok(m.calls.includes('claude plugin install oldguy@oldguy'));
   assert.ok(!m.calls.some((c) => c.includes('update')));
   assert.deepEqual(m.live, []);
 });
@@ -85,16 +85,16 @@ test('first run: adds the marketplace from GitHub and installs the plugin', asyn
 test('second run: refreshes the marketplace and updates the plugin instead', async () => {
   const m = machine({ argv: ['--plugin-only'], market: true, installed: true });
   assert.equal(await main(m.deps), 0);
-  assert.ok(m.calls.includes('claude plugin marketplace update yap'));
-  assert.ok(m.calls.includes('claude plugin update yap@yap'));
-  assert.ok(!m.calls.some((c) => c.includes(' add ') || c.endsWith('install yap@yap')));
+  assert.ok(m.calls.includes('claude plugin marketplace update oldguy'));
+  assert.ok(m.calls.includes('claude plugin update oldguy@oldguy'));
+  assert.ok(!m.calls.some((c) => c.includes(' add ') || c.endsWith('install oldguy@oldguy')));
 });
 
 test('setup runs from the installed plugin with its data folder; --yes installs every offered item', async () => {
   const m = machine({ argv: ['--yes'] });
   assert.equal(await main(m.deps), 0);
-  assert.ok(m.calls.includes(`${process.execPath} ${YAP} setup --json --data-dir ${DATA}`));
-  assert.deepEqual(m.live, [`${process.execPath} ${YAP} setup --install voice,chrome --data-dir ${DATA}`]);
+  assert.ok(m.calls.includes(`${process.execPath} ${OLDGUY} setup --json --data-dir ${DATA}`));
+  assert.deepEqual(m.live, [`${process.execPath} ${OLDGUY} setup --install voice,chrome --data-dir ${DATA}`]);
 });
 
 test('no terminal and no --yes: shows the list and installs nothing', async () => {
@@ -108,7 +108,7 @@ test('in a terminal only the ticked items are installed; q installs nothing', as
   const answers = ['1', ''];
   const m = machine({ isTTY: true, ask: async () => answers.shift() });
   assert.equal(await main(m.deps), 0);
-  assert.deepEqual(m.live, [`${process.execPath} ${YAP} setup --install chrome --data-dir ${DATA}`]);
+  assert.deepEqual(m.live, [`${process.execPath} ${OLDGUY} setup --install chrome --data-dir ${DATA}`]);
   const q = machine({ isTTY: true, ask: async () => 'q' });
   assert.equal(await main(q.deps), 0);
   assert.deepEqual(q.live, []);
@@ -123,14 +123,14 @@ test('a machine with nothing missing says so and runs no install', async () => {
   const m = machine({ argv: ['--yes'], plan: { items: [], manual: [] } });
   assert.equal(await main(m.deps), 0);
   assert.deepEqual(m.live, []);
-  assert.match(m.out.join('\n'), /Everything Yap needs is set up/);
+  assert.match(m.out.join('\n'), /Everything oldguy needs is set up/);
 });
 
 test('nothing left but optional manual items: success; a required manual item: exit 1', async () => {
   const optional = machine({ argv: ['--yes'], plan: { items: [], manual: [{ name: 'whisper-cli', why: 'not on PATH', fix: 'build it', required: false }] } });
   assert.equal(await main(optional.deps), 0);
   assert.match(optional.out.join('\n'), /whisper-cli \(optional\)/);
-  assert.match(optional.out.join('\n'), /Everything Yap needs is set up/);
+  assert.match(optional.out.join('\n'), /Everything oldguy needs is set up/);
   const required = machine({ argv: ['--yes'], plan: { items: [], manual: [{ name: 'ffmpeg', why: 'does not run', fix: 'install ffmpeg', required: true }] } });
   assert.equal(await main(required.deps), 1);
   assert.match(required.out.join('\n'), /needs the fixes above/);

@@ -1,19 +1,19 @@
 'use strict';
-// getyap: installs the Yap plugin into Claude Code, then offers Yap's own setup checklist. Plain JavaScript on
-// purpose: npx runs it from node_modules, where Node will not run Yap's TypeScript, and it must explain itself on
+// oldguy: installs the oldguy plugin into Claude Code, then offers oldguy's own setup checklist. Plain JavaScript on
+// purpose: npx runs it from node_modules, where Node will not run oldguy's TypeScript, and it must explain itself on
 // an old Node. Every outside call (programs, prompts, printing) is passed in, so tests run nothing real.
 const path = require('node:path');
 
 const NODE_FLOOR = [22, 18, 0];
-const MARKETPLACE = 'Aryanshaw/yap';
-const PLUGIN = 'yap@yap';
-const HELP = `npx getyap: install Yap (Claude yaps. You watch.) into Claude Code.
+const MARKETPLACE = 'Aryanshaw/oldguy';
+const PLUGIN = 'oldguy@oldguy';
+const HELP = `npx oldguy: install oldguy (Claude yaps. You watch.) into Claude Code.
 
-  npx getyap               install or update the plugin, then choose what to set up
-  npx getyap --yes         also set up everything Yap offers, without asking
-  npx getyap --plugin-only only install or update the plugin
+  npx oldguy               install or update the plugin, then choose what to set up
+  npx oldguy --yes         also set up everything oldguy offers, without asking
+  npx oldguy --plugin-only only install or update the plugin
 
-Nothing is set up without your yes. More: https://github.com/Aryanshaw/yap
+Nothing is set up without your yes. More: https://github.com/Aryanshaw/oldguy
 `;
 
 // Reads the flags; anything else is a usage error.
@@ -28,7 +28,7 @@ function parseArgs(argv) {
   return opts;
 }
 
-// True when the running Node is 22.18 or newer, the floor Yap needs.
+// True when the running Node is 22.18 or newer, the floor oldguy needs.
 function nodeOk(version) {
   const parts = String(version).replace(/^v/, '').split('.').map(Number);
   for (let i = 0; i < 3; i += 1) {
@@ -43,9 +43,9 @@ function configDir(env, home) {
   return typeof c === 'string' && path.isAbsolute(c) ? c : path.join(home, '.claude');
 }
 
-// Where Claude Code keeps Yap's data (its Python venv and the doctor's marker), named after plugin and marketplace.
+// Where Claude Code keeps oldguy's data (its Python venv and the doctor's marker), named after plugin and marketplace.
 function dataDir(env, home) {
-  return path.join(configDir(env, home), 'plugins', 'data', 'yap-yap');
+  return path.join(configDir(env, home), 'plugins', 'data', 'oldguy-oldguy');
 }
 
 // Parses a program's JSON output; null when it is not JSON.
@@ -63,18 +63,18 @@ async function must(run, cmd, args, what) {
   return r;
 }
 
-// Adds (or refreshes) the Yap marketplace and installs (or updates) the plugin; returns the installed folder.
+// Adds (or refreshes) the oldguy marketplace and installs (or updates) the plugin; returns the installed folder.
 async function installPlugin(run, log) {
   const markets = json((await run('claude', ['plugin', 'marketplace', 'list', '--json'])).stdout) || [];
-  if (markets.some((m) => m && m.name === 'yap')) {
-    log('Refreshing the Yap marketplace…');
-    await must(run, 'claude', ['plugin', 'marketplace', 'update', 'yap'], 'claude plugin marketplace update');
+  if (markets.some((m) => m && m.name === 'oldguy')) {
+    log('Refreshing the oldguy marketplace…');
+    await must(run, 'claude', ['plugin', 'marketplace', 'update', 'oldguy'], 'claude plugin marketplace update');
   } else {
-    log(`Adding the Yap marketplace (${MARKETPLACE})…`);
+    log(`Adding the oldguy marketplace (${MARKETPLACE})…`);
     await must(run, 'claude', ['plugin', 'marketplace', 'add', MARKETPLACE], 'claude plugin marketplace add');
   }
   const installed = (json((await run('claude', ['plugin', 'list', '--json'])).stdout) || []).some((p) => p && p.id === PLUGIN);
-  log(installed ? 'Updating the Yap plugin…' : 'Installing the Yap plugin…');
+  log(installed ? 'Updating the oldguy plugin…' : 'Installing the oldguy plugin…');
   await must(run, 'claude', ['plugin', installed ? 'update' : 'install', PLUGIN], `claude plugin ${installed ? 'update' : 'install'}`);
   const entry = (json((await run('claude', ['plugin', 'list', '--json'])).stdout) || []).find((p) => p && p.id === PLUGIN);
   if (!entry || typeof entry.installPath !== 'string') throw new Error('the plugin installed, but Claude Code did not say where');
@@ -116,43 +116,43 @@ async function main(deps) {
   try {
     opts = parseArgs(deps.argv);
   } catch (err) {
-    warn(`getyap: ${err.message}\n\n${HELP}`);
+    warn(`oldguy: ${err.message}\n\n${HELP}`);
     return 2;
   }
   if (opts.help) { log(HELP); return 0; }
   if (!nodeOk(deps.nodeVersion)) {
-    warn(`getyap: Yap needs Node 22.18 or newer, and this is Node ${deps.nodeVersion}. Install a newer Node (https://nodejs.org) and run npx getyap again.`);
+    warn(`oldguy: oldguy needs Node 22.18 or newer, and this is Node ${deps.nodeVersion}. Install a newer Node (https://nodejs.org) and run npx oldguy again.`);
     return 1;
   }
   if ((await run('claude', ['--version'])).code !== 0) {
-    warn('getyap: Claude Code is not installed (no `claude` command on PATH). Install it first: https://claude.com/claude-code');
+    warn('oldguy: Claude Code is not installed (no `claude` command on PATH). Install it first: https://claude.com/claude-code');
     return 1;
   }
   let plugin;
   try {
     plugin = await installPlugin(run, log);
   } catch (err) {
-    warn(`getyap: ${err.message}`);
+    warn(`oldguy: ${err.message}`);
     return 1;
   }
-  log(`Yap ${plugin.version} is installed in Claude Code.`);
-  const nextSteps = '\nNext: start a new Claude Code session in your project and ask, for example:\n  /yap how does checkout work\n';
+  log(`oldguy ${plugin.version} is installed in Claude Code.`);
+  const nextSteps = '\nNext: start a new Claude Code session in your project and ask, for example:\n  /oldguy how does checkout work\n';
   if (opts.pluginOnly) { log(nextSteps); return 0; }
-  const yap = path.join(plugin.installPath, 'bin', 'yap.cjs');
+  const oldguy = path.join(plugin.installPath, 'bin', 'oldguy.cjs');
   const data = dataDir(env, home);
-  const planRun = await run(process.execPath, [yap, 'setup', '--json', '--data-dir', data]);
+  const planRun = await run(process.execPath, [oldguy, 'setup', '--json', '--data-dir', data]);
   const plan = json(planRun.stdout);
   if (planRun.code !== 0 || !plan || !Array.isArray(plan.items) || !Array.isArray(plan.manual)) {
-    warn(`getyap: could not read Yap's setup list: ${String(planRun.stderr || '').trim() || 'no output'}`);
+    warn(`oldguy: could not read oldguy's setup list: ${String(planRun.stderr || '').trim() || 'no output'}`);
     return 1;
   }
   const blocking = plan.manual.filter((m) => m.required !== false);
   if (!plan.items.length) {
     if (plan.manual.length) log(`\n${checklistText(plan, [])}`);
-    log(blocking.length ? '\nYap needs the fixes above before it can make videos.' : `\nEverything Yap needs is set up.${nextSteps}`);
+    log(blocking.length ? '\noldguy needs the fixes above before it can make videos.' : `\nEverything oldguy needs is set up.${nextSteps}`);
     return blocking.length ? 1 : 0;
   }
-  log('\nYap needs a few things on this machine. Nothing is set up without your yes.\n');
+  log('\noldguy needs a few things on this machine. Nothing is set up without your yes.\n');
   let picked;
   if (opts.yes) {
     log(checklistText(plan, plan.items.map(() => true)));
@@ -161,15 +161,15 @@ async function main(deps) {
     picked = await chooseItems(plan, deps.ask, log);
   } else {
     log(checklistText(plan, plan.items.map(() => false)));
-    log('\nThis is not an interactive terminal, so nothing was set up. Run npx getyap in a terminal, or npx getyap --yes.');
+    log('\nThis is not an interactive terminal, so nothing was set up. Run npx oldguy in a terminal, or npx oldguy --yes.');
     return 0;
   }
   if (!picked.length) {
-    log(`\nNothing set up. Yap's doctor (/yap doctor) will offer it again when you need it.${nextSteps}`);
+    log(`\nNothing set up. oldguy's doctor (/oldguy doctor) will offer it again when you need it.${nextSteps}`);
     return 0;
   }
   log('');
-  const code = await runLive(process.execPath, [yap, 'setup', '--install', picked.join(','), '--data-dir', data]);
+  const code = await runLive(process.execPath, [oldguy, 'setup', '--install', picked.join(','), '--data-dir', data]);
   if (code === 0) log(nextSteps);
   return code;
 }

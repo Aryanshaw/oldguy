@@ -1,0 +1,14 @@
+{
+  "name": "oldguy",
+  "version": "0.1.0",
+  "description": "Install oldguy into Claude Code: ask how a feature of your codebase works and get a short narrated video, fact-checked against the code.",
+  "license": "MIT",
+  "author": "Aryan Shaw",
+  "homepage": "https://github.com/Aryanshaw/oldguy",
+  "repository": { "type": "git", "url": "git+https://github.com/Aryanshaw/oldguy.git", "directory": "packages/oldguy" },
+  "bugs": "https://github.com/Aryanshaw/oldguy/issues",
+  "keywords": ["claude-code", "claude-code-plugin", "explainer", "video", "codebase", "onboarding"],
+  "bin": { "oldguy": "index.cjs" },
+  "files": ["index.cjs", "lib.cjs", "README.md"],
+  "engines": { "node": ">=18" }
+}

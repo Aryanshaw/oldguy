@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict';
-// npx getyap: the real machine for lib.cjs. Programs run with an argument list (never a shell string); the setup
+// npx oldguy: the real machine for lib.cjs. Programs run with an argument list (never a shell string); the setup
 // install streams its progress straight to this terminal.
 const { spawn } = require('node:child_process');
 const os = require('node:os');
@@ -41,6 +41,6 @@ main({
   isTTY: Boolean(process.stdin.isTTY && process.stdout.isTTY),
   log: (s) => process.stdout.write(`${s}\n`), warn: (s) => process.stderr.write(`${s}\n`),
 }).then((code) => { process.exitCode = code; }, (err) => {
-  process.stderr.write(`getyap: ${err && err.message ? err.message : err}\n`);
+  process.stderr.write(`oldguy: ${err && err.message ? err.message : err}\n`);
   process.exitCode = 1;
 });
