@@ -9,9 +9,9 @@ const { checkScene } = require("../lib/chapter.mts");
 // Sentences start at 0, 2, 4, 6 and 8 s; the piece runs 0..10 s.
 const BEATS = [0, 2, 4, 6, 8];
 const WIN = { startS: 0, durationS: 10, idPrefix: "p0", beatsS: BEATS };
-const LANES = [{ id: "you", label: "You", note: "in Claude Code" }, { id: "cli", label: "yap command" }];
+const LANES = [{ id: "you", label: "You", note: "in Claude Code" }, { id: "cli", label: "oldguy command" }];
 const STEPS = [
-  { lane: "you", label: "Type /yap", at: 0 },
+  { lane: "you", label: "Type /oldguy", at: 0 },
   { lane: "cli", label: "Audit", detail: "quotes vs real code", at: 2, kind: "ok" },
   { lane: "cli", label: "Wrong quote", at: 2, kind: "fail" },
   { lane: "you", label: "Watch", at: 4 },

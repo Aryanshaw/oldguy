@@ -1,4 +1,4 @@
-// `yap listen [--dir <slugDir>]`: the bridge between the player's chat and a live Claude Code session. Run under Claude
+// `oldguy listen [--dir <slugDir>]`: the bridge between the player's chat and a live Claude Code session. Run under Claude
 // Code's Monitor tool, every line it prints wakes Claude. It prints each open viewer event (one with no reply and no
 // ack) as one JSON line, first all that are open now, then each new one once; it sends a heartbeat every few seconds
 // so the page shows "Claude connected"; and when the server is gone it prints {"type":"server_stopped"} and exits 0.
@@ -16,8 +16,8 @@ type ListenDeps = {
   readInfo?: (slugDir: string) => ServerInfo | null;
 };
 
-const USAGE = 'usage: yap listen [--dir <slugDir>]';
-const NO_SERVER = 'no server is running: start it with `yap serve --detach`';
+const USAGE = 'usage: oldguy listen [--dir <slugDir>]';
+const NO_SERVER = 'no server is running: start it with `oldguy serve --detach`';
 // Heartbeats refused or unanswered this many times in a row mean the server is gone.
 const MAX_MISSED = 2;
 const HEARTBEAT_TIMEOUT_MS = 3000;
@@ -34,7 +34,7 @@ async function runListen(args: string[], deps: ListenDeps = {}): Promise<number>
     if (positional.length) throw new Error(`unexpected "${positional[0]}"`);
     slugDir = resolveSlugDir(flags['--dir']);
   } catch (err) {
-    complain(`yap listen: ${(err as Error).message}\n${USAGE}`);
+    complain(`oldguy listen: ${(err as Error).message}\n${USAGE}`);
     return 2;
   }
   if (!readInfo(slugDir)) { complain(NO_SERVER); return 1; }

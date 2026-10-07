@@ -28,7 +28,7 @@ const NARRATED = ['beats.json', 'build.json', 'captions.json', 'captions.vtt', '
 
 // Scaffolds the spike-3 narration as a chapter in a temp folder removed after the test.
 function chapterDir(t) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-narrate-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-narrate-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   return scaffoldChapter({ root, id: 'how a job runs', title: 'How a job runs', sources: [], sentences: SENTENCES, scene: SCENE });
 }

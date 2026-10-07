@@ -280,7 +280,7 @@ test('--data-dir overrides the data directory; a bad flag exits 2', async () => 
 });
 
 test('writeMarker creates doctor-ok inside the data directory', () => {
-  const dir = fsReal.mkdtempSync(path.join(osReal.tmpdir(), 'yap-doctor-'));
+  const dir = fsReal.mkdtempSync(path.join(osReal.tmpdir(), 'oldguy-doctor-'));
   try {
     const nested = path.join(dir, 'a', 'b');
     writeMarker(nested);
@@ -315,7 +315,7 @@ test('real exec wrapper resolves for a signal kill, a non-zero exit, a timeout a
   assert.equal(exited.signal, null);
   const slow = await realExec(process.execPath, ['-e', 'setTimeout(()=>{},60000)'], { timeout: 200 });
   assert.equal(slow.timedOut, true);
-  const missing = await realExec('yap-no-such-program-xyz', [], { timeout: 1000 });
+  const missing = await realExec('oldguy-no-such-program-xyz', [], { timeout: 1000 });
   assert.equal(missing.code, null);
   assert.match(missing.stderr, /ENOENT/);
   const fine = await realExec(process.execPath, ['-e', "process.stdout.write('hi')"], { timeout: 10000 });
@@ -324,7 +324,7 @@ test('real exec wrapper resolves for a signal kill, a non-zero exit, a timeout a
 
 // Runs the doctor command with the real marker writer into a temp data dir; returns exit code and whether the marker exists.
 async function cliWithMarker(over) {
-  const dir = fsReal.mkdtempSync(path.join(osReal.tmpdir(), 'yap-doctor-'));
+  const dir = fsReal.mkdtempSync(path.join(osReal.tmpdir(), 'oldguy-doctor-'));
   try {
     const py = `${dir}/venv/bin/python`;
     const m = machine({ ...over, files: { [py]: 1 }, exec: { [py]: () => OK, ...over.exec } });
@@ -347,7 +347,7 @@ test('a missing or unreadable Hyperframes Chrome check still exits 0 and writes 
   assert.deepEqual(junk, { code: 0, marked: true });
 });
 
-test('data dir: CLAUDE_PLUGIN_DATA, else <cwd>/.yap, and --data-dir beats both', async () => {
+test('data dir: CLAUDE_PLUGIN_DATA, else <cwd>/.oldguy, and --data-dir beats both', async () => {
   // Machine whose venv exists under the directory the doctor should pick.
   const run = async (args, env, cwd, dir) => {
     const m = machine({ files: { [`${dir}/venv/bin/python`]: 1 }, exec: { [`${dir}/venv/bin/python`]: () => OK } });
@@ -356,15 +356,15 @@ test('data dir: CLAUDE_PLUGIN_DATA, else <cwd>/.yap, and --data-dir beats both',
     return { code, marked };
   };
   assert.deepEqual(await run([], { CLAUDE_PLUGIN_DATA: '/plugin' }, '/work', '/plugin'), { code: 0, marked: '/plugin' });
-  assert.deepEqual(await run([], {}, '/work', '/work/.yap'), { code: 0, marked: '/work/.yap' });
+  assert.deepEqual(await run([], {}, '/work', '/work/.oldguy'), { code: 0, marked: '/work/.oldguy' });
   assert.deepEqual(await run(['--data-dir', '/flag'], { CLAUDE_PLUGIN_DATA: '/plugin' }, '/work', '/flag'), { code: 0, marked: '/flag' });
 });
 
-test('data dir: without the flag or CLAUDE_PLUGIN_DATA, the doctor reads data_dir from .yap/session.json', async () => {
+test('data dir: without the flag or CLAUDE_PLUGIN_DATA, the doctor reads data_dir from .oldguy/session.json', async () => {
   // the session file is only trusted for a folder under <home>/.claude/plugins/data/, home being the machine's
-  const dir = `${HOME}/.claude/plugins/data/yap-inline`;
+  const dir = `${HOME}/.claude/plugins/data/oldguy-inline`;
   const m = machine({ files: { [`${dir}/venv/bin/python`]: 1 }, exec: { [`${dir}/venv/bin/python`]: () => OK } });
-  const sessions = { '/work/.yap/session.json': JSON.stringify({ session_id: 'a', data_dir: dir }) };
+  const sessions = { '/work/.oldguy/session.json': JSON.stringify({ session_id: 'a', data_dir: dir }) };
   const fs = { ...m.deps.fs, readFileSync: (p) => { if (p in sessions) return sessions[p]; throw new Error('ENOENT'); } };
   let marked;
   const code = await runDoctorCli([], { ...m.deps, fs, env: {}, cwd: '/work/src', marker: (d) => { marked = d; }, stdout: () => {}, stderr: () => {} });

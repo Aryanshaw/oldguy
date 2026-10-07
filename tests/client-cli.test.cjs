@@ -13,7 +13,7 @@ const { readEventsAfter, readThread } = require('../lib/events.mts');
 const { askServer } = require('../lib/ask-server.mts');
 const { runReply, runAddChapter, runSetStatus, runRemoveChapter, runOrder, runAck } = require('../cli/client.mts');
 
-const NO_SERVER = 'no server is running: start it with `yap serve --detach`\n';
+const NO_SERVER = 'no server is running: start it with `oldguy serve --detach`\n';
 
 // Runs a command function with its output captured; resolves { code, out, err }. Binary chunks belong to the test runner.
 async function run(fn, args, opts) {
@@ -27,7 +27,7 @@ async function run(fn, args, opts) {
 }
 // Makes a temp slug folder (with chapters/) and removes it afterwards.
 function slugFolder(t) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-client-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-client-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const slugDir = path.join(root, 'demo');
   fs.mkdirSync(path.join(slugDir, 'chapters'), { recursive: true });
@@ -101,7 +101,7 @@ test('reply: usage errors exit 2 with one stderr line and send nothing', async (
     const r = await run(runReply, args);
     assert.equal(r.code, 2, name);
     assert.equal(r.out, '', name);
-    assert.match(r.err, /^yap reply: [^\n]+\n$/, name);
+    assert.match(r.err, /^oldguy reply: [^\n]+\n$/, name);
   }
   assert.deepEqual(readThread(path.join(slugDir, 'state', 'thread.jsonl')), []);
 });
@@ -136,7 +136,7 @@ test('add-chapter: only --id is needed; a repeat id shows the server error; a mi
   for (const args of [['--dir', slugDir], ['--dir', slugDir, '--id', 'x', '--titel', 'oops']]) {
     const r = await run(runAddChapter, args);
     assert.equal(r.code, 2);
-    assert.match(r.err, /^yap add-chapter: [^\n]+\n$/);
+    assert.match(r.err, /^oldguy add-chapter: [^\n]+\n$/);
   }
 });
 
@@ -152,7 +152,7 @@ test('set-status: an unknown status exits 2 before any request (no server needed
   for (const args of [['--dir', bare, '--id', 'a', '--status', 'done'], ['--dir', bare, '--id', 'a'], ['--dir', bare, '--status', 'ready']]) {
     const r = await run(runSetStatus, args);
     assert.equal(r.code, 2, args.join(' '));
-    assert.match(r.err, /^yap set-status: [^\n]+\n$/);
+    assert.match(r.err, /^oldguy set-status: [^\n]+\n$/);
   }
   const { slugDir } = await withServer(t, ['intro']);
   const unknownChapter = await run(runSetStatus, ['--dir', slugDir, '--id', 'ghost', '--status', 'failed']);
@@ -263,27 +263,27 @@ test('order: bad ids, duplicates, an empty list, extra words and flags exit 2 an
     const r = await run(runOrder, ['--dir', slugDir, ...args]);
     assert.equal(r.code, 2, name);
     assert.equal(r.out, '', name);
-    assert.match(r.err, /^yap order: [^\n]+\n$/, name);
+    assert.match(r.err, /^oldguy order: [^\n]+\n$/, name);
   }
   assert.equal(fs.readFileSync(path.join(slugDir, 'order.json'), 'utf8'), '{"chapters":["keep","me"]}\n');
   assert.deepEqual(fs.readdirSync(slugDir).sort(), ['chapters', 'order.json']);
 });
 
-test('the commands are wired into bin/yap.cjs: --dir is optional (the only folder under .yap/ is used)', (t) => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-client-bin-'));
+test('the commands are wired into bin/oldguy.cjs: --dir is optional (the only folder under .oldguy/ is used)', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-client-bin-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  fs.mkdirSync(path.join(root, '.yap', 'only', 'chapters'), { recursive: true });
-  const yap = (...args) => spawnSync(process.execPath, [path.join(__dirname, '..', 'bin', 'yap.cjs'), ...args], { cwd: root, encoding: 'utf8' });
-  const ok = yap('order', 'a,b');
+  fs.mkdirSync(path.join(root, '.oldguy', 'only', 'chapters'), { recursive: true });
+  const oldguy = (...args) => spawnSync(process.execPath, [path.join(__dirname, '..', 'bin', 'oldguy.cjs'), ...args], { cwd: root, encoding: 'utf8' });
+  const ok = oldguy('order', 'a,b');
   assert.deepEqual([ok.status, ok.stdout], [0, 'order written: 2 chapters\n']);
-  assert.equal(fs.readFileSync(path.join(root, '.yap', 'only', 'order.json'), 'utf8'), '{"chapters":["a","b"]}\n');
-  const noServer = yap('set-status', '--id', 'a', '--status', 'failed');
+  assert.equal(fs.readFileSync(path.join(root, '.oldguy', 'only', 'order.json'), 'utf8'), '{"chapters":["a","b"]}\n');
+  const noServer = oldguy('set-status', '--id', 'a', '--status', 'failed');
   assert.deepEqual([noServer.status, noServer.stderr], [1, NO_SERVER]);
-  fs.mkdirSync(path.join(root, '.yap', 'second', 'chapters'), { recursive: true });
-  const two = yap('reply', '--in-reply-to', 'evt_1', '--text', 'x');
+  fs.mkdirSync(path.join(root, '.oldguy', 'second', 'chapters'), { recursive: true });
+  const two = oldguy('reply', '--in-reply-to', 'evt_1', '--text', 'x');
   assert.equal(two.status, 2);
-  assert.match(two.stderr, /^yap reply: .*--dir.*\n$/);
-  assert.match(yap('--help').stdout, /^\s*reply\s.*\n[\s\S]*add-chapter[\s\S]*set-status[\s\S]*order/m);
+  assert.match(two.stderr, /^oldguy reply: .*--dir.*\n$/);
+  assert.match(oldguy('--help').stdout, /^\s*reply\s.*\n[\s\S]*add-chapter[\s\S]*set-status[\s\S]*order/m);
 });
 
 // ---- fix round 1 ----
@@ -343,7 +343,7 @@ test('M-3: ids that are not plain slugs are usage errors (exit 2, one line) befo
   for (const [fn, args] of cases) {
     const r = await run(fn, ['--dir', slugDir, ...args]);
     assert.equal(r.code, 2, args.join(' '));
-    assert.match(r.err, /^yap [a-z-]+: [^\n]+\n$/);
+    assert.match(r.err, /^oldguy [a-z-]+: [^\n]+\n$/);
   }
   assert.equal(seen.count, 0);
 });
@@ -359,7 +359,7 @@ test('M-4: an extra word is a usage error for every command', async (t) => {
   for (const [fn, args] of cases) {
     const r = await run(fn, ['--dir', slugDir, ...args]);
     assert.equal(r.code, 2, args.join(' '));
-    assert.match(r.err, /^yap [a-z-]+: [^\n]+\n$/);
+    assert.match(r.err, /^oldguy [a-z-]+: [^\n]+\n$/);
   }
   assert.equal(seen.count, 0);
 });
@@ -377,7 +377,7 @@ test('M-4: an answer over 1 MB is cut off by the cap, well before the deadline, 
   writeInfo(slugDir, { pid: process.pid, port: flood.address().port, key: 'c'.repeat(32) });
   const started = Date.now();
   const r = await run(runAddChapter, ['--dir', slugDir, '--id', 'a'], { timeoutMs: 4000 });
-  assert.deepEqual([r.code, r.err], [1, 'the server answered in a way yap could not read\n']);
+  assert.deepEqual([r.code, r.err], [1, 'the server answered in a way oldguy could not read\n']);
   assert.ok(Date.now() - started < 2000, `took ${Date.now() - started} ms`);
 });
 
@@ -413,7 +413,7 @@ test('M-4: a failed write of order.json exits 1 with one line, leaves the old fi
       const r = await run(runOrder, ['--dir', locked, 'new,list']);
       assert.equal(r.code, 1);
       assert.equal(r.out, '');
-      assert.match(r.err, /^yap order: [^\n]+\n$/);
+      assert.match(r.err, /^oldguy order: [^\n]+\n$/);
       assert.equal(fs.readFileSync(path.join(locked, 'order.json'), 'utf8'), '{"chapters":["keep","me"]}\n');
       assert.deepEqual(fs.readdirSync(locked).sort(), ['chapters', 'order.json']);
     }
@@ -423,7 +423,7 @@ test('M-4: a failed write of order.json exits 1 with one line, leaves the old fi
   fs.mkdirSync(path.join(blocked, 'order.json'));
   const r2 = await run(runOrder, ['--dir', blocked, 'a,b']);
   assert.equal(r2.code, 1);
-  assert.match(r2.err, /^yap order: [^\n]+\n$/);
+  assert.match(r2.err, /^oldguy order: [^\n]+\n$/);
   assert.deepEqual(fs.readdirSync(blocked).sort(), ['chapters', 'order.json']);
   assert.ok(fs.statSync(path.join(blocked, 'order.json')).isDirectory());
 });

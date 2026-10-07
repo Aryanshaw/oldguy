@@ -1,24 +1,24 @@
 # Doctor
 
-Purpose: make sure every tool Yap needs is present before any work starts, and tell the user exactly what to fix
-when something is missing. Yap installs only what the user agrees to, through `yap setup`.
+Purpose: make sure every tool oldguy needs is present before any work starts, and tell the user exactly what to fix
+when something is missing. oldguy installs only what the user agrees to, through `oldguy setup`.
 
 ## When to run it
 
-- On the first `/yap` use in a project (the session hook prints a hint until the doctor has passed once).
-- When the user types `/yap doctor`.
+- On the first `/oldguy` use in a project (the session hook prints a hint until the doctor has passed once).
+- When the user types `/oldguy doctor`.
 - After any render failure, before retrying.
 
 ## The command
 
 ```
-yap doctor
-yap doctor --json
-yap doctor --data-dir <dir>
+oldguy doctor
+oldguy doctor --json
+oldguy doctor --data-dir <dir>
 ```
 
 `--data-dir` is where the Python venv and the "doctor passed" marker live. Leave it out: the default is the plugin's
-data folder (the session hook records it in `.yap/session.json`, which every yap command reads), or `./.yap` when
+data folder (the session hook records it in `.oldguy/session.json`, which every oldguy command reads), or `./.oldguy` when
 there is none. `--json` prints `{ ok, checks }` for scripts.
 
 ## What it checks
@@ -48,18 +48,18 @@ required check passed; 1 means at least one failed; 2 means bad usage.
 
 ## What to do with a failure
 
-1. Run `yap setup`. It lists what it can install (each item with its size and the exact programs it runs) and what
+1. Run `oldguy setup`. It lists what it can install (each item with its size and the exact programs it runs) and what
    the user has to fix by hand.
 2. Show the user that list word for word and ask which items to install. Do not install anything yet.
-3. After a clear yes, run `yap setup --install <only the items they agreed to>` (comma-separated, for example
-   `yap setup --install voice,chrome`). It runs those items, then the doctor again.
-4. For a manual item, show its `fix:` line and stop until the user says it is fixed, then run `yap doctor` again.
+3. After a clear yes, run `oldguy setup --install <only the items they agreed to>` (comma-separated, for example
+   `oldguy setup --install voice,chrome`). It runs those items, then the doctor again.
+4. For a manual item, show its `fix:` line and stop until the user says it is fixed, then run `oldguy doctor` again.
 5. Never run a package manager or a fix line yourself.
 
 | Item | What it installs |
 |---|---|
-| `voice` | a Python venv in Yap's data folder with kokoro-onnx and soundfile, and the Kokoro voice model |
+| `voice` | a Python venv in oldguy's data folder with kokoro-onnx and soundfile, and the Kokoro voice model |
 | `captions` | whisper.cpp through Homebrew (macOS only; elsewhere it is manual) |
 | `chrome` | the Chrome Hyperframes renders with |
 
-**Gate:** `yap doctor` exits 0.
+**Gate:** `oldguy doctor` exits 0.

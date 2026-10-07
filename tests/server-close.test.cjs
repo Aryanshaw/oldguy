@@ -21,11 +21,11 @@ function gate() {
   return { open, entered, wait: () => { enter(); return opened; } };
 }
 
-// Makes <root>/.yap/demo with one ready chapter "a" and an empty <root>/out; removes it afterwards.
+// Makes <root>/.oldguy/demo with one ready chapter "a" and an empty <root>/out; removes it afterwards.
 function project(t) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-close-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-close-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  const slugDir = path.join(root, '.yap', 'demo');
+  const slugDir = path.join(root, '.oldguy', 'demo');
   const dir = path.join(slugDir, 'chapters', 'a');
   fs.mkdirSync(dir, { recursive: true });
   fs.mkdirSync(path.join(root, 'out'));
@@ -47,7 +47,7 @@ function project(t) {
 function post(srv, url, body) {
   return new Promise((resolve, reject) => {
     const r = http.request({ host: '127.0.0.1', port: srv.port, method: 'POST', path: url, agent: false,
-      headers: { host: `127.0.0.1:${srv.port}`, 'x-yap-key': srv.key, 'content-type': 'application/json' } }, (res) => {
+      headers: { host: `127.0.0.1:${srv.port}`, 'x-oldguy-key': srv.key, 'content-type': 'application/json' } }, (res) => {
       let text = '';
       res.on('data', (c) => { text += c; });
       res.on('end', () => { let json; try { json = JSON.parse(text); } catch { /* not json */ } resolve({ status: res.statusCode, json }); });
@@ -72,7 +72,7 @@ test('an export whose body is still arriving when close() starts is refused with
   await posterGate.entered;
   const answer = new Promise((resolve, reject) => {
     const req = http.request({ host: '127.0.0.1', port: srv.port, method: 'POST', path: '/api/export', agent: false,
-      headers: { host: `127.0.0.1:${srv.port}`, 'x-yap-key': srv.key, 'content-type': 'application/json' } }, (res) => {
+      headers: { host: `127.0.0.1:${srv.port}`, 'x-oldguy-key': srv.key, 'content-type': 'application/json' } }, (res) => {
       let text = '';
       res.on('data', (c) => { text += c; });
       res.on('end', () => resolve({ status: res.statusCode, json: JSON.parse(text) }));

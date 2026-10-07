@@ -1,6 +1,6 @@
 # Scope
 
-Purpose: turn "/yap how adding a todo works" into one flow that really exists in the code, sized for a short video,
+Purpose: turn "/oldguy how adding a todo works" into one flow that really exists in the code, sized for a short video,
 before any reading in depth begins.
 
 ## 1. Find the flow
@@ -17,14 +17,14 @@ response, a redrawn screen).
 ## 2. The one question
 
 You may ask at most one clarifying question, here and nowhere else. Ask it only when you cannot pick a flow
-without it (two very different things share the name, or the request is just "/yap"). Make the question
+without it (two very different things share the name, or the request is just "/oldguy"). Make the question
 self-contained: say what you found and what the choices are.
 
 ## 3. If the feature is not in the code
 
 Say so plainly in one or two sentences, for example: "I could not find a dark mode in this project; there is no
 theme switch, setting, or style for it." Then ask one question ("Did you mean the colour settings in
-`settings.js`, or something else?") and stop. Write nothing under `.yap/`. Never describe how the feature
+`settings.js`, or something else?") and stop. Write nothing under `.oldguy/`. Never describe how the feature
 "would probably" work.
 
 ## 4. Set the shape
@@ -33,11 +33,11 @@ theme switch, setting, or style for it." Then ask one question ("Did you mean th
   it works (what happens, in what order, what can go wrong); code and other real material appear when they help.
 - Length: 2 to 3 minutes by default, which is 4 to 8 chapters of 20 to 40 seconds. Honour a length the user asks
   for by changing the chapter count, not the chapter length.
-- Slug: a short lower-case name for the folder, from the request (`add-todo`). The video lives in `.yap/<slug>/`.
+- Slug: a short lower-case name for the folder, from the request (`add-todo`). The video lives in `.oldguy/<slug>/`.
 
 ## 5. Write it down
 
-Create `.yap/<slug>/script.md` with a top section: the request, the flow in one sentence, the file where it
+Create `.oldguy/<slug>/script.md` with a top section: the request, the flow in one sentence, the file where it
 starts, the file where it ends, and the planned chapter count. The chapters themselves come in the storyboard step.
 
 **Gate:** `script.md` names one flow, its start file, its end file and 4 to 8 chapters; or you stopped with one question and wrote nothing.

@@ -6,28 +6,28 @@ const fs = require('node:fs');
 const os = require('node:os');
 const { buildRecord } = require('../lib/build-record.mts');
 
-const CLI = path.join(__dirname, '..', 'bin', 'yap.cjs');
+const CLI = path.join(__dirname, '..', 'bin', 'oldguy.cjs');
 const NAMES = ['doctor', 'audit', 'beats', 'captions', 'pad-wav', 'scaffold', 'render', 'narrate'];
 
 // Runs the CLI with the given arguments and returns the finished process result.
-function yap(...args) {
+function oldguy(...args) {
   return spawnSync('node', [CLI, ...args], { encoding: 'utf8' });
 }
 
 test('--help exits 0 and lists all eight commands', () => {
-  const r = yap('--help');
+  const r = oldguy('--help');
   assert.equal(r.status, 0);
   for (const name of NAMES) assert.match(r.stdout, new RegExp(`^\\s*${name}\\s`, 'm'));
 });
 
 test('no arguments prints the same help and exits 0', () => {
-  const r = yap();
+  const r = oldguy();
   assert.equal(r.status, 0);
   assert.match(r.stdout, /doctor/);
 });
 
 test('unknown command exits 2 with a one-line usage message on stderr', () => {
-  const r = yap('bogus');
+  const r = oldguy('bogus');
   assert.equal(r.status, 2);
   assert.equal(r.stdout, '');
   assert.equal(r.stderr.trim().split('\n').length, 1);
@@ -37,16 +37,16 @@ test('unknown command exits 2 with a one-line usage message on stderr', () => {
 // doctor is left out: with no arguments it is a real run (it calls ffmpeg and hyperframes), which tests must not do.
 test('every command except doctor, given no arguments, exits 2 with a usage line on stderr', () => {
   for (const name of NAMES.filter((n) => n !== 'doctor')) {
-    const r = yap(name);
+    const r = oldguy(name);
     assert.equal(r.status, 2, name);
-    assert.match(r.stderr, /usage: yap /, name);
+    assert.match(r.stderr, /usage: oldguy /, name);
     assert.doesNotMatch(r.stderr, /not implemented/, name);
   }
 });
 
 // Makes a temp folder for one test and removes it when the test ends.
 function tempDir(t) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-cli-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-cli-'));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   return dir;
 }
@@ -64,9 +64,9 @@ const SPEC = {
 };
 
 test('scaffold --help documents the spec, the four pieces and the four callout directions', () => {
-  const r = yap('scaffold', '--help');
+  const r = oldguy('scaffold', '--help');
   assert.equal(r.status, 0);
-  assert.match(r.stdout, /^usage: yap scaffold <spec.json> --root <dir>/);
+  assert.match(r.stdout, /^usage: oldguy scaffold <spec.json> --root <dir>/);
   for (const word of ['title', 'steps', 'code-card', 'callout', 'beat', 'up|down|left|right']) assert.ok(r.stdout.includes(word), word);
 });
 
@@ -74,27 +74,27 @@ test('scaffold creates the chapter, prints its folder, and refuses a second run 
   const root = tempDir(t);
   const specFile = path.join(root, 'spec.json');
   fs.writeFileSync(specFile, JSON.stringify(SPEC));
-  const r = yap('scaffold', specFile, '--root', root);
+  const r = oldguy('scaffold', specFile, '--root', root);
   assert.equal(r.status, 0, r.stderr);
   const dir = path.join(root, 'chapters', 'what-if-it-fails');
   assert.equal(r.stdout, `${dir}\n`);
   assert.deepEqual(fs.readdirSync(dir).sort(), ['chapter.json', 'narration.txt']);
-  const again = yap('scaffold', specFile, '--root', root);
+  const again = oldguy('scaffold', specFile, '--root', root);
   assert.equal(again.status, 1);
-  assert.match(again.stderr, /^yap scaffold: .*already exists: delete .* and scaffold again/);
+  assert.match(again.stderr, /^oldguy scaffold: .*already exists: delete .* and scaffold again/);
 });
 
 test('scaffold with a bad callout direction exits 1 naming the allowed ones', (t) => {
   const root = tempDir(t);
   const specFile = path.join(root, 'spec.json');
   fs.writeFileSync(specFile, JSON.stringify({ ...SPEC, scene: [{ piece: 'callout', params: { text: 'x', pointTo: 'north' }, beat: 0 }] }));
-  const r = yap('scaffold', specFile, '--root', root);
+  const r = oldguy('scaffold', specFile, '--root', root);
   assert.equal(r.status, 1);
   assert.match(r.stderr, /pointTo.*up, down, left, right/);
 });
 
 test('narrate on a folder with no chapter.json is a usage error', (t) => {
-  const r = yap('narrate', tempDir(t));
+  const r = oldguy('narrate', tempDir(t));
   assert.equal(r.status, 2);
   assert.match(r.stderr, /no chapter.json/);
 });
@@ -126,7 +126,7 @@ function renderWorkspace(t, { withBad = true } = {}) {
 
 test('render --dry-run prints the render command for passing chapters and fails the unaudited one', (t) => {
   const { repo, chapters } = renderWorkspace(t);
-  const r = yap('render', chapters, '--root', repo, '--cap', '2', '--dry-run');
+  const r = oldguy('render', chapters, '--root', repo, '--cap', '2', '--dry-run');
   assert.equal(r.status, 1, r.stderr);
   const good = path.join(chapters, 'good');
   assert.ok(r.stdout.includes(`would run: npx --yes hyperframes@0.8.112 render ${good} -q draft -w 2 -o ${path.join(good, 'chapter.mp4')}\n`), r.stdout);
@@ -142,7 +142,7 @@ test('render --dry-run exits 0 when every chapter is ready, with the cap taken f
   const { repo, chapters } = renderWorkspace(t, { withBad: false });
   const mp4 = path.join(chapters, 'good', 'chapter.mp4');
   fs.writeFileSync(mp4, 'old video');
-  const r = yap('render', chapters, '--root', repo, '--dry-run');
+  const r = oldguy('render', chapters, '--root', repo, '--dry-run');
   assert.equal(fs.readFileSync(mp4, 'utf8'), 'old video');
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /up to [123] at a time/);
@@ -151,14 +151,14 @@ test('render --dry-run exits 0 when every chapter is ready, with the cap taken f
 
 test('render usage errors exit 2: no --root, a bad --cap, a missing folder', (t) => {
   const { repo, chapters } = renderWorkspace(t);
-  assert.equal(yap('render', chapters, '--dry-run').status, 2);
-  assert.equal(yap('render', chapters, '--root', repo, '--cap', '0', '--dry-run').status, 2);
-  assert.equal(yap('render', path.join(chapters, 'nope'), '--root', repo, '--dry-run').status, 2);
+  assert.equal(oldguy('render', chapters, '--dry-run').status, 2);
+  assert.equal(oldguy('render', chapters, '--root', repo, '--cap', '0', '--dry-run').status, 2);
+  assert.equal(oldguy('render', path.join(chapters, 'nope'), '--root', repo, '--dry-run').status, 2);
 });
 
 test('render with no chapters in the folder exits 1 rather than claiming success', (t) => {
   const empty = tempDir(t);
-  const r = yap('render', empty, '--root', empty, '--dry-run');
+  const r = oldguy('render', empty, '--root', empty, '--dry-run');
   assert.equal(r.status, 1);
   assert.match(r.stderr, /no chapters/);
 });
@@ -172,7 +172,7 @@ function markRendered(dir) {
 
 test('render --only works in the order given and reports an unknown id as no such chapter', (t) => {
   const { repo, chapters } = renderWorkspace(t, { withBad: false });
-  const r = yap('render', chapters, '--root', repo, '--only', 'nope,good', '--dry-run');
+  const r = oldguy('render', chapters, '--root', repo, '--only', 'nope,good', '--dry-run');
   assert.equal(r.status, 1);
   const lines = r.stdout.split('\n').filter((l) => /^(nope|good):/.test(l));
   assert.deepEqual(lines, ['nope: failed (no such chapter)', 'good: would render']);
@@ -183,19 +183,19 @@ test('render --dry-run says would skip for an already-rendered chapter and touch
   const dir = path.join(chapters, 'good');
   markRendered(dir);
   const record = fs.readFileSync(path.join(dir, 'render.json'), 'utf8');
-  const r = yap('render', chapters, '--root', repo, '--dry-run');
+  const r = oldguy('render', chapters, '--root', repo, '--dry-run');
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /^good: would skip \(already rendered\)$/m);
   assert.doesNotMatch(r.stdout, /would run:/);
   assert.equal(fs.readFileSync(path.join(dir, 'render.json'), 'utf8'), record);
   assert.equal(fs.readFileSync(path.join(dir, 'chapter.mp4'), 'utf8'), 'old video');
-  const forced = yap('render', chapters, '--root', repo, '--force', '--dry-run');
+  const forced = oldguy('render', chapters, '--root', repo, '--force', '--dry-run');
   assert.match(forced.stdout, /^good: would render$/m);
 });
 
 test('render --only needs at least one id', (t) => {
   const { repo, chapters } = renderWorkspace(t);
-  const r = yap('render', chapters, '--root', repo, '--only', ',', '--dry-run');
+  const r = oldguy('render', chapters, '--root', repo, '--only', ',', '--dry-run');
   assert.equal(r.status, 2);
   assert.match(r.stderr, /--only/);
 });

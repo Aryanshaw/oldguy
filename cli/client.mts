@@ -26,7 +26,7 @@ type PageMove = 'none' | 'same' | 'moved' | 'failed';
 
 const DEADLINE_MS = 5000;
 const MAX_ANSWER_BYTES = 1024 * 1024;
-const NO_SERVER = 'no server is running: start it with `yap serve --detach`';
+const NO_SERVER = 'no server is running: start it with `oldguy serve --detach`';
 
 const MAX_LINE = 300;
 const UNEXPECTED = 'the server sent an unexpected answer';
@@ -49,7 +49,7 @@ async function callServer(slugDir: string, apiPath: string, body: unknown, timeo
   const r = await askServer({ port: info.port, key: info.key, method: 'POST', path: apiPath, body, timeoutMs, maxBytes: MAX_ANSWER_BYTES });
   if (!r.ok && r.reason === 'refused') { complain(NO_SERVER); return { code: 1 }; }
   if (!r.ok && r.reason === 'timeout') { complain(pidAlive(info.pid) ? 'the server did not answer in time' : NO_SERVER); return { code: 1 }; }
-  if (!r.ok) { complain('the server answered in a way yap could not read'); return { code: 1 }; }
+  if (!r.ok) { complain('the server answered in a way oldguy could not read'); return { code: 1 }; }
   let json: (Answer & { error?: unknown }) | null = null;
   try { json = JSON.parse(r.body) as Answer & { error?: unknown }; } catch { /* not JSON */ }
   if (r.status < 200 || r.status > 299) {
@@ -123,7 +123,7 @@ function readFlags(args: string[], allowed: string[], required: string[]): Recor
   return flags;
 }
 
-// `yap reply --in-reply-to <evt_n> --text <text> [--source <file>:<a>-<b> ...] [--offer-video] [--root <repo>]`: posts
+// `oldguy reply --in-reply-to <evt_n> --text <text> [--source <file>:<a>-<b> ...] [--offer-video] [--root <repo>]`: posts
 // Claude's answer to the viewer; --offer-video puts a "Make this a video" button under it. Each source is checked
 // against the repository at --root (default: the current folder) before anything is sent.
 function runReply(args: string[], opts?: ClientOpts): Promise<number> {
@@ -147,7 +147,7 @@ function runReply(args: string[], opts?: ClientOpts): Promise<number> {
   }, '/api/reply', (json) => `reply ${strictMatch(json.reply.id, /^rep_\d+$/)} sent`, opts);
 }
 
-// `yap add-chapter --id <id> [--after <id>] [--title <t>] [--parent <id>] [--reason <text>] [--question <text>]`: adds
+// `oldguy add-chapter --id <id> [--after <id>] [--title <t>] [--parent <id>] [--reason <text>] [--question <text>]`: adds
 // a chapter row; --question is the viewer's question it answers, shown under it while it is being made.
 function runAddChapter(args: string[], opts?: ClientOpts): Promise<number> {
   return serverCommand('add-chapter', (): Request<AddBody> => {
@@ -161,7 +161,7 @@ function runAddChapter(args: string[], opts?: ClientOpts): Promise<number> {
   }, '/api/chapters', (json, { body }) => `chapter ${body.id} added at position ${positionOf(json, body.id)}`, opts);
 }
 
-// `yap ack <evt_n> [--dir <slugDir>]`: tells the server Claude has handled an event that gets no text reply.
+// `oldguy ack <evt_n> [--dir <slugDir>]`: tells the server Claude has handled an event that gets no text reply.
 function runAck(args: string[], opts?: ClientOpts): Promise<number> {
   return serverCommand('ack', (): Request<{ event_id: string }> => {
     const { positional, flags } = parseFlags(args, ['--dir']);
@@ -171,7 +171,7 @@ function runAck(args: string[], opts?: ClientOpts): Promise<number> {
   }, '/api/ack', (_json, { body }) => `event ${body.event_id} acked`, opts);
 }
 
-// `yap set-status --id <id> --status <pending|rendering|ready|failed|stale>`: changes one chapter's status.
+// `oldguy set-status --id <id> --status <pending|rendering|ready|failed|stale>`: changes one chapter's status.
 function runSetStatus(args: string[], opts?: ClientOpts): Promise<number> {
   return serverCommand('set-status', () => {
     const flags = readFlags(args, ['--dir', '--id', '--status'], ['--id', '--status']);
@@ -180,7 +180,7 @@ function runSetStatus(args: string[], opts?: ClientOpts): Promise<number> {
   }, '/api/chapters', (json, { body }) => `chapter ${body.id} is ${body.fields.status}`, opts);
 }
 
-// `yap remove-chapter --id <id>`: takes a chapter out of the story (after "just text"; delete its folder first).
+// `oldguy remove-chapter --id <id>`: takes a chapter out of the story (after "just text"; delete its folder first).
 function runRemoveChapter(args: string[], opts?: ClientOpts): Promise<number> {
   return serverCommand('remove-chapter', () => {
     const flags = readFlags(args, ['--dir', '--id'], ['--id']);
@@ -232,22 +232,22 @@ async function moveOnPage(slugDir: string, ids: string[], timeoutMs: number): Pr
   // a failed request has no body; the empty text makes JSON.parse throw, which leaves `current` null
   try { current = (JSON.parse(r.ok ? r.body : '') as { manifest: { chapters: { id: string }[] } }).manifest.chapters.map((c) => c.id); } catch { /* reported just below */ }
   if (!r.ok || r.status !== 200 || !current) {
-    complain('yap order: the running server did not give its chapter list; the page keeps its old order');
+    complain('oldguy order: the running server did not give its chapter list; the page keeps its old order');
     return 'failed';
   }
   const next = pageOrder(current, ids);
   if (next.join() === current.join()) return 'same';
   const { code } = await callServer(slugDir, '/api/chapters', { op: 'reorder', ids: next }, timeoutMs);
-  if (code) complain('yap order: the page keeps its old order');
+  if (code) complain('oldguy order: the page keeps its old order');
   return code ? 'failed' : 'moved';
 }
 
-// `yap order <id,id,...>`: writes the story order to <slugDir>/order.json and, when a server is running for the
+// `oldguy order <id,id,...>`: writes the story order to <slugDir>/order.json and, when a server is running for the
 // folder, moves the chapters already on its page into that order. Needs no server.
 async function runOrder(args: string[], opts: ClientOpts = {}): Promise<number> {
   const plan = guarded('order', () => {
     const { positional, flags } = parseFlags(args, ['--dir']);
-    if (positional.length !== 1) throw new Error('usage: yap order <id,id,...> [--dir <slugDir>]');
+    if (positional.length !== 1) throw new Error('usage: oldguy order <id,id,...> [--dir <slugDir>]');
     return { ids: parseOrderIds(positional[0]), slugDir: resolveSlugDir(flags['--dir']) };
   });
   if (typeof plan === 'number') return plan;
@@ -255,7 +255,7 @@ async function runOrder(args: string[], opts: ClientOpts = {}): Promise<number> 
     writeAtomically(path.join(plan.slugDir, 'order.json'), `${JSON.stringify({ chapters: plan.ids })}\n`);
   } catch (err) {
     // a failed write throws a system error with a code
-    complain(`yap order: could not write order.json (${(err as NodeJS.ErrnoException).code || 'error'})`);
+    complain(`oldguy order: could not write order.json (${(err as NodeJS.ErrnoException).code || 'error'})`);
     return 1;
   }
   const moved = await moveOnPage(plan.slugDir, plan.ids, opts.timeoutMs ?? DEADLINE_MS);

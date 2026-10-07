@@ -6,7 +6,7 @@ import type { Rendered } from "./shared.mts";
 // its own text: no scripts, no event handlers, no loaded files or links, and a timeline made of GSAP tween calls only.
 
 const MAX_BYTES = 100 * 1024;
-const TIMELINE_OPEN = "<script data-yap-timeline>";
+const TIMELINE_OPEN = "<script data-oldguy-timeline>";
 // Tags that could run code, load something or leave the page; markup may use any other HTML or inline SVG.
 const BANNED_TAGS = /<\s*\/?\s*(script|iframe|frame|object|embed|link|meta|base|form|input|button|textarea|select|template|audio|video|img|image|use|foreignobject)\b/i;
 // Attributes that run code or fetch something.
@@ -19,7 +19,7 @@ const BANNED_WORDS = /=>|\bfunction\b|\bnew\b|\beval\b|\bimport\b|\bfetch\b|\bwi
 // The three parts of a scene file: its styles, its markup and its timeline.
 type Parts = { css: string; markup: string; timeline: string };
 
-// Splits the scene into styles (every <style> block), the timeline (the one <script data-yap-timeline> block) and the
+// Splits the scene into styles (every <style> block), the timeline (the one <script data-oldguy-timeline> block) and the
 // markup (everything else), refusing a second timeline or one that is not closed.
 function split(source: string): Parts {
   let css = "";
@@ -144,8 +144,8 @@ function render(params: unknown, opts: unknown): Rendered {
   // a block keeps the helpers private to this piece; beat(n) reads a fixed list, so the page stays deterministic
   lines.push(
     "{",
-    `const yapBeats = ${JSON.stringify(beats)};`,
-    "const beat = (n) => yapBeats[n];",
+    `const oldguyBeats = ${JSON.stringify(beats)};`,
+    "const beat = (n) => oldguyBeats[n];",
     `const startS = ${k.sec(win.startMs)};`,
     `const endS = ${k.sec(t.endMs)};`,
     code.trim(),

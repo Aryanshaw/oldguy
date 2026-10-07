@@ -10,7 +10,7 @@ const { runListen } = require('../cli/listen.mts');
 
 // A real server over a fresh video folder; returns it with a helper that posts to its API.
 async function withServer(t) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-listen-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-listen-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const slugDir = path.join(root, 'demo');
   fs.mkdirSync(path.join(slugDir, 'chapters'), { recursive: true });
@@ -48,7 +48,7 @@ test('listen prints the open events first, then each new one once, heartbeats, a
 });
 
 test('listen with no server exits 1 with one line on stderr and prints nothing', async (t) => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-listen-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-listen-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const slugDir = path.join(root, 'demo');
   fs.mkdirSync(slugDir);

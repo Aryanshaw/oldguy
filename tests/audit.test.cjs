@@ -6,12 +6,12 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { audit } = require('../lib/audit.mts');
 
-const CLI = path.join(__dirname, '..', 'bin', 'yap.cjs');
+const CLI = path.join(__dirname, '..', 'bin', 'oldguy.cjs');
 const FILE_TEXT = 'alpha one\nbeta two\ngamma three\ndelta four\nepsilon five\n';
 
 // Makes a temp "repo" holding src/a.txt and an empty sibling folder for outside files; cleans up after fn.
 function withRepo(fn) {
-  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-audit-'));
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-audit-'));
   const root = path.join(base, 'repo');
   fs.mkdirSync(path.join(root, 'src'), { recursive: true });
   fs.writeFileSync(path.join(root, 'src', 'a.txt'), FILE_TEXT);
@@ -207,9 +207,9 @@ test('rejects a directory as a source file', () => {
 
 // ---- CLI ----
 
-// Runs `yap audit` on a chapter object written to a temp file and returns the process result.
+// Runs `oldguy audit` on a chapter object written to a temp file and returns the process result.
 function runCli(chapter, root, extraArgs = []) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-audit-cli-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-audit-cli-'));
   try {
     const file = path.join(dir, 'chapter.json');
     fs.writeFileSync(file, typeof chapter === 'string' ? chapter : JSON.stringify(chapter));
@@ -252,7 +252,7 @@ test('cli exits 2 on unreadable or malformed chapter.json and on missing argumen
 
 test('checkCitation: a chat source must name a real file inside the root and lines that exist in it', () => {
   const { checkCitation } = require('../lib/audit.mts');
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-cite-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-cite-'));
   try {
     fs.mkdirSync(path.join(root, 'src'));
     fs.writeFileSync(path.join(root, 'src', 'a.js'), 'one\ntwo\nthree\n');

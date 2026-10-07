@@ -1,11 +1,11 @@
-// The `yap beats <narration.txt> --duration <s> [--words <transcript.json>] [--lead <s>]` command.
+// The `oldguy beats <narration.txt> --duration <s> [--words <transcript.json>] [--lead <s>]` command.
 import fs from 'node:fs';
 import { splitSentences } from '../lib/sentences.mts';
 import { beatsFromDuration, beatsFromWords } from '../lib/beats.mts';
 import type { Word } from '../lib/beats.mts';
 import { parseFlags, secondsFlag, guarded } from './args.mts';
 
-const USAGE = 'usage: yap beats <narration.txt> --duration <seconds> [--words <transcript.json>] [--lead <seconds>]';
+const USAGE = 'usage: oldguy beats <narration.txt> --duration <seconds> [--words <transcript.json>] [--lead <seconds>]';
 
 // True for something with text and finite start and end times.
 function isTimedWord(w: unknown): boolean {

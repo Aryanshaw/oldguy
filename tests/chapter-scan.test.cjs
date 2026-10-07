@@ -11,7 +11,7 @@ const COMMIT = 'a'.repeat(40);
 
 // Makes a temp folder, runs the test body with it, and removes it after.
 function withTmp(fn) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-scan-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-scan-'));
   try { return fn(dir); } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 }
 // Writes a chapter folder with every Phase 1 file; opts can skip the mp4 or render record.

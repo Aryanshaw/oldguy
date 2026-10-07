@@ -8,22 +8,22 @@ const path = require('node:path');
 const { spawn } = require('node:child_process');
 const { startServer } = require('../server/server.mts');
 
-const YAP = path.join(__dirname, '..', 'bin', 'yap.cjs');
+const OLDGUY = path.join(__dirname, '..', 'bin', 'oldguy.cjs');
 const MESSAGE = 'a server for this folder is already running';
 
 // Makes a temp folder named "demo" with a chapters/ folder and removes it afterwards.
 function tempSlug(t) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-one-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-one-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const slugDir = path.join(root, 'demo');
   fs.mkdirSync(path.join(slugDir, 'chapters'), { recursive: true });
   return slugDir;
 }
 
-// Runs `yap serve` as a child (async, so this process can still answer its ping) and resolves { status, stdout, stderr }.
-function runYap(args) {
+// Runs `oldguy serve` as a child (async, so this process can still answer its ping) and resolves { status, stdout, stderr }.
+function runOldguy(args) {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [YAP, ...args], { stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(process.execPath, [OLDGUY, ...args], { stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '';
     let stderr = '';
     child.stdout.on('data', (c) => { stdout += c; });
@@ -40,7 +40,7 @@ test('a second server on the same folder refuses with one line; the first keeps 
   const before = fs.readFileSync(file, 'utf8');
   await assert.rejects(startServer({ slugDir, deps: { logError: () => {} } }), (err) => err.message === MESSAGE);
   assert.equal(fs.readFileSync(file, 'utf8'), before);
-  const r = await fetch(`http://127.0.0.1:${first.port}/api/ping`, { headers: { 'x-yap-key': first.key } });
+  const r = await fetch(`http://127.0.0.1:${first.port}/api/ping`, { headers: { 'x-oldguy-key': first.key } });
   assert.equal(r.status, 200);
 });
 
@@ -56,13 +56,13 @@ test('a stale server.json (nothing listening) is replaced by a new server', asyn
   assert.equal(JSON.parse(fs.readFileSync(path.join(slugDir, 'state', 'server.json'), 'utf8')).port, second.port);
 });
 
-test('foreground `yap serve` on a folder with a live server exits 1 with the line and the existing URL', async (t) => {
+test('foreground `oldguy serve` on a folder with a live server exits 1 with the line and the existing URL', async (t) => {
   const slugDir = tempSlug(t);
   const first = await startServer({ slugDir, deps: { logError: () => {} } });
   t.after(() => first.close());
-  const r = await runYap(['serve', '--dir', slugDir]);
+  const r = await runOldguy(['serve', '--dir', slugDir]);
   assert.equal(r.status, 1, r.stderr);
-  assert.equal(r.stderr, `yap serve: ${MESSAGE}\n`);
+  assert.equal(r.stderr, `oldguy serve: ${MESSAGE}\n`);
   assert.equal(r.stdout, `${first.url}\n`);
 });
 

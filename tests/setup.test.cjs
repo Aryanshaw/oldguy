@@ -75,8 +75,8 @@ test('no venv, no model, uv present: voice makes the venv with uv, then speaks o
   assert.deepEqual(voice.steps, [
     { cmd: 'uv', args: ['venv', '--python', '3.12', VENV] },
     { cmd: 'uv', args: ['pip', 'install', '--python', VENV_PY, 'kokoro-onnx', 'soundfile'] },
-    { write: '/tmp/yap-setup-voice.txt', text: 'Hello from Yap.\n' },
-    { cmd: 'npx', args: [...HF, 'tts', '/tmp/yap-setup-voice.txt', '-o', '/tmp/yap-setup-voice.wav', '--json'], env: { HYPERFRAMES_PYTHON: VENV_PY } },
+    { write: '/tmp/oldguy-setup-voice.txt', text: 'Hello from oldguy.\n' },
+    { cmd: 'npx', args: [...HF, 'tts', '/tmp/oldguy-setup-voice.txt', '-o', '/tmp/oldguy-setup-voice.wav', '--json'], env: { HYPERFRAMES_PYTHON: VENV_PY } },
   ]);
 });
 
@@ -138,17 +138,17 @@ test('runItems stops at the first failed step and runs nothing after it', async 
   assert.ok(log.some((l) => /failed: boom/.test(l)));
 });
 
-test('yap setup without --install only prints the plan and installs nothing', async () => {
+test('oldguy setup without --install only prints the plan and installs nothing', async () => {
   const m = machine({ missing: [VENV_PY], exec: { uv: () => OK } });
   assert.equal(await runSetupCli([], m.deps), 0);
   assert.match(m.out.stdout, /Nothing is installed until you agree/);
   assert.match(m.out.stdout, /runs: uv venv --python 3.12/);
-  assert.match(m.out.stdout, /yap setup --install voice/);
+  assert.match(m.out.stdout, /oldguy setup --install voice/);
   assert.deepEqual(installCalls(m.calls), []);
   assert.deepEqual(m.written, []);
 });
 
-test('yap setup --install voice runs exactly the voice steps, then the doctor, and marks the pass', async () => {
+test('oldguy setup --install voice runs exactly the voice steps, then the doctor, and marks the pass', async () => {
   let made = false;
   const m = machine({ missing: [VENV_PY], exec: { uv: (args) => { if (args[0] === 'pip') made = true; return OK; } } });
   // once uv has installed the packages, the venv python exists and imports
@@ -159,11 +159,11 @@ test('yap setup --install voice runs exactly the voice steps, then the doctor, a
     `uv venv --python 3.12 ${VENV}`,
     `uv pip install --python ${VENV_PY} kokoro-onnx soundfile`,
   ]);
-  assert.match(m.out.stdout, /Setup done: yap doctor passes/);
+  assert.match(m.out.stdout, /Setup done: oldguy doctor passes/);
   assert.equal(m.out.marked, true);
 });
 
-test('yap setup --install with an unknown or unneeded item exits 2 and runs nothing', async () => {
+test('oldguy setup --install with an unknown or unneeded item exits 2 and runs nothing', async () => {
   for (const list of ['everything', 'chrome']) {
     const m = machine({ missing: [VENV_PY], exec: { uv: () => OK } });
     assert.equal(await runSetupCli(['--install', list], m.deps), 2, list);

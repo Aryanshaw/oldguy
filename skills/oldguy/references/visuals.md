@@ -33,7 +33,7 @@ Whatever the shape:
 
 ## 2. Ready pieces
 
-When one of these already shows the idea, use it: they are quick and always fit the stage. `yap scaffold --help`
+When one of these already shows the idea, use it: they are quick and always fit the stage. `oldguy scaffold --help`
 lists every param.
 
 | Piece | Shows |
@@ -50,7 +50,7 @@ When no piece shows the idea well, design the scene: a `design` piece pointing a
 folder, `{"piece": "design", "params": {"file": "scenes/<id>.html"}, "beat": 0}`. Scaffold copies the file into
 `chapter.json`. Start from the worked example, [examples/journey.html](../examples/journey.html): a journey with
 a failure and a planned part, using every rule below. The file holds `<style>`, your markup on a 1920x1080 stage,
-and one `<script data-yap-timeline>`.
+and one `<script data-oldguy-timeline>`.
 
 - **Shared look:** open with `<div class="yk-kicker">Topic · this chapter</div>` and
   `<div class="yk-title">The one idea</div>` (no numbers in the label: chapters can move). Use the theme variables:
@@ -75,8 +75,8 @@ After narrating a chapter, look at it before rendering. Take a frame about one s
 read the `start` of every beat in the chapter's `beats.json`, add 1, and pass the list:
 
 ```
-npx --yes hyperframes@0.8.112 check .yap/<slug>/chapters/<id>
-npx --yes hyperframes@0.8.112 snapshot .yap/<slug>/chapters/<id> --at 1,4.3,8.1
+npx --yes hyperframes@0.8.112 check .oldguy/<slug>/chapters/<id>
+npx --yes hyperframes@0.8.112 snapshot .oldguy/<slug>/chapters/<id> --at 1,4.3,8.1
 ```
 
 The check finds overflowing text, poor contrast and bad motion. It does not see two boxes overlapping, a label on
@@ -86,7 +86,7 @@ a border, something shown before its sentence or a picture that does not say wha
 
 ## 5. The spec file
 
-Write one file per chapter at `.yap/<slug>/specs/<id>.json`:
+Write one file per chapter at `.oldguy/<slug>/specs/<id>.json`:
 
 ```json
 {"id": "what-the-form-sends", "title": "What the form sends",
@@ -97,7 +97,7 @@ Write one file per chapter at `.yap/<slug>/specs/<id>.json`:
 ```
 
 Each piece's `beat` is the sentence it appears with; beats rise from 0 and a piece stays until the next one's beat.
-Then scaffold it: `yap scaffold .yap/<slug>/specs/<id>.json --root .yap/<slug>` (the video folder, not the
+Then scaffold it: `oldguy scaffold .oldguy/<slug>/specs/<id>.json --root .oldguy/<slug>` (the video folder, not the
 repository). It never overwrites a chapter: to redo one, delete its folder first.
 
-**Gate:** every chapter has a spec whose picture was chosen for its idea, `yap scaffold` exited 0 for it, and you looked at its snapshots, one per sentence, before rendering.
+**Gate:** every chapter has a spec whose picture was chosen for its idea, `oldguy scaffold` exited 0 for it, and you looked at its snapshots, one per sentence, before rendering.

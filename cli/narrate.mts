@@ -1,4 +1,4 @@
-// The `yap narrate <chapter-dir> [--root <repo>] [--data-dir <dir>]` command: speech, beats, captions and index.html
+// The `oldguy narrate <chapter-dir> [--root <repo>] [--data-dir <dir>]` command: speech, beats, captions and index.html
 // for one chapter, recording the repository's commit when --root is given.
 import fs from 'node:fs';
 import os from 'node:os';
@@ -13,7 +13,7 @@ import { renderCap } from '../lib/render-schedule.mts';
 import type { ProgramResult } from '../lib/narrate.mts';
 import type { NarrateResult } from '../lib/narrate.mts';
 
-const USAGE = 'usage: yap narrate <chapter-dir> [--root <repo>] [--data-dir <dir>]';
+const USAGE = 'usage: oldguy narrate <chapter-dir> [--root <repo>] [--data-dir <dir>]';
 const STEP_TIMEOUT_MS = 10 * 60 * 1000;
 
 // Runs one real program for the pipeline with a generous time limit.
@@ -41,7 +41,7 @@ async function runNarrate(args: string[]): Promise<number> {
     if (positional.length !== 1) throw new Error('needs exactly one chapter folder');
     if (!fs.existsSync(path.join(positional[0], 'chapter.json'))) throw new Error(`no chapter.json in ${positional[0]}`);
   } catch (err) {
-    process.stderr.write(`yap narrate: ${(err as Error).message}\n${USAGE}\n`);
+    process.stderr.write(`oldguy narrate: ${(err as Error).message}\n${USAGE}\n`);
     return 2;
   }
   // the venv and the whisper check are the same ones the doctor uses
@@ -57,7 +57,7 @@ async function runNarrate(args: string[]): Promise<number> {
     process.stdout.write(`${narratedLine(path.basename(path.resolve(positional[0])), r, Boolean(root))}\n`);
     return 0;
   } catch (err) {
-    process.stderr.write(`yap narrate: ${String((err as Error).message).replace(/\s*\n\s*/g, ' ')}\n`);
+    process.stderr.write(`oldguy narrate: ${String((err as Error).message).replace(/\s*\n\s*/g, ' ')}\n`);
     return 1;
   }
 }

@@ -6,7 +6,7 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { parseWav, padWav } = require('../lib/wav.mts');
 
-const CLI = path.join(__dirname, '..', 'bin', 'yap.cjs');
+const CLI = path.join(__dirname, '..', 'bin', 'oldguy.cjs');
 const FIXTURE = path.join(__dirname, 'fixtures', 'narration.wav');
 
 // Builds a "fmt " chunk for the given format fields.
@@ -132,7 +132,7 @@ test('truncated or non-WAV input is rejected without crashing', () => {
 
 // Runs the pad-wav CLI inside a fresh temp folder, then removes it.
 function withTemp(fn) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-wav-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-wav-'));
   try {
     return fn(dir);
   } finally {

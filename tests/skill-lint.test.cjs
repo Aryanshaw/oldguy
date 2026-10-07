@@ -1,21 +1,21 @@
 'use strict';
-// Lint for the yap skill text: the files exist, link to each other, name only real commands and keep the owner's word rules.
+// Lint for the oldguy skill text: the files exist, link to each other, name only real commands and keep the owner's word rules.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
-const SKILL_DIR = path.join(__dirname, '..', 'skills', 'yap');
+const SKILL_DIR = path.join(__dirname, '..', 'skills', 'oldguy');
 const SKILL = path.join(SKILL_DIR, 'SKILL.md');
 const REFS_DIR = path.join(SKILL_DIR, 'references');
-const CLI = path.join(__dirname, '..', 'bin', 'yap.cjs');
+const CLI = path.join(__dirname, '..', 'bin', 'oldguy.cjs');
 const MAX_SKILL_LINES = 200;
 const MAX_REFERENCE_LINES = 120;
 // Words the owner never wants in the skill text (whole words, any case).
 const BANNED_WORDS = /\b(cost|costs|price|pricing|usd|dollar|dollars|billing|token|tokens)\b/i;
 // Commands that do not exist yet and must not be promised.
-const MISSING_COMMANDS = /\byap (export)\b/i;
+const MISSING_COMMANDS = /\boldguy (export)\b/i;
 
 // Reads one file as text; a missing file fails the test with its path.
 function readText(file) {
@@ -29,7 +29,7 @@ function allFiles() {
   return [SKILL, ...refs].map((file) => ({ file, text: readText(file) }));
 }
 
-// The command names printed by `yap --help`, read from its "commands:" block.
+// The command names printed by `oldguy --help`, read from its "commands:" block.
 function realCommands() {
   const r = spawnSync('node', [CLI, '--help'], { encoding: 'utf8' });
   assert.equal(r.status, 0);
@@ -37,12 +37,12 @@ function realCommands() {
   return new Set(block.split('\n').map((l) => l.trim().split(/\s+/)[0]).filter(Boolean));
 }
 
-// Every `yap <command>` inside backticks or fenced code; `/yap`, `.yap/` and `yap-setup` are not commands.
+// Every `oldguy <command>` inside backticks or fenced code; `/oldguy`, `.oldguy/` and `oldguy-setup` are not commands.
 function mentionedCommands(text) {
   const spans = [...text.matchAll(/```[\s\S]*?```|`[^`\n]+`/g)].map((m) => m[0]);
   const names = new Set();
   for (const span of spans) {
-    for (const m of span.matchAll(/(?<![/\w.-])yap\s+([a-z][a-z-]*)/g)) names.add(m[1]);
+    for (const m of span.matchAll(/(?<![/\w.-])oldguy\s+([a-z][a-z-]*)/g)) names.add(m[1]);
   }
   return names;
 }
@@ -56,9 +56,9 @@ function frontmatter(text) {
 
 test('SKILL.md frontmatter names the skill and describes its triggers', () => {
   const fm = frontmatter(readText(SKILL));
-  assert.equal(fm.name, 'yap');
+  assert.equal(fm.name, 'oldguy');
   assert.ok(fm.description && fm.description.length > 0, 'description must not be empty');
-  for (const word of ['explain', 'video', '/yap']) assert.ok(fm.description.includes(word), `description must mention "${word}"`);
+  for (const word of ['explain', 'video', '/oldguy']) assert.ok(fm.description.includes(word), `description must mention "${word}"`);
 });
 
 test('SKILL.md stays short and each reference stays short', () => {
@@ -68,11 +68,11 @@ test('SKILL.md stays short and each reference stays short', () => {
   }
 });
 
-test('every yap command mentioned is a real command in yap --help', () => {
+test('every oldguy command mentioned is a real command in oldguy --help', () => {
   const real = realCommands();
   assert.ok(real.has('scaffold'), 'help output did not parse');
   for (const { file, text } of allFiles()) {
-    for (const name of mentionedCommands(text)) assert.ok(real.has(name), `${path.basename(file)} mentions "yap ${name}", which is not a command`);
+    for (const name of mentionedCommands(text)) assert.ok(real.has(name), `${path.basename(file)} mentions "oldguy ${name}", which is not a command`);
   }
 });
 
@@ -98,10 +98,10 @@ test('the money rule lets Claude explain the repository\'s own payment code', ()
     'SKILL.md must say that explaining the repository\'s own payment or checkout code is fine');
 });
 
-test('every SKILL.md paragraph that re-runs yap narrate also names yap audit', () => {
+test('every SKILL.md paragraph that re-runs oldguy narrate also names oldguy audit', () => {
   const paragraphs = readText(SKILL).split(/\n\s*\n/);
   for (const p of paragraphs) {
-    if (/`yap narrate`/.test(p)) assert.ok(/`yap audit`/.test(p), `paragraph mentions yap narrate without yap audit:\n${p}`);
+    if (/`oldguy narrate`/.test(p)) assert.ok(/`oldguy audit`/.test(p), `paragraph mentions oldguy narrate without oldguy audit:\n${p}`);
   }
 });
 
@@ -124,7 +124,7 @@ function everySkillFile(dir = path.join(__dirname, '..', 'skills')) {
   });
 }
 
-test('no skill file sends Claude to a hyperframes-* skill yap does not ship, or to search the disk', () => {
+test('no skill file sends Claude to a hyperframes-* skill oldguy does not ship, or to search the disk', () => {
   for (const { file, text } of everySkillFile()) {
     text.split('\n').forEach((line, i) => {
       assert.ok(!/\bhyperframes-[a-z]/i.test(line), `${path.relative(SKILL_DIR, file)}:${i + 1} names a hyperframes-* skill: ${line}`);
@@ -154,7 +154,7 @@ test('SKILL.md runs chapters one at a time in story order and renders each with 
   const text = readText(SKILL);
   assert.ok(/story order/i.test(text), 'SKILL.md must say chapters are made in story order');
   assert.ok(/for each chapter/i.test(text), 'SKILL.md must describe the per-chapter pipeline ("for each chapter")');
-  assert.ok(/`yap render [^`]*--only <id>`/.test(text), 'SKILL.md must render each chapter with `yap render ... --only <id>`');
+  assert.ok(/`oldguy render [^`]*--only <id>`/.test(text), 'SKILL.md must render each chapter with `oldguy render ... --only <id>`');
   assert.ok(/--only <all ids in story order>/.test(text), 'SKILL.md must end with one --only run over every id in story order');
 });
 
@@ -166,11 +166,11 @@ test('no skill file runs a render in the background, with &, or through run_in_b
   for (const { file, text } of everySkillFile().filter(({ file }) => file.endsWith('.md'))) {
     text.split('\n').forEach((line, i) => {
       const where = `${path.relative(SKILL_DIR, file)}:${i + 1}`;
-      // The one allowed exception: the sentence about the server that `yap serve --detach` leaves running.
-      assert.ok(!/background/i.test(line) || line.includes('`yap serve --detach'), `${where} mentions running something in the background: ${line}`);
+      // The one allowed exception: the sentence about the server that `oldguy serve --detach` leaves running.
+      assert.ok(!/background/i.test(line) || line.includes('`oldguy serve --detach'), `${where} mentions running something in the background: ${line}`);
       assert.ok(!/background/i.test(line) || !/render|narrate/i.test(line), `${where} lets a render or narrate run in the background: ${line}`);
       assert.ok(!/run_in_background/.test(line), `${where} mentions run_in_background: ${line}`);
-      assert.ok(!/yap render[^`\n]*&/.test(line), `${where} puts a yap render behind &: ${line}`);
+      assert.ok(!/oldguy render[^`\n]*&/.test(line), `${where} puts an oldguy render behind &: ${line}`);
     });
   }
 });
@@ -184,9 +184,9 @@ test('SKILL.md says Claude never ends its turn while a render is running, and re
 // The rule that keeps long commands from being stopped by the shell tool's default limit of about 2 minutes.
 const LONG_LIMIT = "the shell tool's longest time limit: 10 minutes (`timeout` 600000 ms)";
 // The rule that keeps every file Claude writes inside the video's own folder.
-const WRITE_ONLY_HERE = 'Write files only inside `.yap/<slug>/`';
+const WRITE_ONLY_HERE = 'Write files only inside `.oldguy/<slug>/`';
 
-test('SKILL.md gives long commands the 10-minute limit and keeps every written file inside .yap/<slug>/', () => {
+test('SKILL.md gives long commands the 10-minute limit and keeps every written file inside .oldguy/<slug>/', () => {
   const text = readText(SKILL);
   assert.ok(text.includes(LONG_LIMIT), `SKILL.md must contain "${LONG_LIMIT}"`);
   assert.ok(text.includes(WRITE_ONLY_HERE), `SKILL.md must contain "${WRITE_ONLY_HERE}"`);
@@ -203,46 +203,46 @@ test('no skill file sends Claude to write in /tmp', () => {
   }
 });
 
-// Every line of every code span (inline or fenced) that mentions `yap <name>`, as { file, line }.
+// Every line of every code span (inline or fenced) that mentions `oldguy <name>`, as { file, line }.
 function commandLines(name) {
   const out = [];
   for (const { file, text } of allFiles()) {
     for (const span of text.matchAll(/```[\s\S]*?```|`[^`\n]+`/g)) {
-      for (const line of span[0].split('\n')) if (new RegExp(`(?<![/\\w.-])yap\\s+${name}\\b`).test(line)) out.push({ file, line });
+      for (const line of span[0].split('\n')) if (new RegExp(`(?<![/\\w.-])oldguy\\s+${name}\\b`).test(line)) out.push({ file, line });
     }
   }
   return out;
 }
 
-test('SKILL.md writes the story order (yap order) before the first yap scaffold', () => {
+test('SKILL.md writes the story order (oldguy order) before the first oldguy scaffold', () => {
   const text = readText(SKILL);
-  const order = text.search(/yap order \S+ --dir/);
-  const scaffold = text.search(/yap scaffold \.yap\//);
-  assert.ok(order >= 0, 'SKILL.md must run `yap order <ids> --dir .yap/<slug>`');
-  assert.ok(scaffold >= 0, 'SKILL.md must run yap scaffold');
-  assert.ok(order < scaffold, 'yap order must come before the first yap scaffold');
+  const order = text.search(/oldguy order \S+ --dir/);
+  const scaffold = text.search(/oldguy scaffold \.oldguy\//);
+  assert.ok(order >= 0, 'SKILL.md must run `oldguy order <ids> --dir .oldguy/<slug>`');
+  assert.ok(scaffold >= 0, 'SKILL.md must run oldguy scaffold');
+  assert.ok(order < scaffold, 'oldguy order must come before the first oldguy scaffold');
 });
 
-test('SKILL.md starts the server with yap serve --detach after the last chapter render step', () => {
+test('SKILL.md starts the server with oldguy serve --detach after the last chapter render step', () => {
   const text = readText(SKILL);
-  const serve = text.search(/yap serve --detach/);
-  const lastRender = [...text.matchAll(/yap render \.yap\/<slug>\/chapters/g)].pop();
-  assert.ok(serve >= 0, 'SKILL.md must run `yap serve --detach`');
-  assert.ok(lastRender, 'SKILL.md must run yap render');
-  assert.ok(serve > lastRender.index, 'yap serve --detach must come after the last yap render step');
+  const serve = text.search(/oldguy serve --detach/);
+  const lastRender = [...text.matchAll(/oldguy render \.oldguy\/<slug>\/chapters/g)].pop();
+  assert.ok(serve >= 0, 'SKILL.md must run `oldguy serve --detach`');
+  assert.ok(lastRender, 'SKILL.md must run oldguy render');
+  assert.ok(serve > lastRender.index, 'oldguy serve --detach must come after the last oldguy render step');
 });
 
-test('every yap serve in the skill files carries --detach', () => {
+test('every oldguy serve in the skill files carries --detach', () => {
   const lines = commandLines('serve');
-  assert.ok(lines.length > 0, 'no skill file shows yap serve');
-  for (const { file, line } of lines) assert.ok(line.includes('--detach'), `${path.basename(file)} shows yap serve without --detach: ${line}`);
+  assert.ok(lines.length > 0, 'no skill file shows oldguy serve');
+  for (const { file, line } of lines) assert.ok(line.includes('--detach'), `${path.basename(file)} shows oldguy serve without --detach: ${line}`);
 });
 
-test('every yap order and yap serve example carries --dir', () => {
+test('every oldguy order and oldguy serve example carries --dir', () => {
   for (const name of ['order', 'serve']) {
     const lines = commandLines(name);
-    assert.ok(lines.length > 0, `no skill file shows yap ${name}`);
-    for (const { file, line } of lines) assert.ok(/--dir \.yap\/<slug>/.test(line), `${path.basename(file)} shows yap ${name} without --dir .yap/<slug>: ${line}`);
+    assert.ok(lines.length > 0, `no skill file shows oldguy ${name}`);
+    for (const { file, line } of lines) assert.ok(/--dir \.oldguy\/<slug>/.test(line), `${path.basename(file)} shows oldguy ${name} without --dir .oldguy/<slug>: ${line}`);
   }
 });
 
@@ -251,7 +251,7 @@ test('the background exception is only the server: no skill file lets a render r
   for (const { file, text } of allFiles()) {
     for (const line of text.split('\n')) if (/background/i.test(line)) allowed.push({ file, line });
   }
-  for (const { file, line } of allowed) assert.ok(line.includes('`yap serve --detach'), `${path.basename(file)}: ${line}`);
+  for (const { file, line } of allowed) assert.ok(line.includes('`oldguy serve --detach'), `${path.basename(file)}: ${line}`);
   assert.ok(allowed.length >= 1, 'the skill should say the detached server is the one process left running');
 });
 

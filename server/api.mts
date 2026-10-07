@@ -142,7 +142,7 @@ async function handleReply({ req, res, state, sendJson, readJsonBody }: RouteCon
   sendJson(res, 200, { reply });
 }
 
-// POST /api/ack: records that Claude handled an event that gets no text reply (a button press), so yap listen stops
+// POST /api/ack: records that Claude handled an event that gets no text reply (a button press), so oldguy listen stops
 // showing it. An unknown event is a 404; a malformed id a 400.
 async function handleAck({ req, res, state, sendJson, readJsonBody }: RouteContext): Promise<void> {
   const { event_id } = await readJsonBody(req);

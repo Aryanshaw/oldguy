@@ -123,7 +123,7 @@ const BUILD2 = JSON.stringify({ version: 3, verified_against_commit: 'd'.repeat(
 
 // Makes a temp slug folder named "demo" with a chapters folder.
 function tempSlug(t) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-watch-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-watch-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const slugDir = path.join(root, 'demo');
   fs.mkdirSync(path.join(slugDir, 'chapters'), { recursive: true });
@@ -157,7 +157,7 @@ async function boot(t, slugDir, { failExec = false, deps = {} } = {}) {
 const rowsOf = (slugDir) => loadManifest(path.join(slugDir, 'manifest.json')).chapters;
 const rowOf = (slugDir, id) => rowsOf(slugDir).find((c) => c.id === id);
 // GET with the session key.
-const api = (srv, p) => fetch(`http://127.0.0.1:${srv.port}${p}`, { headers: { 'x-yap-key': srv.key } });
+const api = (srv, p) => fetch(`http://127.0.0.1:${srv.port}${p}`, { headers: { 'x-oldguy-key': srv.key } });
 
 test('chapters on disk are in the manifest when startServer resolves, in order.json order, with the fixed row shape', async (t) => {
   const slugDir = tempSlug(t);
@@ -550,7 +550,7 @@ const net = require('node:net');
 function call(srv, method, url, body) {
   return new Promise((resolve, reject) => {
     const payload = body === undefined ? undefined : JSON.stringify(body);
-    const headers = { host: `127.0.0.1:${srv.port}`, 'x-yap-key': srv.key };
+    const headers = { host: `127.0.0.1:${srv.port}`, 'x-oldguy-key': srv.key };
     if (payload !== undefined) headers['content-type'] = 'application/json';
     const r = http.request({ host: '127.0.0.1', port: srv.port, method, path: url, agent: false, headers }, (res) => {
       let text = '';
@@ -619,7 +619,7 @@ test('N3: the poster route is 404 while the row has no poster even if the file e
   const { srv } = await boot(t, slugDir, { deps: { exec } });
   await srv.state.posterIdle();
   assert.equal(rowOf(slugDir, 'intro').poster, null);
-  const get = (p) => fetch(`http://127.0.0.1:${srv.port}${p}`, { headers: { 'x-yap-key': srv.key } });
+  const get = (p) => fetch(`http://127.0.0.1:${srv.port}${p}`, { headers: { 'x-oldguy-key': srv.key } });
   assert.equal((await get('/chapters/intro/poster')).status, 404);
   fail = false;
   fs.writeFileSync(path.join(dir, 'build.json'), BUILD2);

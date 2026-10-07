@@ -23,11 +23,11 @@ A source is one quoted place in the code:
   layout does not matter, but every word and symbol must match. Copy it from the file; never type it from memory.
 - Keep quotes short (a line or two): long quotes break on small differences.
 - A line you plan to show on a code card must fit in 68 columns (a tab counts as 4). If it is longer, cut it at
-  the limit and end it with `…`, or pick other lines; never reword or wrap it. `yap audit` compares every card line
+  the limit and end it with `…`, or pick other lines; never reword or wrap it. `oldguy audit` compares every card line
   with the file. Never let a sentence describe the part of a line the card cuts off.
 - Give each source a short id (`s1`, `s2`, ...) that is unique within its chapter.
 
-Write all of them to `.yap/<slug>/sources.json` as a list, and list each chapter's sources in `script.md`.
+Write all of them to `.oldguy/<slug>/sources.json` as a list, and list each chapter's sources in `script.md`.
 
 ## 3. Sentences
 
@@ -45,7 +45,7 @@ Every sentence in the narration is one of two kinds:
 
 ## 4. The chapter file
 
-`yap scaffold` writes this shape to `chapters/<id>/chapter.json` from your spec:
+`oldguy scaffold` writes this shape to `chapters/<id>/chapter.json` from your spec:
 
 ```json
 {"id": "what-the-form-sends", "title": "What the form sends",
@@ -57,11 +57,11 @@ Every sentence in the narration is one of two kinds:
 ## 5. Run the audit
 
 ```
-yap audit .yap/<slug>/chapters/<id>/chapter.json --root <repo>
+oldguy audit .oldguy/<slug>/chapters/<id>/chapter.json --root <repo>
 ```
 
-`--root` here is the user's repository, not the `.yap` folder. Exit 0 means every source and sentence holds.
+`--root` here is the user's repository, not the `.oldguy` folder. Exit 0 means every source and sentence holds.
 Exit 1 prints one failure per line, such as `s1: quote not on lines 10-14` or `sentence 2: claim has no source ids`.
-Fix the spec, delete the chapter folder, run `yap scaffold` and audit again. Exit 2 means the file could not be read.
+Fix the spec, delete the chapter folder, run `oldguy scaffold` and audit again. Exit 2 means the file could not be read.
 
-**Gate:** `yap audit` exits 0 for every chapter, and every quote was copied from the file.
+**Gate:** `oldguy audit` exits 0 for every chapter, and every quote was copied from the file.

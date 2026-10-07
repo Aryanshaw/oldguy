@@ -1,4 +1,4 @@
-// The `yap render <chapters-dir> --root <repo> [--only <id,...>] [--cap <n>] [--force] [--dry-run]` command.
+// The `oldguy render <chapters-dir> --root <repo> [--only <id,...>] [--cap <n>] [--force] [--dry-run]` command.
 import fs from 'node:fs';
 import os from 'node:os';
 import { parseFlags } from './args.mts';
@@ -12,14 +12,14 @@ import type { ChapterOutcome, CheckResult, Folder } from '../lib/render-chapters
 // What the command line asked for.
 type RenderArgs = { chaptersDir: string; root: string; cap: number | undefined; dryRun: boolean; force: boolean; only: string[] | undefined };
 
-const USAGE = 'usage: yap render <chapters-dir> --root <repo> [--only <id,id,...>] [--cap <n>] [--force] [--dry-run]';
+const USAGE = 'usage: oldguy render <chapters-dir> --root <repo> [--only <id,id,...>] [--cap <n>] [--force] [--dry-run]';
 const RENDER_TIMEOUT_MS = 60 * 60 * 1000;
 const CHECK_TIMEOUT_MS = 10 * 60 * 1000;
 // render progress output can be long, so allow far more than the default buffer
 const RENDER_MAX_BUFFER = 256 * 1024 * 1024;
 
 // Renders one chapter for real; a failed render becomes an error carrying the last line Hyperframes printed.
-// Recording is heavy, so it waits for one of the machine's slots (shared with narrate and with other yap processes).
+// Recording is heavy, so it waits for one of the machine's slots (shared with narrate and with other oldguy processes).
 async function realRender({ dir }: Folder): Promise<void> {
   const onWait = (inUse: number) => { process.stderr.write(`waiting for a free slot (${inUse} in use)\n`); };
   const r = await withSlot({ cap: renderCap(freeRamGb(os)), onWait },
@@ -80,7 +80,7 @@ async function runRender(args: string[]): Promise<number> {
   try {
     opts = parseArgs(args);
   } catch (err) {
-    process.stderr.write(`yap render: ${(err as Error).message}\n${USAGE}\n`);
+    process.stderr.write(`oldguy render: ${(err as Error).message}\n${USAGE}\n`);
     return 2;
   }
   // without --cap, free memory decides, measured the way the doctor measures it
@@ -91,7 +91,7 @@ async function runRender(args: string[]): Promise<number> {
   const { root, only, force, dryRun } = opts;
   const results = await renderChapters(opts.chaptersDir, { root, cap, render, check, only, force, dryRun });
   if (results.length === 0) {
-    process.stderr.write(`yap render: no chapters (folders with chapter.json) in ${opts.chaptersDir}\n`);
+    process.stderr.write(`oldguy render: no chapters (folders with chapter.json) in ${opts.chaptersDir}\n`);
     return 1;
   }
   for (const r of results) process.stdout.write(`${resultLine(r, dryRun)}\n`);

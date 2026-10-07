@@ -21,7 +21,7 @@ const SCENE = [
 
 // Makes an empty temp folder for one test and removes it when the test ends.
 function tempRoot(t) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-chapter-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-chapter-'));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   return dir;
 }

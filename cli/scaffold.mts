@@ -1,10 +1,10 @@
-// The `yap scaffold <spec.json> --root <dir>` command: creates a chapter folder from a spec file.
+// The `oldguy scaffold <spec.json> --root <dir>` command: creates a chapter folder from a spec file.
 import fs from 'node:fs';
 import { parseFlags } from './args.mts';
 import { scaffoldChapter } from '../lib/chapter.mts';
 import type { ScaffoldInput } from '../lib/chapter.mts';
 
-const HELP = `usage: yap scaffold <spec.json> --root <dir>
+const HELP = `usage: oldguy scaffold <spec.json> --root <dir>
 Creates <dir>/chapters/<id>/ with chapter.json and narration.txt, then prints that folder.
 spec.json:
   {"id": "What if it fails?", "title": "What if it fails?",
@@ -25,7 +25,7 @@ Pieces and their params:
              a diagram that stays up: each step appears with sentence "at" (from the piece's beat to before the
              next piece's beat, never going back) and stays; the newest step and its lane light up
   design     {"file": "scenes/<id>.html" (inside the --root folder; copied into chapter.json) or "html": text}
-             a scene you design: <style>, markup on a 1920x1080 stage, and one <script data-yap-timeline> of
+             a scene you design: <style>, markup on a 1920x1080 stage, and one <script data-oldguy-timeline> of
              tl.from/to/fromTo/set calls timed with beat(n), startS and endS; no scripts, handlers, src/href or url()
 "beat" is the 0-based index of the sentence a piece appears with; beats must go up. A piece stays on screen
 until the next piece's beat starts; the last one stays until the chapter ends.
@@ -42,7 +42,7 @@ function runScaffold(args: string[]): number {
   try {
     ({ positional, flags } = parseFlags(args, ['--root']));
   } catch (err) {
-    process.stderr.write(`yap scaffold: ${(err as Error).message}\n${HELP}`);
+    process.stderr.write(`oldguy scaffold: ${(err as Error).message}\n${HELP}`);
     return 2;
   }
   if (positional.length !== 1 || !flags['--root']) {
@@ -56,7 +56,7 @@ function runScaffold(args: string[]): number {
     process.stdout.write(`${dir}\n`);
     return 0;
   } catch (err) {
-    process.stderr.write(`yap scaffold: ${String((err as Error).message).replace(/\s*\n\s*/g, ' ')}\n`);
+    process.stderr.write(`oldguy scaffold: ${String((err as Error).message).replace(/\s*\n\s*/g, ' ')}\n`);
     return 1;
   }
 }

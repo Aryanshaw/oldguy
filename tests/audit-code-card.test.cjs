@@ -10,13 +10,13 @@ const { spawnSync } = require('node:child_process');
 const { audit } = require('../lib/audit.mts');
 const codeCard = require('../scene-kit/code-card.mts');
 
-const CLI = path.join(__dirname, '..', 'bin', 'yap.cjs');
+const CLI = path.join(__dirname, '..', 'bin', 'oldguy.cjs');
 const LONG = '  return a + b; // adds the two numbers together and returns the sum to the caller right away';
 const APP = ['function add(a, b) {', LONG, '}', '\tconst x = 1;', ''].join('\n');
 
 // Makes a temp repo holding src/app.js (and a file outside it), removed after the test.
 function repo(t) {
-  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-card-'));
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-card-'));
   t.after(() => fs.rmSync(base, { recursive: true, force: true }));
   const root = path.join(base, 'repo');
   fs.mkdirSync(path.join(root, 'src'), { recursive: true });
@@ -107,9 +107,9 @@ test('claims and sources are audited exactly as before alongside the cards', (t)
   assert.deepEqual(lines(r), ['sentence 1: claim has no source ids']);
 });
 
-test('yap audit prints one scene line per card problem and exits 1', (t) => {
+test('oldguy audit prints one scene line per card problem and exits 1', (t) => {
   const root = repo(t);
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-card-cli-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-card-cli-'));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   const file = path.join(dir, 'chapter.json');
   const scene = [{ piece: 'code-card', params: { file: 'src/app.js', lines: [{ no: 1, text: 'function sum(a, b) {' }, { no: 3, text: '}' }] }, beat: 0 }];

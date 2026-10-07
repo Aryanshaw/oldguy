@@ -11,7 +11,7 @@ const { newManifest, insertChapter, saveManifest } = require('../lib/manifest.mt
 
 // Makes a temp slug folder (named "demo") and removes it when the test ends.
 function tempSlug(t) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-srv-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-srv-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const slugDir = path.join(root, 'demo');
   fs.mkdirSync(path.join(slugDir, 'chapters'), { recursive: true });
@@ -21,7 +21,7 @@ function tempSlug(t) {
 async function start(t, opts = {}) {
   const slugDir = opts.slugDir || tempSlug(t);
   // An empty player folder, so these tests see the placeholder whether or not player/dist is built.
-  const playerDir = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-noplayer-'));
+  const playerDir = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-noplayer-'));
   t.after(() => fs.rmSync(playerDir, { recursive: true, force: true }));
   const srv = await startServer({ slugDir, ...opts, deps: { playerDir, ...(opts.deps || {}) } });
   t.after(() => srv.close());
@@ -39,7 +39,7 @@ function req(srv, { method = 'GET', url = '/', headers = {}, body } = {}) {
     r.end(body);
   });
 }
-const withKey = (srv, extra = {}) => ({ 'x-yap-key': srv.key, ...extra });
+const withKey = (srv, extra = {}) => ({ 'x-oldguy-key': srv.key, ...extra });
 
 test('listens on 127.0.0.1 only, url carries the key, key is 32 hex and differs between starts', async (t) => {
   const { srv } = await start(t);
@@ -58,7 +58,7 @@ test('every route refuses without the key and with a wrong key (403 JSON)', asyn
     const none = await req(srv, { method, url });
     assert.equal(none.status, 403, `${method} ${url}`);
     assert.ok(JSON.parse(none.body).error);
-    assert.equal((await req(srv, { method, url, headers: { 'x-yap-key': 'f'.repeat(32) } })).status, 403);
+    assert.equal((await req(srv, { method, url, headers: { 'x-oldguy-key': 'f'.repeat(32) } })).status, 403);
   }
 });
 
@@ -67,10 +67,10 @@ test('key in query sets the cookie and redirects to /; cookie alone then passes;
   const first = await req(srv, { url: `/?key=${srv.key}` });
   assert.equal(first.status, 302);
   assert.equal(first.headers.location, '/');
-  assert.equal(first.headers['set-cookie'][0], `yap_key_${srv.port}=${srv.key}; HttpOnly; SameSite=Strict; Path=/`);
-  const page = await req(srv, { headers: { cookie: `yap_key_${srv.port}=${srv.key}` } });
+  assert.equal(first.headers['set-cookie'][0], `oldguy_key_${srv.port}=${srv.key}; HttpOnly; SameSite=Strict; Path=/`);
+  const page = await req(srv, { headers: { cookie: `oldguy_key_${srv.port}=${srv.key}` } });
   assert.equal(page.status, 200);
-  assert.equal((await req(srv, { headers: { cookie: `yap_key=${srv.key}` } })).status, 403, 'plain yap_key is ignored');
+  assert.equal((await req(srv, { headers: { cookie: `oldguy_key=${srv.key}` } })).status, 403, 'plain oldguy_key is ignored');
   assert.match(page.headers['content-type'], /text\/html/);
   assert.equal((await req(srv, { headers: withKey(srv) })).status, 200);
 });
@@ -200,8 +200,8 @@ test('placeholder page lists chapters escaped, video only for ready ones, no scr
 test('two servers each accept their own cookie and refuse the other one', async (t) => {
   const a = (await start(t)).srv;
   const b = (await start(t)).srv;
-  const ca = { cookie: `yap_key_${a.port}=${a.key}` };
-  const cb = { cookie: `yap_key_${b.port}=${b.key}` };
+  const ca = { cookie: `oldguy_key_${a.port}=${a.key}` };
+  const cb = { cookie: `oldguy_key_${b.port}=${b.key}` };
   assert.equal((await req(a, { headers: ca })).status, 200);
   assert.equal((await req(b, { headers: cb })).status, 200);
   assert.equal((await req(a, { headers: cb })).status, 403);
@@ -227,7 +227,7 @@ test('malformed absolute-form targets are answered with a 4xx and the server kee
   const { srv } = await start(t);
   const host = `Host: 127.0.0.1:${srv.port}`;
   for (const target of ['http://x:99999/', 'http://[/']) {
-    for (const extra of ['', `x-yap-key: ${srv.key}\r\n`]) {
+    for (const extra of ['', `x-oldguy-key: ${srv.key}\r\n`]) {
       const head = await raw(srv, `GET ${target} HTTP/1.1\r\n${host}\r\n${extra}Connection: close\r\n\r\n`);
       assert.match(head, /^HTTP\/1\.1 4\d\d /, `${target} ${extra ? 'with key' : 'no key'}`);
       assert.equal((await req(srv, { headers: withKey(srv) })).status, 200, 'still serving');

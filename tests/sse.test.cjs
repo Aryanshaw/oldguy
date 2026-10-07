@@ -106,7 +106,7 @@ test('the ping timer is unref()ed so it cannot keep the process alive', () => {
 
 // Makes a temp slug folder and starts a server on it.
 async function start(t, deps = {}) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-sse-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-sse-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const slugDir = path.join(root, 'demo');
   fs.mkdirSync(slugDir, { recursive: true });
@@ -115,7 +115,7 @@ async function start(t, deps = {}) {
   return { srv, slugDir };
 }
 // Opens the stream and collects parsed events; wait(n) resolves once n events have arrived.
-function openStream(srv, headers = { 'x-yap-key': srv.key }) {
+function openStream(srv, headers = { 'x-oldguy-key': srv.key }) {
   return new Promise((resolve, reject) => {
     const events = [];
     const waiters = [];
@@ -150,7 +150,7 @@ function openStream(srv, headers = { 'x-yap-key': srv.key }) {
 function post(srv, url, obj) {
   return new Promise((resolve, reject) => {
     const body = JSON.stringify(obj);
-    const r = http.request({ host: '127.0.0.1', port: srv.port, method: 'POST', path: url, agent: false, headers: { host: `127.0.0.1:${srv.port}`, 'x-yap-key': srv.key, 'content-type': 'application/json' } }, (res) => {
+    const r = http.request({ host: '127.0.0.1', port: srv.port, method: 'POST', path: url, agent: false, headers: { host: `127.0.0.1:${srv.port}`, 'x-oldguy-key': srv.key, 'content-type': 'application/json' } }, (res) => {
       let d = '';
       res.on('data', (c) => { d += c; });
       res.on('end', () => resolve({ status: res.statusCode, body: JSON.parse(d) }));
@@ -251,7 +251,7 @@ test('a client that stops reading is dropped once its backlog passes 1 MB; other
   const stalled = net.connect(srv.port, '127.0.0.1');
   t.after(() => stalled.destroy());
   await new Promise((r) => stalled.once('connect', r));
-  stalled.write(`GET /api/stream HTTP/1.1\r\nHost: 127.0.0.1:${srv.port}\r\nx-yap-key: ${srv.key}\r\n\r\n`);
+  stalled.write(`GET /api/stream HTTP/1.1\r\nHost: 127.0.0.1:${srv.port}\r\nx-oldguy-key: ${srv.key}\r\n\r\n`);
   stalled.pause();
   const end = Date.now() + 2000;
   while (srv.state.hub.size() < 2 && Date.now() < end) await new Promise((r) => setTimeout(r, 10));

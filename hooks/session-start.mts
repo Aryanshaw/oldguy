@@ -1,5 +1,5 @@
 // SessionStart hook: remembers which Claude Code session this folder is in, and nudges the user to run
-// `/yap doctor` until it has passed once. It must never break a session, so every path ends in exit 0.
+// `/oldguy doctor` until it has passed once. It must never break a session, so every path ends in exit 0.
 import fs from 'node:fs';
 import path from 'node:path';
 import { readStdin, parseInput } from './stdin.mts';
@@ -10,16 +10,16 @@ async function writeSessionFile(cwd: string, input: HookInput): Promise<void> {
   // loaded here, not at the top, so even a missing library file ends in the quiet exit 0
   const { trustedDataDir } = await import('../lib/data-dir.mts');
   const { findClaudePid } = await import('../lib/owner.mts');
-  const dir = path.join(cwd, '.yap');
+  const dir = path.join(cwd, '.oldguy');
   fs.mkdirSync(dir, { recursive: true });
   const record = {
     session_id: input.session_id,
     transcript_path: input.transcript_path,
     cwd,
     source: input.source,
-    // the Claude Code process this session runs in; yap serve stops when it is gone (null when none was found)
+    // the Claude Code process this session runs in; oldguy serve stops when it is gone (null when none was found)
     claude_pid: findClaudePid(process.ppid),
-    // Claude's own shell does not get CLAUDE_PLUGIN_DATA, so yap commands read the data folder from here;
+    // Claude's own shell does not get CLAUDE_PLUGIN_DATA, so oldguy commands read the data folder from here;
     // only a folder inside Claude Code's plugin data root is recorded, since readers trust nothing else
     data_dir: trustedDataDir(process.env.CLAUDE_PLUGIN_DATA || null, { env: process.env }),
     updated_at: new Date().toISOString(),
@@ -34,10 +34,10 @@ async function writeSessionFile(cwd: string, input: HookInput): Promise<void> {
   }
 }
 
-// Prints the one-line hint when `yap doctor` has not left its pass marker in the data folder.
+// Prints the one-line hint when `oldguy doctor` has not left its pass marker in the data folder.
 function hintIfDoctorNotRun(dataDir: string | null): void {
   if (dataDir && !fs.existsSync(path.join(dataDir, 'doctor-ok'))) {
-    process.stdout.write('yap: run /yap doctor once to check this machine can make videos.\n');
+    process.stdout.write('oldguy: run /oldguy doctor once to check this machine can make videos.\n');
   }
 }
 

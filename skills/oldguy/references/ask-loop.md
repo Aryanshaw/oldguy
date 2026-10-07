@@ -5,11 +5,11 @@ and build a new chapter only when they ask for one. You are the main session: yo
 
 ## 1. Start listening
 
-Right after `yap serve --detach --dir .yap/<slug>` printed the URL, start the listener with Claude Code's Monitor tool, with the
+Right after `oldguy serve --detach --dir .oldguy/<slug>` printed the URL, start the listener with Claude Code's Monitor tool, with the
 longest timeout (1,800,000 ms):
 
 ```
-yap listen --dir .yap/<slug>
+oldguy listen --dir .oldguy/<slug>
 ```
 
 Each line it prints is one open event from the page (a question or a button press) as JSON, and it keeps the page's
@@ -27,11 +27,11 @@ An event stays open until it has a reply or an ack, so handle every one.
 
 | Event | What you do |
 |---|---|
-| `message` | Read the code it needs (its `context` says which chapter and second the viewer was on), then answer with `yap reply --in-reply-to <id> --text "…" --source <file>:<lines>` (one `--source` per place you used; each is checked against the code, so run it from the repository root or pass `--root`). Add `--offer-video` only when a chapter would explain it better (see section 3). The reply closes the event. |
-| `make_video` | `yap ack <id>`. Find the reply its `ref` names, then: `yap add-chapter --id <new-id> --title "…" --question "<the viewer's question>"` and `yap set-status --id <new-id> --status rendering` (the page shows "Making a chapter for: …"). Dispatch a chapter subagent (section 4). |
-| `just_text` | `yap ack <id>`. Stop the subagent building that chapter, delete its folder (`rm -r .yap/<slug>/chapters/<id>`, if it was made) and its spec, then `yap remove-chapter --id <id> --dir .yap/<slug>` (the page drops "Making a chapter for…"). The question already has its text answer. |
-| `retry_chapter` | `yap ack <id>`, then dispatch a fresh chapter subagent for that chapter id. |
-| `export` | `yap ack <id>`: export runs on its own route. |
+| `message` | Read the code it needs (its `context` says which chapter and second the viewer was on), then answer with `oldguy reply --in-reply-to <id> --text "…" --source <file>:<lines>` (one `--source` per place you used; each is checked against the code, so run it from the repository root or pass `--root`). Add `--offer-video` only when a chapter would explain it better (see section 3). The reply closes the event. |
+| `make_video` | `oldguy ack <id>`. Find the reply its `ref` names, then: `oldguy add-chapter --id <new-id> --title "…" --question "<the viewer's question>"` and `oldguy set-status --id <new-id> --status rendering` (the page shows "Making a chapter for: …"). Dispatch a chapter subagent (section 4). |
+| `just_text` | `oldguy ack <id>`. Stop the subagent building that chapter, delete its folder (`rm -r .oldguy/<slug>/chapters/<id>`, if it was made) and its spec, then `oldguy remove-chapter --id <id> --dir .oldguy/<slug>` (the page drops "Making a chapter for…"). The question already has its text answer. |
+| `retry_chapter` | `oldguy ack <id>`, then dispatch a fresh chapter subagent for that chapter id. |
+| `export` | `oldguy ack <id>`: export runs on its own route. |
 
 Answer in the house voice: short, plain, beginner-friendly, every claim with its file and lines. When you cannot
 find something in the code, say so; never guess.
@@ -45,13 +45,13 @@ thank-you or an "I got it". When in doubt, answer in text without the button: th
 ## 4. Chapter subagents
 
 Every new chapter is built by a subagent, so you stay free to answer more questions while it works. Give it:
-the viewer's question, your text answer and its sources, the new chapter id, the video folder `.yap/<slug>`, the
+the viewer's question, your text answer and its sources, the new chapter id, the video folder `.oldguy/<slug>`, the
 repository root, and these rules:
 
 - Build exactly one chapter by the per-chapter steps of the skill: sources, storyboard, visuals, spec, then
-  `yap scaffold`, `yap audit`, `yap narrate`, look at the snapshots, `yap render --only <id>`, and the redo path on
+  `oldguy scaffold`, `oldguy audit`, `oldguy narrate`, look at the snapshots, `oldguy render --only <id>`, and the redo path on
   any failure. Every claim is checked against the code like every other chapter.
-- Never touch another chapter, never start a server or `yap listen`, never change the order.
+- Never touch another chapter, never start a server or `oldguy listen`, never change the order.
 - Report back: the chapter id, its seconds, and whether every step passed (or what failed).
 
 **Parallel or one after another.** Before dispatching, ask: does this chapter build on one still being made (it
@@ -60,8 +60,8 @@ finish first. Otherwise dispatch at once; several subagents may run together. Na
 slot on their own, so the machine is never overloaded.
 
 **When a subagent reports back,** review before showing it: the render line said `ready`, the audit passed, and its
-snapshots were looked at. Then place it where it fits the story: `yap order <id>,<id>,... --dir .yap/<slug>` (every id, comma-separated, in the new story order), and
-`yap set-status --id <id> --status ready`. If it failed after the redo path, `yap set-status --id <id> --status
+snapshots were looked at. Then place it where it fits the story: `oldguy order <id>,<id>,... --dir .oldguy/<slug>` (every id, comma-separated, in the new story order), and
+`oldguy set-status --id <id> --status ready`. If it failed after the redo path, `oldguy set-status --id <id> --status
 failed` and tell the viewer in one reply; clicking the failed chapter asks for a retry.
 
-**Gate:** `yap listen` is running under Monitor (or it printed `server_stopped` and you told the user), every printed event has a reply or an ack, and every chapter subagent's result was reviewed before it was marked ready.
+**Gate:** `oldguy listen` is running under Monitor (or it printed `server_stopped` and you told the user), every printed event has a reply or an ack, and every chapter subagent's result was reviewed before it was marked ready.

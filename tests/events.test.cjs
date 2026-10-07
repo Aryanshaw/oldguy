@@ -8,7 +8,7 @@ const E = require('../lib/events.mts');
 
 // Makes a temp folder, runs the test body with it, and removes it after.
 function withTmp(fn) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-events-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-events-'));
   try { return fn(dir); } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 }
 const ctx = { chapter_id: 'ch-worker-claim', t: 12.3 };
@@ -78,7 +78,7 @@ test('whole line over maxBytes is rejected and nothing is written', () => withTm
 }));
 
 test('200 appends from Promise.all give 200 distinct ids and whole lines', async () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-events-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-events-'));
   try {
     const f = path.join(dir, 'events.jsonl');
     const out = await Promise.all(Array.from({ length: 200 }, (_, i) =>

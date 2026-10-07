@@ -11,7 +11,7 @@ const { sha256 } = require('../lib/build-record.mts');
 
 // Makes a temp slug folder (named "demo"), writes a manifest with the given [id, status] rows, starts a server.
 async function setup(t, rows = [], deps = {}) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-api-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-api-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const slugDir = path.join(root, 'demo');
   fs.mkdirSync(slugDir, { recursive: true });
@@ -26,7 +26,7 @@ async function setup(t, rows = [], deps = {}) {
 function call(srv, method, url, body, { raw, type = 'application/json' } = {}) {
   return new Promise((resolve, reject) => {
     const payload = raw !== undefined ? raw : body === undefined ? undefined : JSON.stringify(body);
-    const headers = { host: `127.0.0.1:${srv.port}`, 'x-yap-key': srv.key };
+    const headers = { host: `127.0.0.1:${srv.port}`, 'x-oldguy-key': srv.key };
     if (payload !== undefined) headers['content-type'] = type;
     const r = http.request({ host: '127.0.0.1', port: srv.port, method, path: url, agent: false, headers }, (res) => {
       let text = '';

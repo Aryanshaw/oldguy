@@ -1,4 +1,4 @@
-// A machine-wide limit on heavy work (speech and recording): at most `cap` holders at once, across every yap process.
+// A machine-wide limit on heavy work (speech and recording): at most `cap` holders at once, across every oldguy process.
 // A slot is a lock file holding its owner's pid; a lock whose process is gone (or that cannot be read) counts as free,
 // so a crash never leaves a slot taken. Chapter subagents may run in parallel; this keeps the laptop responsive.
 import fs from 'node:fs';
@@ -10,7 +10,7 @@ import { pidAlive } from './ask-server.mts';
 type SlotOptions = { dir?: string; cap: number; pid?: number; isAlive?: (pid: number) => boolean; pollMs?: number; onWait?: (inUse: number) => void };
 
 // The default lock folder: one per machine, shared by every project.
-const DEFAULT_DIR = path.join(os.tmpdir(), 'yap-slots');
+const DEFAULT_DIR = path.join(os.tmpdir(), 'oldguy-slots');
 
 // Reads the pid in a lock file, or null when it is missing or not a whole number.
 function lockPid(file: string): number | null {

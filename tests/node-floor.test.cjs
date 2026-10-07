@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { nodeProblem, NODE_FLOOR } = require('../lib/node-floor.cjs');
 
-const DIR = '/x/yap/bin';
+const DIR = '/x/oldguy/bin';
 
 test('the floor is 22.18.0', () => {
   assert.equal(NODE_FLOOR, '22.18.0');
@@ -31,7 +31,7 @@ test('numbers are compared as integers, not as text', () => {
 });
 
 test('running from inside a node_modules folder is one line that says so', () => {
-  for (const dir of ['/p/node_modules/yap/bin', 'C:\\p\\node_modules\\yap\\bin']) {
+  for (const dir of ['/p/node_modules/oldguy/bin', 'C:\\p\\node_modules\\oldguy\\bin']) {
     const line = nodeProblem('22.18.0', dir);
     assert.equal(typeof line, 'string', dir);
     assert.ok(line.includes('node_modules'), dir);
@@ -40,7 +40,7 @@ test('running from inside a node_modules folder is one line that says so', () =>
 });
 
 test('a folder that only looks like node_modules is fine', () => {
-  assert.equal(nodeProblem('22.18.0', '/p/my_node_modules_copy/yap'), null);
+  assert.equal(nodeProblem('22.18.0', '/p/my_node_modules_copy/oldguy'), null);
 });
 
 test('garbage versions are a problem line and never throw', () => {
@@ -68,23 +68,23 @@ function nodeOfVersion(version) {
 test('under Node 22.17 the command and the hook each print one plain sentence, never a syntax error', (t) => {
   const old = nodeOfVersion('22.17.0');
   if (!old) return t.skip('Node 22.17.0 is not installed on this machine');
-  const cli = spawnSync(old, [path.join(ROOT, 'bin', 'yap.cjs'), '--help'], { encoding: 'utf8' });
+  const cli = spawnSync(old, [path.join(ROOT, 'bin', 'oldguy.cjs'), '--help'], { encoding: 'utf8' });
   assert.equal(cli.status, 1);
   assert.equal(cli.stdout, '');
-  assert.match(cli.stderr, /^yap: Yap needs Node 22\.18 or newer; this is Node 22\.17\.0\./);
+  assert.match(cli.stderr, /^oldguy: oldguy needs Node 22\.18 or newer; this is Node 22\.17\.0\./);
   assert.equal(cli.stderr.trim().split('\n').length, 1);
   assert.doesNotMatch(cli.stderr, /SyntaxError|ERR_UNKNOWN_FILE_EXTENSION/);
   const hook = spawnSync(old, [path.join(ROOT, 'hooks', 'session-start.cjs')], { input: '{}', encoding: 'utf8' });
   assert.equal(hook.status, 0);
   assert.equal(hook.stdout, '');
-  assert.match(hook.stderr, /^yap: Yap needs Node 22\.18 or newer/);
+  assert.match(hook.stderr, /^oldguy: oldguy needs Node 22\.18 or newer/);
   assert.equal(hook.stderr.trim().split('\n').length, 1);
 });
 
 test('under Node 22.18 the command and the hook run normally', (t) => {
   const floor = nodeOfVersion('22.18.0');
   if (!floor) return t.skip('Node 22.18.0 is not installed on this machine');
-  const cli = spawnSync(floor, [path.join(ROOT, 'bin', 'yap.cjs'), '--help'], { encoding: 'utf8' });
+  const cli = spawnSync(floor, [path.join(ROOT, 'bin', 'oldguy.cjs'), '--help'], { encoding: 'utf8' });
   assert.equal(cli.status, 0);
   assert.match(cli.stdout, /commands:/);
   assert.equal(cli.stderr, '');

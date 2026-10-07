@@ -1,9 +1,9 @@
-// The `yap pad-wav <in> <out> [--lead <ms>] [--tail <ms>]` command.
+// The `oldguy pad-wav <in> <out> [--lead <ms>] [--tail <ms>]` command.
 import fs from 'node:fs';
 import { padWav } from '../lib/wav.mts';
 
 const MAX_BYTES = 200 * 1024 * 1024;
-const USAGE = 'usage: yap pad-wav <in> <out> [--lead <ms>] [--tail <ms>]';
+const USAGE = 'usage: oldguy pad-wav <in> <out> [--lead <ms>] [--tail <ms>]';
 
 // Reads one non-negative millisecond option, falling back to its default when absent.
 function readMs(args: string[], flag: string, fallback: number): number {
@@ -31,7 +31,7 @@ function runPadWav(args: string[]): number {
     fs.writeFileSync(output, padWav(fs.readFileSync(input), { leadMs, tailMs }));
     return 0;
   } catch (err) {
-    process.stderr.write(`yap pad-wav: ${(err as Error).message.replace(/\s*\n\s*/g, ' ')}\n`);
+    process.stderr.write(`oldguy pad-wav: ${(err as Error).message.replace(/\s*\n\s*/g, ' ')}\n`);
     return 2;
   }
 }

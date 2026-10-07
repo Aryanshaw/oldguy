@@ -62,7 +62,7 @@ function blockReason({ dir }: Folder, root: string): string | null {
   }
   const checked = audit({ root, sources: chapter.sources, sentences: chapter.sentences, scene: chapter.scene });
   if (!checked.ok) return `audit: ${checked.failures.map((f) => `${f.id}: ${f.reason}`).join('; ')}`;
-  if (!fs.existsSync(path.join(dir, 'index.html'))) return 'not narrated yet (no index.html); run yap narrate first';
+  if (!fs.existsSync(path.join(dir, 'index.html'))) return 'not narrated yet (no index.html); run oldguy narrate first';
   return buildChangedReason(dir, chapter);
 }
 
