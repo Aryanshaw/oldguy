@@ -48,7 +48,16 @@ reviewer checking work Claude did, or anyone stuck on "wait, how does this part 
 
 ## Install
 
-In Claude Code:
+In a terminal:
+
+```
+npx getyap
+```
+
+It adds Yap to Claude Code (or updates it), then shows what Yap still needs on this machine, with sizes and the exact
+commands, and sets up only what you tick. `npx getyap --yes` sets up everything offered without asking.
+
+Or, from inside Claude Code:
 
 ```
 /plugin marketplace add Aryanshaw/yap
@@ -70,7 +79,8 @@ install for you, with sizes and the exact commands:
 | `captions` | optional: whisper.cpp through Homebrew, for word-by-word captions (macOS) |
 | `chrome` | the Chrome build Yap renders with |
 
-Nothing is installed until you say which items you want. Things Yap cannot install for you (ffmpeg, Node, disk
+Nothing is installed until you say which items you want. To update Yap later, run `npx getyap` again, or
+`/plugin marketplace update yap` then `/plugin update yap@yap` in Claude Code. Things Yap cannot install for you (ffmpeg, Node, disk
 space) are listed with the command to fix them.
 
 ## Use
