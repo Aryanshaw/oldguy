@@ -21,18 +21,18 @@ function render(params: unknown, opts: unknown): Rendered {
 
   const rows = items.map(
     (it, i) =>
-      `<div id="${id}-step-${i}" class="yk-step">` +
-      `<span class="yk-step-num">${i + 1}</span>` +
-      `<div class="yk-step-text"><div class="yk-step-label yk-wrap">${k.esc(it.label)}</div>` +
-      (it.detail ? `<div class="yk-step-detail yk-wrap">${k.esc(it.detail)}</div>` : "") +
+      `<div id="${id}-step-${i}" class="og-step">` +
+      `<span class="og-step-num">${i + 1}</span>` +
+      `<div class="og-step-text"><div class="og-step-label og-wrap">${k.esc(it.label)}</div>` +
+      (it.detail ? `<div class="og-step-detail og-wrap">${k.esc(it.detail)}</div>` : "") +
       `</div></div>`
   );
-  const html = `<div id="${id}-root" class="yk-piece yk-steps">${rows.join("")}</div>`;
+  const html = `<div id="${id}-root" class="og-piece og-steps">${rows.join("")}</div>`;
 
   // each step slides in a beat after the one before it
   const { durMs, staggerMs } = k.spread(items.length, t.bodySpan);
   const lines = k.frameTweens(id, win, t);
-  lines.push(k.tween("from", `#${id}-root .yk-step`, k.vars("opacity: 0, xPercent: -8", durMs, staggerMs), t.bodyStart));
+  lines.push(k.tween("from", `#${id}-root .og-step`, k.vars("opacity: 0, xPercent: -8", durMs, staggerMs), t.bodyStart));
   return { html, ...k.finish(lines, t.endMs) };
 }
 

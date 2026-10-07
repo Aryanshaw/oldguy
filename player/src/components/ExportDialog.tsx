@@ -3,7 +3,7 @@ import { ApiError, postExport } from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-const KEY = 'yap.exportDest';
+const KEY = 'oldguy.exportDest';
 const BAD_PATH = 'Type the full path of a folder, starting with /';
 
 type Result = Awaited<ReturnType<typeof postExport>>;
@@ -66,7 +66,7 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
     <dialog
       ref={ref}
       onClose={onClose}
-      className="bd sh-lg m-auto w-[min(520px,calc(100vw-32px))] rounded-[14px] bg-yk-cream p-6 text-yk-black backdrop:bg-yk-black/50"
+      className="bd sh-lg m-auto w-[min(520px,calc(100vw-32px))] rounded-[14px] bg-og-cream p-6 text-og-black backdrop:bg-og-black/50"
     >
       <form
         method="dialog"

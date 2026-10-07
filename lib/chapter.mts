@@ -225,8 +225,8 @@ function buildRootComposition({ id, durationS, pieces }: { id: unknown; duration
     `<script src="${GSAP_NAME}"></script>`,
     // the stage is a fixed 1920x1080 box the pieces are laid over
     '<style>',
-    'html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: var(--yk-black); }',
-    '#root { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: var(--yk-black); }',
+    'html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: var(--og-black); }',
+    '#root { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: var(--og-black); }',
     theme,
     '</style>',
     '</head>',

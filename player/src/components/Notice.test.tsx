@@ -19,11 +19,11 @@ describe('Notice', () => {
   });
   it('forbidden', () => {
     render(<Notice link="forbidden" error={null} onRetry={() => {}} />);
-    expect(screen.getByText('This link has expired. Open the link printed by Yap again.')).toBeInTheDocument();
+    expect(screen.getByText('This link has expired. Open the link printed by oldguy again.')).toBeInTheDocument();
   });
   it('gone', () => {
     render(<Notice link="gone" error={null} onRetry={() => {}} />);
-    expect(screen.getByText("Yap's server stopped. Run /yap again and open the new link.")).toBeInTheDocument();
+    expect(screen.getByText("oldguy's server stopped. Run /oldguy again and open the new link.")).toBeInTheDocument();
   });
   it('reconnecting is a slim banner', () => {
     render(<Notice link="reconnecting" error={null} onRetry={() => {}} />);

@@ -60,7 +60,7 @@ export function ChatTab({ store, position, chapters }: Props) {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       {!connected && (
-        <p className="bd rounded-[10px] bg-yk-orange px-3 py-2 text-xs font-black">
+        <p className="bd rounded-[10px] bg-og-orange px-3 py-2 text-xs font-black">
           Claude isn't connected.
         </p>
       )}
@@ -70,7 +70,7 @@ export function ChatTab({ store, position, chapters }: Props) {
           e.role === 'viewer' ? (
             <div key={e.id} data-role="viewer" className="flex max-w-[88%] flex-col items-end gap-1 self-end">
               <p
-                className={`bd rounded-[14px_14px_2px_14px] bg-yk-yellow px-3 py-2 text-[13.5px] font-bold whitespace-pre-wrap ${WRAP}`}
+                className={`bd rounded-[14px_14px_2px_14px] bg-og-yellow px-3 py-2 text-[13.5px] font-bold whitespace-pre-wrap ${WRAP}`}
               >
                 {e.text}
               </p>
@@ -78,7 +78,7 @@ export function ChatTab({ store, position, chapters }: Props) {
             </div>
           ) : (
             <div key={e.id} data-role="claude" className="flex flex-col gap-2">
-              <div className="bd flex flex-col gap-2 rounded-[14px_14px_14px_2px] bg-yk-white px-3 py-2.5 sh">
+              <div className="bd flex flex-col gap-2 rounded-[14px_14px_14px_2px] bg-og-white px-3 py-2.5 sh">
                 <p className={`text-[13.5px] leading-normal whitespace-pre-wrap ${WRAP}`}>{e.text}</p>
                 {e.sources && e.sources.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
@@ -106,7 +106,7 @@ export function ChatTab({ store, position, chapters }: Props) {
           ),
         )}
         {asking.map((c) => (
-          <div key={c.id} className="bd flex flex-col gap-2 rounded-[10px] bg-yk-cream px-3 py-2">
+          <div key={c.id} className="bd flex flex-col gap-2 rounded-[10px] bg-og-cream px-3 py-2">
             <p className={`text-xs font-bold ${WRAP}`}>Making a chapter for: {c.question}</p>
             <Button
               size="sm"
@@ -134,7 +134,7 @@ export function ChatTab({ store, position, chapters }: Props) {
                 void send();
               }
             }}
-            className="bd min-h-[44px] w-full resize-none rounded-[10px] bg-yk-white px-3 py-2 text-sm font-bold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-yk-black"
+            className="bd min-h-[44px] w-full resize-none rounded-[10px] bg-og-white px-3 py-2 text-sm font-bold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-og-black"
           />
           <Button variant="accent" disabled={busy || !text.trim()} onClick={() => void send()}>
             Ask
@@ -144,7 +144,7 @@ export function ChatTab({ store, position, chapters }: Props) {
           <span className="self-end text-[11px] font-bold tabular-nums">{`${text.length}/${LIMIT}`}</span>
         )}
         {error && (
-          <p role="alert" className={`bd rounded-[10px] bg-yk-red px-3 py-1.5 text-xs font-bold text-yk-black ${WRAP}`}>
+          <p role="alert" className={`bd rounded-[10px] bg-og-red px-3 py-1.5 text-xs font-bold text-og-black ${WRAP}`}>
             {error}
           </p>
         )}

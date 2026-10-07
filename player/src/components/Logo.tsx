@@ -15,11 +15,11 @@ export function Logo({ size = 'lg' }: { size?: 'sm' | 'lg' }) {
       <span
         className={
           small
-            ? 'bd sh -rotate-2 rounded-[6px] bg-yk-yellow px-3 pb-1 text-[34px] leading-none font-black tracking-[-0.04em]'
-            : 'bd sh -rotate-2 rounded-[6px] bg-yk-yellow px-[18px] pb-2 text-[76px] leading-none font-black tracking-[-0.04em]'
+            ? 'bd sh -rotate-2 rounded-[6px] bg-og-yellow px-3 pb-1 text-[34px] leading-none font-black tracking-[-0.04em]'
+            : 'bd sh -rotate-2 rounded-[6px] bg-og-yellow px-[18px] pb-2 text-[76px] leading-none font-black tracking-[-0.04em]'
         }
       >
-        yap
+        oldguy
       </span>
     </div>
   );

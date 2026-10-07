@@ -72,10 +72,10 @@ async function startFixture() {
   const ffmpeg = findTool('ffmpeg', 'HYPERFRAMES_FFMPEG_PATH');
   if (!ffmpeg) throw new Error('ffmpeg is needed for the end-to-end test');
   process.env.HYPERFRAMES_FFMPEG_PATH = ffmpeg; // the server's poster and export steps use it
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'yap-e2e-'));
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-e2e-'));
   let srv = null;
   try {
-    const slugDir = path.join(tmp, 'proj', '.yap', 'demo');
+    const slugDir = path.join(tmp, 'proj', '.oldguy', 'demo');
     fs.mkdirSync(path.join(slugDir, 'chapters'), { recursive: true });
     fs.writeFileSync(path.join(slugDir, 'script.md'), '# Demo\n\nA synthetic script for the end-to-end test.\n');
     fs.writeFileSync(path.join(slugDir, 'sources.json'), '[]\n');

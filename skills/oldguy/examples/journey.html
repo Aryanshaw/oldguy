@@ -1,25 +1,25 @@
 <style>
 /* A worked example of a designed scene: one thing travelling through four stations, a panel under the track that
    changes with each sentence, a failure on sentence 4, and a planned station. Every rule is scoped under #ex. */
-#ex .track { position: absolute; left: 240px; top: 352px; width: 1440px; height: 6px; background: var(--yk-line); }
-#ex .fill { position: absolute; left: 240px; top: 352px; width: 1440px; height: 6px; background: var(--yk-yellow); transform-origin: left center; transform: scaleX(0); }
+#ex .track { position: absolute; left: 240px; top: 352px; width: 1440px; height: 6px; background: var(--og-line); }
+#ex .fill { position: absolute; left: 240px; top: 352px; width: 1440px; height: 6px; background: var(--og-yellow); transform-origin: left center; transform: scaleX(0); }
 #ex .station { position: absolute; top: 300px; width: 300px; margin-left: -150px; text-align: center; }
-#ex .ring { width: 104px; height: 104px; margin: 0 auto; border-radius: 50%; background: var(--yk-panel); border: 6px solid var(--yk-line); box-sizing: border-box; }
-#ex .planned-ring { border-style: dashed; border-color: var(--yk-orange); }
-#ex .lit { position: absolute; left: 50%; top: 0; width: 104px; height: 104px; margin-left: -52px; border-radius: 50%; border: 6px solid var(--yk-yellow); box-sizing: border-box; }
-#ex .label { margin-top: 16px; font: 800 34px var(--yk-font); color: var(--yk-text); }
-#ex .sub { margin-top: 4px; font: 400 26px var(--yk-font); color: var(--yk-dim); }
-#ex .mover { position: absolute; left: 240px; top: 284px; width: 40px; height: 40px; margin-left: -20px; border-radius: 50%; background: var(--yk-orange); }
-#ex .panel { position: absolute; left: 240px; top: 600px; width: 1440px; padding: 30px 40px; box-sizing: border-box; background: var(--yk-panel); border: 3px solid var(--yk-line); }
-#ex .panel .big { font: 800 44px var(--yk-font); color: var(--yk-text); }
-#ex .panel .dim { margin-top: 8px; font: 400 30px var(--yk-font); color: var(--yk-dim); }
-#ex .bad { border-color: var(--yk-red); }
-#ex .bad .big { color: var(--yk-red); }
+#ex .ring { width: 104px; height: 104px; margin: 0 auto; border-radius: 50%; background: var(--og-panel); border: 6px solid var(--og-line); box-sizing: border-box; }
+#ex .planned-ring { border-style: dashed; border-color: var(--og-orange); }
+#ex .lit { position: absolute; left: 50%; top: 0; width: 104px; height: 104px; margin-left: -52px; border-radius: 50%; border: 6px solid var(--og-yellow); box-sizing: border-box; }
+#ex .label { margin-top: 16px; font: 800 34px var(--og-font); color: var(--og-text); }
+#ex .sub { margin-top: 4px; font: 400 26px var(--og-font); color: var(--og-dim); }
+#ex .mover { position: absolute; left: 240px; top: 284px; width: 40px; height: 40px; margin-left: -20px; border-radius: 50%; background: var(--og-orange); }
+#ex .panel { position: absolute; left: 240px; top: 600px; width: 1440px; padding: 30px 40px; box-sizing: border-box; background: var(--og-panel); border: 3px solid var(--og-line); }
+#ex .panel .big { font: 800 44px var(--og-font); color: var(--og-text); }
+#ex .panel .dim { margin-top: 8px; font: 400 30px var(--og-font); color: var(--og-dim); }
+#ex .bad { border-color: var(--og-red); }
+#ex .bad .big { color: var(--og-red); }
 </style>
 <div id="ex">
-  <div class="yk-kicker">Todo app · adding a todo</div>
-  <div class="yk-title">From the form to the saved list</div>
-  <div id="ex-planned" class="yk-planned">PLANNED · NOT BUILT YET</div>
+  <div class="og-kicker">Todo app · adding a todo</div>
+  <div class="og-title">From the form to the saved list</div>
+  <div id="ex-planned" class="og-planned">PLANNED · NOT BUILT YET</div>
   <div class="track"></div>
   <div id="ex-fill" class="fill"></div>
   <div class="station" style="left:240px"><div class="ring"></div><div id="ex-lit-0" class="lit"></div><div class="label">The form</div><div class="sub">you type a title</div></div>
@@ -36,7 +36,7 @@
 tl.set("#ex-planned, #ex .lit, #ex-p1, #ex-p2, #ex-p3", {opacity: 0}, startS);
 
 // the header and the empty track come in first, so the screen is never blank
-tl.from("#ex .yk-kicker, #ex .yk-title", {opacity: 0, y: -20, duration: 0.5, stagger: 0.15}, startS + 0.2);
+tl.from("#ex .og-kicker, #ex .og-title", {opacity: 0, y: -20, duration: 0.5, stagger: 0.15}, startS + 0.2);
 tl.from("#ex .station", {opacity: 0, y: 30, duration: 0.4, stagger: 0.12}, startS + 0.5);
 
 // sentence 1: you type a title in the form

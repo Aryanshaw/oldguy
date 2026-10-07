@@ -6,7 +6,7 @@ import type { Chapter } from '@/types';
 
 export type CreateEngine = typeof createEngine;
 
-const CAPTIONS_KEY = 'yap.captions';
+const CAPTIONS_KEY = 'oldguy.captions';
 
 export function usePlayer(chapters: Chapter[], create: CreateEngine = createEngine) {
   const refA = useRef<HTMLVideoElement>(null);

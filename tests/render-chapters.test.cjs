@@ -367,10 +367,10 @@ test('layout check: a failing check blocks the render, keeps the old video, and 
   const { repo, chapters } = workspace(t);
   const dir = addChapter(chapters, 'a');
   fs.writeFileSync(path.join(dir, 'chapter.mp4'), 'old video');
-  const { check, dirs } = fakeCheck({ code: 1, stdout: '\n  clipped_text: .yk-code overflows\nmore detail\n', stderr: 'later' });
+  const { check, dirs } = fakeCheck({ code: 1, stdout: '\n  clipped_text: .og-code overflows\nmore detail\n', stderr: 'later' });
   const { render, calls } = fakeRender();
   const [result] = await renderChapters(chapters, { root: repo, cap: 1, render, check });
-  assert.deepEqual(result, { id: 'a', status: 'failed', reason: 'layout check failed: clipped_text: .yk-code overflows' });
+  assert.deepEqual(result, { id: 'a', status: 'failed', reason: 'layout check failed: clipped_text: .og-code overflows' });
   assert.deepEqual(calls, []);
   assert.deepEqual(dirs, [dir]);
   assert.equal(fs.readFileSync(path.join(dir, 'chapter.mp4'), 'utf8'), 'old video');

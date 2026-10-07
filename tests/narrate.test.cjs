@@ -131,7 +131,7 @@ test('narrate: the scene pieces land on their beats in index.html', async (t) =>
   await narrateChapter(dir, { ...fakeRun(), venvPython: PYTHON, whisperAvailable: true });
   const third = readJson(dir, 'beats.json').beats[2].start;
   const html = fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
-  assert.match(html, /id="p0-root" class="yk-piece yk-title"/);
+  assert.match(html, /id="p0-root" class="og-piece og-title"/);
   // the steps piece fades in at the third sentence's start (whole milliseconds, as the kit writes it)
   const fadeIn = html.split('\n').find((l) => l.startsWith('tl.fromTo("#p1-root"'));
   assert.ok(fadeIn.endsWith(`, ${Math.round(third * 1000) / 1000});`), fadeIn);

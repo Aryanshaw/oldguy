@@ -45,7 +45,7 @@ function Page({ store, manifest, onExport }: { store: Store; manifest: Manifest;
         </div>
         <aside
           // a fixed height, so a long chat scrolls inside the panel and the question box stays on screen
-          className="bd sh-lg flex h-[min(760px,calc(100dvh-8rem))] min-h-[420px] flex-col gap-3 rounded-[14px] bg-yk-white p-3"
+          className="bd sh-lg flex h-[min(760px,calc(100dvh-8rem))] min-h-[420px] flex-col gap-3 rounded-[14px] bg-og-white p-3"
         >
           <Tabs defaultValue="chat" className="flex min-h-0 flex-1 flex-col gap-3">
             <TabsList>

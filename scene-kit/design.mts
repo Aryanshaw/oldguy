@@ -139,7 +139,7 @@ function render(params: unknown, opts: unknown): Rendered {
   const id = win.idPrefix;
   const t = k.plan(win);
 
-  const html = (css.trim() ? `<style>\n${css}</style>\n` : "") + `<div id="${id}-root" class="yk-piece yk-design">${markup}</div>`;
+  const html = (css.trim() ? `<style>\n${css}</style>\n` : "") + `<div id="${id}-root" class="og-piece og-design">${markup}</div>`;
   const lines = k.frameTweens(id, win, t);
   // a block keeps the helpers private to this piece; beat(n) reads a fixed list, so the page stays deterministic
   lines.push(

@@ -23,8 +23,8 @@ Whatever the shape:
 - **Everything shown is real or clearly generic.** Code, values and file contents come from the repository with
   where they came from (`add.js, line 12`), or are plainly examples (`step 1`, `"buy milk"`). Never invent anything
   that looks like it is from the repository.
-- **Mark what is not built.** When a chapter shows planned or missing work, say so on screen: the `yk-planned`
-  badge, and dashed outlines in `--yk-orange` for planned parts beside solid ones for what exists.
+- **Mark what is not built.** When a chapter shows planned or missing work, say so on screen: the `og-planned`
+  badge, and dashed outlines in `--og-orange` for planned parts beside solid ones for what exists.
 - **One picture that builds.** Keep the chapter's picture on screen and change only what the sentence talks about,
   so the viewer sees state pile up instead of slides swapping. The screen is never blank.
 - **Readable on a phone.** About seven things on screen at most, labels at least 32 px, nothing under 24 px.
@@ -52,10 +52,10 @@ folder, `{"piece": "design", "params": {"file": "scenes/<id>.html"}, "beat": 0}`
 a failure and a planned part, using every rule below. The file holds `<style>`, your markup on a 1920x1080 stage,
 and one `<script data-oldguy-timeline>`.
 
-- **Shared look:** open with `<div class="yk-kicker">Topic · this chapter</div>` and
-  `<div class="yk-title">The one idea</div>` (no numbers in the label: chapters can move). Use the theme variables:
-  `--yk-yellow`, `--yk-orange`, `--yk-green`, `--yk-blue`, `--yk-pink`, `--yk-red`, `--yk-text`, `--yk-dim`,
-  `--yk-black`, `--yk-panel`, `--yk-line`, `--yk-font`, `--yk-font-mono`. Scope your own rules under one id.
+- **Shared look:** open with `<div class="og-kicker">Topic · this chapter</div>` and
+  `<div class="og-title">The one idea</div>` (no numbers in the label: chapters can move). Use the theme variables:
+  `--og-yellow`, `--og-orange`, `--og-green`, `--og-blue`, `--og-pink`, `--og-red`, `--og-text`, `--og-dim`,
+  `--og-black`, `--og-panel`, `--og-line`, `--og-font`, `--og-font-mono`. Scope your own rules under one id.
 - **Timing:** `beat(n)` is when sentence `n` starts; `startS` and `endS` are the piece's window. Bring each thing in
   on the sentence that talks about it (`beat(n) + 0.3` is fine). Use only sentences from the piece's beat up to the
   next piece's beat.

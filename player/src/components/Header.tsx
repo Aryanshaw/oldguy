@@ -8,11 +8,11 @@ export function Header({ title, connected, onExport }: { title: string; connecte
       <Logo size="sm" />
       <Mascot className="-ml-2 w-11 shrink-0 rotate-6" />
       <div className="min-w-0 flex-1">
-        <h1 className="truncate text-lg font-black text-yk-black">{title}</h1>
-        <p className="text-xs font-bold text-yk-black/70">Claude yaps. You watch.</p>
+        <h1 className="truncate text-lg font-black text-og-black">{title}</h1>
+        <p className="text-xs font-bold text-og-black/70">Ask the old guy. Claude yaps. You watch.</p>
       </div>
       <span
-        className={`bd rounded-full px-3 py-1 text-xs font-black text-yk-black ${connected ? 'bg-yk-yellow' : 'bg-yk-white'}`}
+        className={`bd rounded-full px-3 py-1 text-xs font-black text-og-black ${connected ? 'bg-og-yellow' : 'bg-og-white'}`}
       >
         {connected ? 'Claude connected' : 'Claude not connected'}
       </span>

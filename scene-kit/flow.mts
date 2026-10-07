@@ -96,26 +96,26 @@ function stepTimes(steps: Step[], beats: number[], win: k.Win, t: k.Plan): numbe
 // The diagram's HTML: an optional header, then one column per lane holding its step cards (numbered in story order).
 function html(id: string, kicker: string, heading: string, lanes: Lane[], steps: Step[]): string {
   const head = kicker || heading
-    ? `<div id="${id}-head" class="yk-flow-head">` +
-      (kicker ? `<div class="yk-flow-kicker yk-wrap">${k.esc(kicker)}</div>` : "") +
-      (heading ? `<div class="yk-flow-title yk-wrap">${k.esc(heading)}</div>` : "") +
+    ? `<div id="${id}-head" class="og-flow-head">` +
+      (kicker ? `<div class="og-flow-kicker og-wrap">${k.esc(kicker)}</div>` : "") +
+      (heading ? `<div class="og-flow-title og-wrap">${k.esc(heading)}</div>` : "") +
       `</div>`
     : "";
   const columns = lanes.map((lane, li) => {
     const cards = steps.map((s, si) => ({ s, si })).filter(({ s }) => s.lane === lane.id).map(({ s, si }) =>
-      `<div id="${id}-step-${si}" class="yk-flow-step${s.kind ? ` yk-kind-${s.kind}` : ""}">` +
-      `<span class="yk-flow-num">${si + 1}</span>` +
-      `<div class="yk-flow-text"><div class="yk-flow-label yk-wrap">${k.esc(s.label)}</div>` +
-      (s.detail ? `<div class="yk-flow-detail yk-wrap">${k.esc(s.detail)}</div>` : "") +
-      `</div><div id="${id}-step-${si}-glow" class="yk-flow-glow"></div></div>`
+      `<div id="${id}-step-${si}" class="og-flow-step${s.kind ? ` og-kind-${s.kind}` : ""}">` +
+      `<span class="og-flow-num">${si + 1}</span>` +
+      `<div class="og-flow-text"><div class="og-flow-label og-wrap">${k.esc(s.label)}</div>` +
+      (s.detail ? `<div class="og-flow-detail og-wrap">${k.esc(s.detail)}</div>` : "") +
+      `</div><div id="${id}-step-${si}-glow" class="og-flow-glow"></div></div>`
     );
-    return `<div id="${id}-lane-${li}" class="yk-lane yk-lane-c${li + 1}">` +
-      `<div id="${id}-lane-${li}-glow" class="yk-lane-glow"></div>` +
-      `<div class="yk-lane-head"><span class="yk-lane-dot"></span><span class="yk-lane-label yk-wrap">${k.esc(lane.label)}</span></div>` +
-      (lane.note ? `<div class="yk-lane-note yk-wrap">${k.esc(lane.note)}</div>` : "") +
-      `<div class="yk-lane-steps">${cards.join("")}</div></div>`;
+    return `<div id="${id}-lane-${li}" class="og-lane og-lane-c${li + 1}">` +
+      `<div id="${id}-lane-${li}-glow" class="og-lane-glow"></div>` +
+      `<div class="og-lane-head"><span class="og-lane-dot"></span><span class="og-lane-label og-wrap">${k.esc(lane.label)}</span></div>` +
+      (lane.note ? `<div class="og-lane-note og-wrap">${k.esc(lane.note)}</div>` : "") +
+      `<div class="og-lane-steps">${cards.join("")}</div></div>`;
   });
-  return `<div id="${id}-root" class="yk-piece yk-flow">${head}<div class="yk-flow-lanes">${columns.join("")}</div></div>`;
+  return `<div id="${id}-root" class="og-piece og-flow">${head}<div class="og-flow-lanes">${columns.join("")}</div></div>`;
 }
 
 // A diagram that stays on screen: lanes for the parts of a system, and numbered steps that appear in them sentence by
@@ -135,7 +135,7 @@ function render(params: unknown, opts: unknown): Rendered {
   const lines = k.frameTweens(id, win, t);
   // the header and the empty lanes come in first, so the stage is never blank
   if (kicker || heading) lines.push(k.tween("from", `#${id}-head`, k.vars("opacity: 0, y: -16", ENTER_MS), t.bodyStart));
-  lines.push(k.tween("from", `#${id}-root .yk-lane`, k.vars("opacity: 0, y: 24", ENTER_MS / 2, ENTER_MS / (2 * lanes.length)), t.bodyStart));
+  lines.push(k.tween("from", `#${id}-root .og-lane`, k.vars("opacity: 0, y: 24", ENTER_MS / 2, ENTER_MS / (2 * lanes.length)), t.bodyStart));
   steps.forEach((s, i) => {
     const at = times[i];
     const next = times.findIndex((tm, j) => j > i && tm > at);

@@ -11,9 +11,9 @@ function render(params: unknown, opts: unknown): Rendered {
   const t = k.plan(win);
 
   const html =
-    `<div id="${id}-root" class="yk-piece yk-title">` +
-    `<h1 id="${id}-heading" class="yk-heading yk-wrap">${k.esc(heading)}</h1>` +
-    (sub ? `<p id="${id}-sub" class="yk-sub yk-wrap">${k.esc(sub)}</p>` : "") +
+    `<div id="${id}-root" class="og-piece og-title">` +
+    `<h1 id="${id}-heading" class="og-heading og-wrap">${k.esc(heading)}</h1>` +
+    (sub ? `<p id="${id}-sub" class="og-sub og-wrap">${k.esc(sub)}</p>` : "") +
     `</div>`;
 
   // heading rises in first, the sub line follows half an entrance later

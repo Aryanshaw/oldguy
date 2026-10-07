@@ -8,9 +8,9 @@ afterEach(cleanup);
 describe('Header', () => {
   it('shows the logo, title and tagline', () => {
     render(<Header title="How the cache works" connected onExport={() => {}} />);
-    expect(screen.getByText('yap')).toBeInTheDocument();
+    expect(screen.getByText('oldguy')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'How the cache works' })).toBeInTheDocument();
-    expect(screen.getByText('Claude yaps. You watch.')).toBeInTheDocument();
+    expect(screen.getByText('Ask the old guy. Claude yaps. You watch.')).toBeInTheDocument();
   });
   it('shows the alarm-clock mascot as decoration, hidden from screen readers', () => {
     const { container } = render(<Header title="T" connected onExport={() => {}} />);

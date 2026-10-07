@@ -38,15 +38,15 @@ describe('looks', () => {
   it('played: black with cream text', () => {
     setup([ch('a'), ch('b'), ch('c')]);
     const el = block('Title a, played, 1:04');
-    expect(el).toHaveClass('bg-yk-black', 'text-yk-cream');
+    expect(el).toHaveClass('bg-og-black', 'text-og-cream');
     expect(el.dataset.look).toBe('played');
   });
   it('current: white, yellow fill at offset/duration, lifted with sh', () => {
     setup([ch('a'), ch('b'), ch('c')], { position: { chapterId: 'b', offset: 16 } });
     const el = block('Title b, current, 1:04');
-    expect(el).toHaveClass('bg-yk-white', 'sh', '-translate-y-1');
+    expect(el).toHaveClass('bg-og-white', 'sh', '-translate-y-1');
     const fill = el.querySelector('[data-fill]') as HTMLElement;
-    expect(fill).toHaveClass('bg-yk-yellow');
+    expect(fill).toHaveClass('bg-og-yellow');
     expect(fill.style.width).toBe('25%');
   });
   it('current fill is clamped and survives a null duration', () => {
@@ -56,7 +56,7 @@ describe('looks', () => {
   it('upcoming: white', () => {
     setup([ch('a'), ch('b'), ch('c')]);
     const el = block('Title c, upcoming, 1:04');
-    expect(el).toHaveClass('bg-yk-white');
+    expect(el).toHaveClass('bg-og-white');
     expect(el).not.toHaveClass('border-dashed');
   });
   it('follow-up: dashed border, pale orange ground', () => {
@@ -67,28 +67,28 @@ describe('looks', () => {
   it('rendering: stripes, label, disabled', () => {
     setup([ch('a'), ch('b', { status: 'rendering', duration_s: null })], { position: null });
     const el = block('Title b, rendering');
-    expect(el).toHaveClass('yk-stripes');
+    expect(el).toHaveClass('og-stripes');
     expect(el).toHaveAttribute('aria-disabled', 'true');
     expect(el).toHaveTextContent('rendering');
   });
   it('pending: white, dashed, label waiting, disabled', () => {
     setup([ch('a'), ch('b', { status: 'pending', duration_s: null })], { position: null });
     const el = block('Title b, waiting');
-    expect(el).toHaveClass('bg-yk-white', 'border-dashed');
+    expect(el).toHaveClass('bg-og-white', 'border-dashed');
     expect(el).toHaveAttribute('aria-disabled', 'true');
     expect(el).toHaveTextContent('waiting');
   });
   it('failed: red, label failed, retry', () => {
     setup([ch('a'), ch('b', { status: 'failed', duration_s: null })], { position: null });
     const el = block('Title b, failed, retry');
-    expect(el).toHaveClass('bg-yk-red');
+    expect(el).toHaveClass('bg-og-red');
     expect(el).toHaveTextContent('failed, retry');
     expect(el).not.toHaveAttribute('aria-disabled', 'true');
   });
   it('stale: white, dashed grey, struck title, label, disabled', () => {
     setup([ch('a'), ch('b', { status: 'stale' })], { position: null });
     const el = block('Title b, out of date, 1:04');
-    expect(el).toHaveClass('bg-yk-white', 'border-dashed', 'border-[#8a8472]');
+    expect(el).toHaveClass('bg-og-white', 'border-dashed', 'border-[#8a8472]');
     expect(el).toHaveAttribute('aria-disabled', 'true');
     expect(el).toHaveTextContent('out of date');
     expect(screen.getByText('Title b')).toHaveClass('line-through');
@@ -108,7 +108,7 @@ describe('looks', () => {
   it('broken ready block renders as failed', () => {
     setup([ch('a'), ch('b'), ch('c')], { broken: ['c'] });
     const el = block('Title c, failed, retry, 1:04');
-    expect(el).toHaveClass('bg-yk-red');
+    expect(el).toHaveClass('bg-og-red');
     expect(el).toHaveTextContent('failed, retry');
   });
   it('each clip is as wide as its length (6 px a second) and shares spare room by length', () => {

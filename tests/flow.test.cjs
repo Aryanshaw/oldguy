@@ -30,13 +30,13 @@ function tweenAt(timeline, method, selector) {
 
 test("flow draws the header, one column per lane in order, and the steps numbered in story order", () => {
   const { html } = draw();
-  assert.match(html, /id="p0-root" class="yk-piece yk-flow"/);
+  assert.match(html, /id="p0-root" class="og-piece og-flow"/);
   assert.match(html, /01 · making a video[\s\S]*One request/);
   assert.ok(html.indexOf('id="p0-lane-0"') < html.indexOf('id="p0-lane-1"'));
-  assert.match(html, /class="yk-lane yk-lane-c1"[\s\S]*You[\s\S]*in Claude Code/);
+  assert.match(html, /class="og-lane og-lane-c1"[\s\S]*You[\s\S]*in Claude Code/);
   // step 3 (Wrong quote) sits in the second lane and keeps its story number
-  assert.match(html, /id="p0-step-2" class="yk-flow-step yk-kind-fail"><span class="yk-flow-num">3</);
-  assert.match(html, /id="p0-step-1" class="yk-flow-step yk-kind-ok"/);
+  assert.match(html, /id="p0-step-2" class="og-flow-step og-kind-fail"><span class="og-flow-num">3</);
+  assert.match(html, /id="p0-step-1" class="og-flow-step og-kind-ok"/);
   assert.ok(html.indexOf('id="p0-step-1"') > html.indexOf('id="p0-lane-1"'));
 });
 

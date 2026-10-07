@@ -54,13 +54,13 @@ export function SourcesTab({
       <section className="flex flex-col gap-2">
         {title && <h3 className={`text-sm font-black ${WRAP}`}>{title}</h3>}
         {current === null ? null : current.list === null ? (
-          <p role="alert" className="bd rounded-[10px] bg-yk-red px-3 py-1.5 text-sm font-bold text-yk-black">Could not load sources.</p>
+          <p role="alert" className="bd rounded-[10px] bg-og-red px-3 py-1.5 text-sm font-bold text-og-black">Could not load sources.</p>
         ) : current.list.length === 0 ? (
           <p className="text-sm font-bold opacity-70">This chapter lists no sources.</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {current.list.map((s, i) => (
-              <li key={i} className="bd flex flex-col gap-1 rounded-[10px] bg-yk-white px-3 py-2">
+              <li key={i} className="bd flex flex-col gap-1 rounded-[10px] bg-og-white px-3 py-2">
                 <span className={`font-mono text-xs font-bold ${WRAP}`}>{`${s.file}:${s.lines[0]}-${s.lines[1]}`}</span>
                 <span className={`text-[13px] ${WRAP}`}>{s.quote}</span>
               </li>

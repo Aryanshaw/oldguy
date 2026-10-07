@@ -15,8 +15,8 @@ function render(params: unknown, opts: unknown): Rendered {
   const t = k.plan(win);
 
   const html =
-    `<div id="${id}-root" class="yk-piece yk-callout">` +
-    `<div id="${id}-bubble" class="yk-bubble yk-point-${pointTo} yk-wrap" data-point-to="${pointTo}">${k.esc(text)}</div></div>`;
+    `<div id="${id}-root" class="og-piece og-callout">` +
+    `<div id="${id}-bubble" class="og-bubble og-point-${pointTo} og-wrap" data-point-to="${pointTo}">${k.esc(text)}</div></div>`;
 
   // the bubble pops in with a small scale-up
   const { durMs } = k.spread(1, t.bodySpan);

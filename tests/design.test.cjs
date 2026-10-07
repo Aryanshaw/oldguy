@@ -11,7 +11,7 @@ const { checkScene, scaffoldChapter } = require("../lib/chapter.mts");
 // Sentences start at 0, 2, 4, 6 and 8 s; the piece runs 0..10 s.
 const WIN = { startS: 0, durationS: 10, idPrefix: "p0", beatsS: [0, 2, 4, 6, 8] };
 const TIMELINE = '<script data-oldguy-timeline>\n// comment with tl.call("x") in it\ntl.from("#a", {opacity: 0, duration: 0.4}, beat(1));\ntl.to("#b", {x: 20, duration: 0.3, ease: "power2.out"}, beat(2) + 0.5)\n</script>';
-const SCENE = `<style>#a { color: var(--yk-yellow); }</style>\n<div id="a">A &lt;b&gt;</div><svg viewBox="0 0 10 10"><path d="M0 0L10 10"/></svg><div id="b">B</div>\n${TIMELINE}`;
+const SCENE = `<style>#a { color: var(--og-yellow); }</style>\n<div id="a">A &lt;b&gt;</div><svg viewBox="0 0 10 10"><path d="M0 0L10 10"/></svg><div id="b">B</div>\n${TIMELINE}`;
 
 // Renders a scene with the sample window, or with the given one.
 function draw(html, win = WIN) {
@@ -20,7 +20,7 @@ function draw(html, win = WIN) {
 
 test("design puts the styles beside the piece root, the markup inside it, and runs the timeline with beat()", () => {
   const { html, timeline, endS } = draw(SCENE);
-  assert.match(html, /^<style>\n#a \{ color: var\(--yk-yellow\); \}\n<\/style>\n<div id="p0-root" class="yk-piece yk-design">/);
+  assert.match(html, /^<style>\n#a \{ color: var\(--og-yellow\); \}\n<\/style>\n<div id="p0-root" class="og-piece og-design">/);
   assert.match(html, /<div id="a">A &lt;b&gt;<\/div><svg/);
   assert.doesNotMatch(html, /<script/);
   assert.match(timeline, /const oldguyBeats = \[0,2,4,6,8\];\nconst beat = \(n\) => oldguyBeats\[n\];\nconst startS = 0;\nconst endS = 10;/);
@@ -109,10 +109,10 @@ test("the worked example in the skill passes every design check", () => {
   const html = fs.readFileSync(path.join(__dirname, "..", "skills", "oldguy", "examples", "journey.html"), "utf8");
   const win = { startS: 0, durationS: 30, idPrefix: "p0", beatsS: [0, 4, 9, 14, 19, 24] };
   const r = design.render({ html }, win);
-  assert.match(r.html, /class="yk-kicker"/);
-  assert.match(r.html, /class="yk-title"/);
-  assert.match(r.html, /class="yk-planned"/);
+  assert.match(r.html, /class="og-kicker"/);
+  assert.match(r.html, /class="og-title"/);
+  assert.match(r.html, /class="og-planned"/);
   assert.match(r.timeline, /tl\.set\("#ex-planned, #ex \.lit, #ex-p1, #ex-p2, #ex-p3", \{opacity: 0\}, startS\)/);
   const css = fs.readFileSync(path.join(__dirname, "..", "scene-kit", "theme.css"), "utf8");
-  for (const cls of ["yk-kicker", "yk-title", "yk-planned"]) assert.match(css, new RegExp(`\\.${cls} \\{`), cls);
+  for (const cls of ["og-kicker", "og-title", "og-planned"]) assert.match(css, new RegExp(`\\.${cls} \\{`), cls);
 });

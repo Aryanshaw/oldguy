@@ -1,4 +1,4 @@
-// Yap's mascot: an original wind-up alarm clock (bells on stalks, a striker, a dial with hands, feet and a winding
+// oldguy's mascot: an original wind-up alarm clock (bells on stalks, a striker, a dial with hands, feet and a winding
 // key), drawn flat in the page's palette. The same drawing is docs/assets/mascot.svg, used by the README.
 export function Mascot({ className = 'w-12' }: { className?: string }) {
   return (
