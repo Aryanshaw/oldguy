@@ -26,8 +26,8 @@ Checks nobody has done yet:
   watch real chapters on a real screen and say whether it is visible (`docs/phase-3/SUMMARY.md` section 5.1).
 - **Listening.** Nobody has listened end to end for audio dropouts at a chapter join or narration out of sync.
 - **A 16 GB machine.** Renders were measured on 8 GB only.
-- **An install on a fresh personal machine.** The install from GitHub (`Aryanshaw/yap`) was tested in a cloud
-  container with an empty Claude Code config, through `npx getyap`; not yet on a real macOS laptop.
+- **An install on a fresh personal machine.** `npx getyap` (from npm, installing the plugin from GitHub) was
+  tested in a cloud container with an empty Claude Code config; not yet on a real macOS laptop.
 - **Phase 4 paths covered only by unit tests:** re-arming `yap listen` after the Monitor's 30-minute limit, and
   finding the Claude Code process on macOS.
 
@@ -41,9 +41,9 @@ Work to do:
 - **Fact-check coverage.** The audit checks narration and code against the repository; titles, steps, callouts and
   framing text on screen are not checked yet.
 - **Deferred minor findings.** Each phase summary lists the small findings left on purpose; none blocks use.
-- **Domain and npm.** The domain will be getyap.dev (to buy). The terminal installer `npx getyap` is built in
-  `packages/getyap/` and tested from a packed tarball, but not published. To publish: `npm login`, then
-  `cd packages/getyap && npm publish`. Until then, the README's `npx getyap` line does not work yet.
+- **Domain.** getyap.dev, to buy. The terminal installer is published on npm as `getyap` (0.1.0, from
+  `packages/getyap/`); `npx getyap` was checked from npm on an empty Claude Code config (install, then a clean
+  re-run). Publishing needs npm two-factor authentication: `cd packages/getyap && npm publish`.
 - **Releases.** Claude Code offers an update only when the version changes. To release, raise the same version in
   `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `package.json` and `packages/getyap/package.json`
   (`tests/versions.test.cjs` fails if they differ), merge, and publish getyap again.
