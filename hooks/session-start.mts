@@ -40,6 +40,7 @@ function parseInput(text: string): HookInput | null {
 async function writeSessionFile(cwd: string, input: HookInput): Promise<void> {
   // loaded here, not at the top, so even a missing library file ends in the quiet exit 0
   const { trustedDataDir } = await import('../lib/data-dir.mts');
+  const { findClaudePid } = await import('../lib/owner.mts');
   const dir = path.join(cwd, '.yap');
   fs.mkdirSync(dir, { recursive: true });
   const record = {
@@ -47,6 +48,8 @@ async function writeSessionFile(cwd: string, input: HookInput): Promise<void> {
     transcript_path: input.transcript_path,
     cwd,
     source: input.source,
+    // the Claude Code process this session runs in; yap serve stops when it is gone (null when none was found)
+    claude_pid: findClaudePid(process.ppid),
     // Claude's own shell does not get CLAUDE_PLUGIN_DATA, so yap commands read the data folder from here;
     // only a folder inside Claude Code's plugin data root is recorded, since readers trust nothing else
     data_dir: trustedDataDir(process.env.CLAUDE_PLUGIN_DATA || null, { env: process.env }),

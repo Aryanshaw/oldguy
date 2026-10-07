@@ -270,3 +270,24 @@ test('I-1: --detach over such a file starts a fresh server promptly instead of r
     assert.ok(Date.now() - started < 4500, `${bodyText} took ${Date.now() - started} ms`);
   }
 });
+
+test('a detached server stops itself once the Claude Code process recorded in .yap/session.json is gone', async (t) => {
+  const root = tempRoot(t);
+  const slugDir = path.join(root, '.yap', 'demo');
+  fs.mkdirSync(path.join(slugDir, 'chapters'), { recursive: true });
+  // a stand-in for Claude Code: any process we can end
+  const owner = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'ignore' });
+  t.after(() => { try { owner.kill('SIGKILL'); } catch { /* already gone */ } });
+  fs.writeFileSync(path.join(root, '.yap', 'session.json'), JSON.stringify({ session_id: 's', cwd: root, claude_pid: owner.pid }));
+  const r = await runYap(['serve', '--dir', slugDir, '--detach']);
+  assert.equal(r.status, 0, r.stderr);
+  const file = path.join(slugDir, 'state', 'server.json');
+  const pid = JSON.parse(fs.readFileSync(file, 'utf8')).pid;
+  t.after(() => { try { process.kill(pid, 'SIGKILL'); } catch { /* stopped */ } });
+  await new Promise((res) => setTimeout(res, 1500));
+  assert.ok(fs.existsSync(file), 'still running while its owner is alive');
+  owner.kill('SIGKILL');
+  const end = Date.now() + 12000;
+  while (fs.existsSync(file) && Date.now() < end) await new Promise((res) => setTimeout(res, 200));
+  assert.equal(fs.existsSync(file), false, 'server.json removed: the server shut down cleanly');
+});

@@ -54,6 +54,9 @@ test('writes session.json with the id, transcript path, cwd and source', (t) => 
   assert.equal(s.cwd, cwd);
   assert.equal(s.source, 'startup');
   assert.ok(!Number.isNaN(Date.parse(s.updated_at)));
+  // the Claude Code process this session runs in, when one is found among the hook's ancestors
+  assert.ok('claude_pid' in s);
+  assert.ok(s.claude_pid === null || (Number.isInteger(s.claude_pid) && s.claude_pid > 1));
 });
 
 test('a second run with source resume overwrites the file and keeps the id', (t) => {

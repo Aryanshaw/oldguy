@@ -4,6 +4,8 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { parseFlags } from './args.mts';
 import { readInfo, liveServer } from '../lib/live-server.mts';
+import { watchOwner } from '../lib/owner.mts';
+import { pidAlive } from '../lib/ask-server.mts';
 import type { RunningServer } from '../server/types.mts';
 
 const USAGE = 'usage: yap serve [--dir <slugDir>] [--detach]';
@@ -23,7 +25,18 @@ function resolveSlugDir(dirFlag: string | undefined, cwd: string = process.cwd()
   return found[0];
 }
 
-// Runs the server until SIGINT or SIGTERM, then closes it cleanly.
+// The Claude Code process recorded in <.yap>/session.json next to the video folder, when it is a live process; else null
+// (an old session file, or a server started by hand, keeps running until it is stopped).
+function ownerPid(slugDir: string): number | null {
+  try {
+    const pid: unknown = (JSON.parse(fs.readFileSync(path.join(path.dirname(slugDir), 'session.json'), 'utf8')) as { claude_pid?: unknown }).claude_pid;
+    return typeof pid === 'number' && Number.isInteger(pid) && pid > 1 && pidAlive(pid) ? pid : null;
+  } catch {
+    return null;
+  }
+}
+
+// Runs the server until SIGINT or SIGTERM, or until the Claude Code session that started it is gone, then closes it cleanly.
 async function serveForeground(slugDir: string): Promise<number> {
   // loaded only here, so the other commands never pay for the server's code
   const { startServer } = await import('../server/server.mts');
@@ -40,8 +53,12 @@ async function serveForeground(slugDir: string): Promise<number> {
     return 1;
   }
   process.stdout.write(`${srv.url}\n`);
+  const owner = ownerPid(slugDir);
   await new Promise<void>((resolve) => {
-    const stop = () => { srv.close().then(resolve); };
+    let stopping = false;
+    const stop = () => { if (stopping) return; stopping = true; watch?.stop(); srv.close().then(resolve); };
+    // the server lives only as long as the Claude Code session that started it
+    const watch = owner === null ? null : watchOwner({ pid: owner, onGone: stop });
     process.once('SIGINT', stop);
     process.once('SIGTERM', stop);
   });
