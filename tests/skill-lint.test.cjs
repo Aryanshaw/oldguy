@@ -162,7 +162,8 @@ test('SKILL.md runs chapters one at a time in story order and renders each with 
 const NEVER_END_TURN = 'Never end your turn while a render is running.';
 
 test('no skill file runs a render in the background, with &, or through run_in_background', () => {
-  for (const { file, text } of everySkillFile()) {
+  // instructions live in the markdown files; an example scene's CSS says background: as a style property
+  for (const { file, text } of everySkillFile().filter(({ file }) => file.endsWith('.md'))) {
     text.split('\n').forEach((line, i) => {
       const where = `${path.relative(SKILL_DIR, file)}:${i + 1}`;
       // The one allowed exception: the sentence about the server that `yap serve --detach` leaves running.
