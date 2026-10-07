@@ -130,12 +130,13 @@ export function createStore(
       kind: 'make_video' | 'just_text' | 'retry_chapter',
       key: string,
       context?: Context,
+      ref?: string,
     ): Promise<void> {
       // One request per key: a double click must not ask Claude twice. A failed press frees the key for another try.
       if (pending.has(key) || snap.sent[key]) return;
       pending.add(key);
       try {
-        await post({ type: kind, context });
+        await post(ref === undefined ? { type: kind, context } : { type: kind, context, ref });
         set({ sent: { ...snap.sent, [key]: true } });
       } finally {
         pending.delete(key);

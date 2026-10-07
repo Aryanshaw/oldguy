@@ -56,6 +56,8 @@ export async function postMessage(body: {
   type: 'message' | 'make_video' | 'just_text' | 'retry_chapter';
   text?: string;
   context?: { chapter_id: string; t: number };
+  /** make_video only: the id of the reply to turn into a chapter. */
+  ref?: string;
 }): Promise<StoredEvent> {
   const res = await post<{ event: StoredEvent }>('/api/message', body);
   return res.event;

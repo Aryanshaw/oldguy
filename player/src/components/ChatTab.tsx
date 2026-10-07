@@ -35,8 +35,8 @@ export function ChatTab({ store, position, chapters }: Props) {
   });
   const asking = chapters.filter((c) => c.status === 'rendering' && c.question);
 
-  const press = (kind: 'make_video' | 'just_text', key: string, ctx?: { chapter_id: string; t: number }) => {
-    store.press(kind, key, ctx).catch(() => {});
+  const press = (kind: 'make_video' | 'just_text', key: string, ctx?: { chapter_id: string; t: number }, ref?: string) => {
+    store.press(kind, key, ctx, ref).catch(() => {});
   };
 
   async function send() {
@@ -58,7 +58,7 @@ export function ChatTab({ store, position, chapters }: Props) {
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       {!connected && (
         <p className="bd rounded-[10px] bg-yk-orange px-3 py-2 text-xs font-black">
-          Claude isn't connected: run /yap resume in Claude Code
+          Claude isn't connected.
         </p>
       )}
       <div ref={listRef} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
@@ -88,15 +88,17 @@ export function ChatTab({ store, position, chapters }: Props) {
                   </div>
                 )}
               </div>
-              <Button
-                size="sm"
-                variant="plain"
-                className="self-start"
-                disabled={!!sent[`mv:${e.id}`]}
-                onClick={() => press('make_video', `mv:${e.id}`, e.context)}
-              >
-                {sent[`mv:${e.id}`] ? 'Asked for a video' : 'Make this a video'}
-              </Button>
+              {e.offer_video === true && (
+                <Button
+                  size="sm"
+                  variant="plain"
+                  className="self-start"
+                  disabled={!!sent[`mv:${e.id}`]}
+                  onClick={() => press('make_video', `mv:${e.id}`, e.context, e.id)}
+                >
+                  {sent[`mv:${e.id}`] ? 'Asked for a video' : 'Make this a video'}
+                </Button>
+              )}
             </div>
           ),
         )}

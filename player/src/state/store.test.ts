@@ -113,8 +113,8 @@ describe('store', () => {
   it('press posts, records sent[key], and does not touch the thread', async () => {
     const s = await started();
     const ctx = { chapter_id: 'overview', t: 1 };
-    await s.store.press('make_video', 'k1', ctx);
-    expect(s.postMessage).toHaveBeenCalledWith({ type: 'make_video', context: ctx });
+    await s.store.press('make_video', 'k1', ctx, 'rep_4');
+    expect(s.postMessage).toHaveBeenCalledWith({ type: 'make_video', context: ctx, ref: 'rep_4' });
     expect(s.store.get().sent).toEqual({ k1: true });
     expect(s.store.get().thread).toEqual(appState.thread);
   });

@@ -32,6 +32,8 @@ export interface ThreadEntry {
   in_reply_to?: string;
   sources?: SourceRef[];
   context?: { chapter_id: string; t: number };
+  /** true when Claude offered to turn this answer into a chapter; only then is the button shown. */
+  offer_video?: boolean;
 }
 
 export interface AppState {
