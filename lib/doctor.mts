@@ -13,7 +13,7 @@ type DoctorReport = DoctorCheck[];
 // What running a program gives back (a program that cannot start comes back as code -1).
 type RunResult = { code: number | null; stdout?: string; stderr?: string; signal?: string | null; timedOut?: boolean };
 // Runs a program with an argument list and a time limit; the real one is in cli/doctor, a test hands in a fake.
-type Exec = (cmd: string, args: string[], opts: { timeout: number }) => Promise<RunResult>;
+type Exec = (cmd: string, args: string[], opts: { timeout: number; env?: Record<string, string> }) => Promise<RunResult>;
 // The file functions the doctor reads with.
 type DoctorFs = Pick<typeof realFs, 'existsSync' | 'statSync' | 'statfsSync'>;
 // The machine facts the doctor reads.
@@ -82,49 +82,81 @@ function freeRamGb(os: DoctorOs): number {
 
 // Pythons Kokoro works with, newest first; the default python3 can be too new (3.14's ensurepip fails).
 const VENV_PYTHONS = ['python3.12', 'python3.11', 'python3.10'];
-const PACKAGES = 'kokoro-onnx soundfile';
+const PACKAGES = ['kokoro-onnx', 'soundfile'];
+
+// One program to run, as an argument list (never a shell string); `env` is added on top of the current environment.
+type Step = { cmd: string; args: string[]; env?: Record<string, string> };
 
 // True when a program runs on this machine (`<cmd> --version` exits 0).
 async function onPath(exec: Exec, cmd: string): Promise<boolean> {
   return (await run(exec, cmd, ['--version'], QUICK_MS)).code === 0;
 }
 
-// The command that makes a fresh venv and installs the packages, preferring uv, then a Python 3.10 to 3.12 on PATH.
-// With neither, it says plainly what to install, since yap never installs Python itself.
-async function createVenvFix(exec: Exec, venv: string, python: string): Promise<string> {
-  if (await onPath(exec, 'uv')) return `uv venv --python 3.12 ${venv} && uv pip install --python ${python} ${PACKAGES}`;
-  for (const cmd of VENV_PYTHONS) {
-    if (await onPath(exec, cmd)) return `${cmd} -m venv ${venv} && ${path.join(venv, 'bin', 'pip')} install ${PACKAGES}`;
+// The steps that make a fresh venv and install the packages, preferring uv, then a Python 3.10 to 3.12 on PATH;
+// null when neither is there, since yap never installs Python itself.
+async function createVenvSteps(exec: Exec, venv: string, python: string): Promise<Step[] | null> {
+  if (await onPath(exec, 'uv')) {
+    return [{ cmd: 'uv', args: ['venv', '--python', '3.12', venv] }, { cmd: 'uv', args: ['pip', 'install', '--python', python, ...PACKAGES] }];
   }
-  return 'Python 3.10 to 3.12 is needed to make the venv and none was found on PATH: install Python 3.12 or uv, '
-    + 'then re-run yap doctor';
+  for (const cmd of VENV_PYTHONS) {
+    if (await onPath(exec, cmd)) return [{ cmd, args: ['-m', 'venv', venv] }, { cmd: path.join(venv, 'bin', 'pip'), args: ['install', ...PACKAGES] }];
+  }
+  return null;
 }
 
-// The command that adds the packages to a venv whose python already runs: uv when present, else the venv's pip.
-async function installFix(exec: Exec, venv: string, python: string): Promise<string> {
-  return (await onPath(exec, 'uv')) ? `uv pip install --python ${python} ${PACKAGES}` : `${path.join(venv, 'bin', 'pip')} install ${PACKAGES}`;
+// The steps that add the packages to a venv whose python already runs: uv when present, else the venv's pip.
+async function installSteps(exec: Exec, venv: string, python: string): Promise<Step[]> {
+  return (await onPath(exec, 'uv'))
+    ? [{ cmd: 'uv', args: ['pip', 'install', '--python', python, ...PACKAGES] }]
+    : [{ cmd: path.join(venv, 'bin', 'pip'), args: ['install', ...PACKAGES] }];
+}
+
+const NO_PYTHON = 'Python 3.10 to 3.12 is needed to make the venv and none was found on PATH: install Python 3.12 or uv, '
+  + 'then re-run yap doctor';
+
+// The steps that repair a venv the doctor found broken (the caller has already seen it fail to import): add the
+// packages when its python runs, else remove whatever is there and start over. null when no Python can make one.
+async function venvRepairSteps({ exec, fs, dataDir }: Pick<DoctorDeps, 'exec' | 'fs' | 'dataDir'>): Promise<Step[] | null> {
+  const venv = path.join(dataDir, 'venv');
+  const python = venvPython(dataDir);
+  if (fs.existsSync(python) && await onPath(exec, python)) return installSteps(exec, venv, python);
+  const create = await createVenvSteps(exec, venv, python);
+  if (!create) return null;
+  return fs.existsSync(venv) || fs.existsSync(python) ? [{ cmd: 'rm', args: ['-r', venv] }, ...create] : create;
+}
+
+// Steps as the one shell line the doctor prints in its fix.
+function stepsText(steps: Step[]): string {
+  return steps.map((s) => [s.cmd, ...s.args].join(' ')).join(' && ');
 }
 
 // The Python venv under the data folder must exist and import the two packages Kokoro needs. A venv folder with no
 // working python (left by a failed create) is reported as half-made, and its fix removes the folder first.
-async function checkVenv({ exec, fs, dataDir }: Pick<DoctorDeps, 'exec' | 'fs' | 'dataDir'>): Promise<DoctorCheck> {
+async function checkVenv(deps: Pick<DoctorDeps, 'exec' | 'fs' | 'dataDir'>): Promise<DoctorCheck> {
+  const { exec, fs, dataDir } = deps;
   const venv = path.join(dataDir, 'venv');
   const python = venvPython(dataDir);
-  const fail = (detail: string, fix: string) => result('Python venv', false, true, detail, fix);
-  const halfMade = async () => fail(`${venv} is half-made: it has no working bin/python`, `rm -r ${venv} && ${await createVenvFix(exec, venv, python)}`);
+  let detail: string;
   if (!fs.existsSync(python)) {
-    return fs.existsSync(venv) ? halfMade() : fail(`no venv at ${venv}`, await createVenvFix(exec, venv, python));
+    detail = fs.existsSync(venv) ? `${venv} is half-made: it has no working bin/python` : `no venv at ${venv}`;
+  } else {
+    const r = await run(exec, python, ['-c', 'import kokoro_onnx, soundfile'], QUICK_MS);
+    if (r.code === 0) return result('Python venv', true, true, `${venv} imports kokoro_onnx and soundfile`);
+    // a python that runs but cannot import only needs the packages; one that does not run at all means start over
+    detail = (await onPath(exec, python)) ? `${venv} cannot import kokoro_onnx and soundfile` : `${venv} is half-made: it has no working bin/python`;
   }
-  const r = await run(exec, python, ['-c', 'import kokoro_onnx, soundfile'], QUICK_MS);
-  if (r.code === 0) return result('Python venv', true, true, `${venv} imports kokoro_onnx and soundfile`);
-  // a python that runs but cannot import only needs the packages; one that does not run at all means start over
-  if (!(await onPath(exec, python))) return halfMade();
-  return fail(`${venv} cannot import kokoro_onnx and soundfile`, await installFix(exec, venv, python));
+  const steps = await venvRepairSteps(deps);
+  return result('Python venv', false, true, detail, steps ? stepsText(steps) : NO_PYTHON);
+}
+
+// Where Hyperframes keeps the Kokoro voice model once its tts command has downloaded it.
+function kokoroModelPath(os: Pick<DoctorOs, 'homedir'>): string {
+  return path.join(os.homedir(), '.cache', 'hyperframes', 'tts', 'models', 'kokoro-v1.0.onnx');
 }
 
 // The Kokoro voice model must be downloaded in full (a partial file is far smaller than 300 MB).
 function checkModel({ fs, os }: Pick<DoctorDeps, 'fs' | 'os'>): DoctorCheck {
-  const file = path.join(os.homedir(), '.cache', 'hyperframes', 'tts', 'models', 'kokoro-v1.0.onnx');
+  const file = kokoroModelPath(os);
   const fix = 'generate any narration once with `hyperframes tts` to download the Kokoro model, then re-run yap doctor';
   if (!fs.existsSync(file)) return result('Kokoro model', false, true, `not found at ${file}`, fix);
   const mb = Math.round(fs.statSync(file).size / 1e6);
@@ -191,5 +223,5 @@ function writeMarker(dataDir: string, fs: Pick<typeof realFs, 'mkdirSync' | 'wri
   fs.writeFileSync(path.join(dataDir, 'doctor-ok'), `${new Date().toISOString()}\n`);
 }
 
-export { runDoctor, writeMarker, venvPython, freeRamGb, checkWhisper };
-export type { DoctorCheck, DoctorReport, DoctorDeps, Exec, RunResult, DoctorFs, DoctorOs };
+export { runDoctor, writeMarker, venvPython, freeRamGb, checkWhisper, venvRepairSteps, stepsText, onPath, kokoroModelPath, NO_PYTHON };
+export type { DoctorCheck, DoctorReport, DoctorDeps, Exec, RunResult, DoctorFs, DoctorOs, Step };
