@@ -101,6 +101,13 @@ describe('make this a video', () => {
     expect(postMessage).toHaveBeenCalledTimes(1);
     expect(postMessage).toHaveBeenCalledWith({ type: 'make_video', context: ctx, ref: 'c1' });
   });
+
+  it('stays Asked for a video after a reload when the server says it was already asked', async () => {
+    const { postMessage } = await setup([claude('c1', 'answer', { offer_video: true, video_asked: true })]);
+    expect(screen.getByRole('button', { name: 'Asked for a video' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Make this a video' })).toBeNull();
+    expect(postMessage).not.toHaveBeenCalled();
+  });
 });
 
 describe('just text', () => {

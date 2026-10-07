@@ -111,10 +111,28 @@ describe('looks', () => {
     expect(el).toHaveClass('bg-yk-red');
     expect(el).toHaveTextContent('failed, retry');
   });
-  it('width follows weight via flex-grow', () => {
-    setup([ch('a', { duration_s: 60 }), ch('b', { duration_s: 120 })]);
-    expect(block(/^Title a/).style.flexGrow).toBe('60');
-    expect(block(/^Title b/).style.flexGrow).toBe('120');
+  it('each clip is as wide as its length (6 px a second) and shares spare room by length', () => {
+    setup([ch('a', { duration_s: 60 }), ch('b', { duration_s: 120 }), ch('c', { duration_s: 5 })]);
+    const clip = (name: RegExp) => block(name).closest<HTMLElement>('[data-clip]')!;
+    expect(clip(/^Title a/).style.flexBasis).toBe('360px');
+    expect(clip(/^Title b/).style.flexBasis).toBe('720px');
+    expect(clip(/^Title c/).style.flexBasis).toBe('140px');
+    expect(clip(/^Title b/).style.flexGrow).toBe('120');
+    expect(clip(/^Title a/).style.flexShrink).toBe('0');
+  });
+  it('the track scrolls sideways instead of squeezing clips', () => {
+    const { container } = setup([ch('a'), ch('b')]);
+    expect(container.querySelector('[data-track]')).toHaveClass('overflow-x-auto');
+  });
+  it('the ruler labels video time across clips and the playhead sits in the current clip', () => {
+    const { container } = setup([ch('a', { duration_s: 20 }), ch('b', { duration_s: 20 })], {
+      position: { chapterId: 'b', offset: 5 },
+    });
+    expect(container.textContent).toContain('0:15');
+    expect(container.textContent).toContain('0:30');
+    const head = container.querySelectorAll('[data-playhead]');
+    expect(head).toHaveLength(1);
+    expect(head[0].closest('[data-clip]')).toBe(block(/^Title b/).closest('[data-clip]'));
   });
 });
 

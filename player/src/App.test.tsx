@@ -91,18 +91,11 @@ describe('App', () => {
     render(<App store={store} />);
     expect(await screen.findByText('This link has expired. Open the link printed by Yap again.')).toBeInTheDocument();
   });
-  it('the panel collapse button hides and shows the panel and has aria-expanded', async () => {
+  it('always shows the side panel, with no collapse button', async () => {
     const { store } = make(state([]));
     render(<App store={store} />);
-    const btn = await screen.findByRole('button', { name: /panel/i });
-    expect(btn).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('tab', { name: 'Chat' })).toBeVisible();
-    await userEvent.click(btn);
-    expect(btn).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByRole('tab', { name: 'Chat' })).toBeNull();
-    await userEvent.click(btn);
-    expect(btn).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('tab', { name: 'Chat' })).toBeInTheDocument();
+    expect(await screen.findByRole('tab', { name: 'Chat' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: /panel/i })).toBeNull();
   });
   it('stacks under 1000px, side by side from 1000px', async () => {
     const { store } = make(state([]));

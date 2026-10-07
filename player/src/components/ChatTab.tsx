@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import type { Position } from '@/lib/timeline';
 import type { createStore } from '@/state/store';
 import { useStore } from '@/state/store';
-import type { Chapter } from '@/types';
+import type { Chapter, ThreadEntry } from '@/types';
 
 const LIMIT = 4000;
 const COUNTER_FROM = 3500;
@@ -34,6 +34,9 @@ export function ChatTab({ store, position, chapters }: Props) {
     if (e.role === 'claude') lastClaude = i;
   });
   const asking = chapters.filter((c) => c.status === 'rendering' && c.question);
+
+  // pressed in this page load, or asked earlier (the server remembers, so a reload cannot ask twice)
+  const videoAsked = (e: ThreadEntry) => !!sent[`mv:${e.id}`] || e.video_asked === true;
 
   const press = (kind: 'make_video' | 'just_text', key: string, ctx?: { chapter_id: string; t: number }, ref?: string) => {
     store.press(kind, key, ctx, ref).catch(() => {});
@@ -93,10 +96,10 @@ export function ChatTab({ store, position, chapters }: Props) {
                   size="sm"
                   variant="plain"
                   className="self-start"
-                  disabled={!!sent[`mv:${e.id}`]}
+                  disabled={videoAsked(e)}
                   onClick={() => press('make_video', `mv:${e.id}`, e.context, e.id)}
                 >
-                  {sent[`mv:${e.id}`] ? 'Asked for a video' : 'Make this a video'}
+                  {videoAsked(e) ? 'Asked for a video' : 'Make this a video'}
                 </Button>
               )}
             </div>

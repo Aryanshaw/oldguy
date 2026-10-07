@@ -40,19 +40,21 @@ On the 7-chapter video `how-yap-works-v2`:
 
 - **The chat panel overflowed** (owner report): the panel had no height limit, so the question box was pushed off
   screen as the chat grew. Fixed with a bounded panel height (evidence 3).
+- **Owner review of the page:** the "Hide panel" button took its own row and pushed the side panel below the video's
+  top line. The button was removed (the panel is always shown) and both columns now start on the same line.
 - **"Making a chapter for…" vanished** once the subagent created the chapter folder: the watcher reset `rendering` to
   `pending`. Fixed in `mapStatus`, with a test.
 
 ## 4. Open items
 
-1. **Reply sources are not checked.** A chapter's claims are audited, but a chat reply's `--source` lines are not; in
-   the run one answer cited `lib/slots.mts:15` for something on line 13 and needed a correction. Proposal: `yap reply`
-   checks each source exists and the line range is inside the file.
-2. **The timeline gets crowded.** With 8 chapters, each segment is too narrow: titles are cut to nothing and a long
-   status ("failed, retry") is cut off. Needs a design pass (shorter status marks, title on hover only below a width).
-3. **"Asked for a video" resets on reload.** The page remembers pressed buttons only for one page load (a Phase 3
-   decision), so after a reload the button can be pressed again and ask for a second chapter. Proposal: derive it
-   from the stored `make_video` events.
+1. ~~**Reply sources are not checked.**~~ Fixed: `yap reply` checks every `--source` against the repository
+   (the file exists, the lines are inside it) and refuses the reply otherwise (`--root`, default the current folder).
+2. ~~**The timeline gets crowded.**~~ Fixed: the timeline is now a scrolling track, like a video editor's. Each clip is
+   6 px per second (at least 140 px, so title and status fit), a ruler above shows video time, a red playhead marks the
+   current spot and the track follows it while playing; a mouse wheel scrolls it sideways. A short video still fills
+   the row.
+3. ~~**"Asked for a video" resets on reload.**~~ Fixed: `GET /api/thread` marks a reply `video_asked` once a
+   `make_video` event names it, so the button stays pressed after a reload.
 4. **Videos do not play in this container's Chromium.** It has no H.264 decoder (`canPlayType` empty), so the page
    marks every chapter "failed, retry" there. The video route itself answers 206 correctly. Real Chrome and Safari
    play H.264; worth a check on the owner's machine.

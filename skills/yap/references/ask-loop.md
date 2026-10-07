@@ -27,7 +27,7 @@ An event stays open until it has a reply or an ack, so handle every one.
 
 | Event | What you do |
 |---|---|
-| `message` | Read the code it needs (its `context` says which chapter and second the viewer was on), then answer with `yap reply --in-reply-to <id> --text "…" --source <file>:<lines>` (one `--source` per place you used). Add `--offer-video` only when a chapter would explain it better (see section 3). The reply closes the event. |
+| `message` | Read the code it needs (its `context` says which chapter and second the viewer was on), then answer with `yap reply --in-reply-to <id> --text "…" --source <file>:<lines>` (one `--source` per place you used; each is checked against the code, so run it from the repository root or pass `--root`). Add `--offer-video` only when a chapter would explain it better (see section 3). The reply closes the event. |
 | `make_video` | `yap ack <id>`. Find the reply its `ref` names, then: `yap add-chapter --id <new-id> --title "…" --question "<the viewer's question>"` and `yap set-status --id <new-id> --status rendering` (the page shows "Making a chapter for: …"). Dispatch a chapter subagent (section 4). |
 | `just_text` | `yap ack <id>`. Stop the subagent building that chapter, delete its folder (`rm -r .yap/<slug>/chapters/<id>`) and its spec, and run `yap order <the remaining ids> --dir .yap/<slug>`. The question already has its text answer. |
 | `retry_chapter` | `yap ack <id>`, then dispatch a fresh chapter subagent for that chapter id. |

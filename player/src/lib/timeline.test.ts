@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import type { Chapter, Status } from '@/types';
-import { blocks, fmt, globalTime, neighbour, playable, total } from './timeline';
+import { blocks, clipTicks, clipWidth, fmt, globalTime, MIN_CLIP_PX, neighbour, playable, rulerScale, total } from './timeline';
 
 const ch = (id: string, status: Status, duration_s: number | null, parent_id: string | null = null): Chapter => ({
   id,
@@ -54,10 +54,13 @@ describe('blocks', () => {
     const b = blocks([ch('a', 'ready', null), ch('b', 'pending', null)]);
     expect(b.map((x) => x.weight)).toEqual([1, 1]);
   });
-  test('a 1s chapter next to a 300s one gets at least 4%', () => {
+  test('weight is the length in seconds, however short', () => {
     const b = blocks([ch('a', 'ready', 1), ch('b', 'ready', 300)]);
-    const sum = b.reduce((s, x) => s + x.weight, 0);
-    expect(b[0].weight / sum).toBeGreaterThanOrEqual(0.04 - 1e-9);
+    expect(b.map((x) => x.weight)).toEqual([1, 300]);
+  });
+  test('start counts only playable chapters; others have none', () => {
+    const b = blocks([ch('a', 'ready', 10), ch('p', 'pending', null), ch('c', 'ready', 30)]);
+    expect(b.map((x) => x.start)).toEqual([0, null, 10]);
   });
   test('missing durations use the mean of those that have one', () => {
     const b = blocks([ch('a', 'ready', 10), ch('b', 'pending', null), ch('c', 'ready', 30)]);
@@ -92,5 +95,26 @@ describe('fmt', () => {
     expect(fmt(NaN)).toBe('0:00');
     expect(fmt(-1)).toBe('0:00');
     expect(fmt(Infinity)).toBe('0:00');
+  });
+});
+
+describe('clip sizing and ruler', () => {
+  test('clips are 6 px per second with a 140 px floor', () => {
+    expect(clipWidth(60)).toBe(360);
+    expect(clipWidth(5)).toBe(MIN_CLIP_PX);
+  });
+  test('ruler gets coarser as the video grows', () => {
+    expect(rulerScale(90)).toEqual({ step: 5, label: 15 });
+    expect(rulerScale(238)).toEqual({ step: 10, label: 30 });
+    expect(rulerScale(1200)).toEqual({ step: 30, label: 60 });
+  });
+  test('ticks land on whole steps inside the clip', () => {
+    expect(clipTicks(25, 30, 10)).toEqual([
+      { t: 30, at: 5 / 30 },
+      { t: 40, at: 15 / 30 },
+      { t: 50, at: 25 / 30 },
+    ]);
+    expect(clipTicks(0, 20, 10)).toEqual([{ t: 0, at: 0 }, { t: 10, at: 0.5 }]);
+    expect(clipTicks(0, 0, 10)).toEqual([]);
   });
 });
