@@ -55,16 +55,20 @@ function Page({ store, manifest, onExport }: { store: Store; manifest: Manifest;
             {panelOpen ? 'Hide panel' : 'Show panel'}
           </button>
           {panelOpen && (
-            <aside id="side-panel" className="bd sh-lg flex flex-col gap-3 rounded-[14px] bg-yk-white p-3">
-              <Tabs defaultValue="chat" className="flex flex-col gap-3">
+            <aside
+              id="side-panel"
+              // a fixed height, so a long chat scrolls inside the panel and the question box stays on screen
+              className="bd sh-lg flex h-[min(760px,calc(100dvh-8rem))] min-h-[420px] flex-col gap-3 rounded-[14px] bg-yk-white p-3"
+            >
+              <Tabs defaultValue="chat" className="flex min-h-0 flex-1 flex-col gap-3">
                 <TabsList>
                   <TabsTrigger value="chat">Chat</TabsTrigger>
                   <TabsTrigger value="sources">Sources</TabsTrigger>
                 </TabsList>
-                <TabsContent value="chat">
+                <TabsContent value="chat" className="flex min-h-0 flex-1 flex-col">
                   <ChatTab store={store} position={player.position} chapters={chapters} />
                 </TabsContent>
-                <TabsContent value="sources">
+                <TabsContent value="sources" className="min-h-0 flex-1 overflow-y-auto">
                   <SourcesTab store={store} position={player.position} chapters={chapters} />
                 </TabsContent>
               </Tabs>

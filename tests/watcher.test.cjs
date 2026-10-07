@@ -321,6 +321,19 @@ test('a row failed through the API stays failed while the folder is only pending
   assert.equal(rowOf(slugDir, 'intro').status, 'failed');
 });
 
+test('a row set to rendering (a chapter being made) stays rendering while its folder is only pending, and becomes ready with its video', async (t) => {
+  const slugDir = tempSlug(t);
+  makeChapter(slugDir, 'intro', { withVideo: false });
+  const { srv } = await boot(t, slugDir);
+  await srv.state.updateManifest((m) => ({ ...m, chapters: m.chapters.map((c) => ({ ...c, status: 'rendering' })) }));
+  makeChapter(slugDir, 'intro', { withVideo: false, build: BUILD2 });
+  await srv.state.watcher.pollNow();
+  assert.equal(rowOf(slugDir, 'intro').status, 'rendering');
+  makeChapter(slugDir, 'intro', { withVideo: true, build: BUILD2 });
+  await srv.state.watcher.pollNow();
+  assert.equal(rowOf(slugDir, 'intro').status, 'ready');
+});
+
 test('close() stops the watcher', async (t) => {
   const slugDir = tempSlug(t);
   let cleared = 0;
