@@ -9,14 +9,14 @@ Run: `node build.mjs <python of a venv with kokoro-onnx and soundfile>`, then in
 `out/` is git-ignored. The art is stand-in SVG; the background is CSS blocks, not gameplay footage.
 
 Inputs: `template/template.json` (the spec's shape, 9:16 only) and `chapter.json` (8 lines, Stewie and Peter, about
-how `yap reply` refuses a wrong line; Peter's 4 lines are claims citing `cli/client.mts:141`, `:142` and
+how `oldguy reply` refuses a wrong line; Peter's 4 lines are claims citing `cli/client.mts:141`, `:142` and
 `lib/audit.mts:97`).
 
 ## Results (2026-10-07, cloud container, 16 GB)
 
 | Check | Result |
 |---|---|
-| `yap audit` on lines with a `speaker` field | passes unchanged; the same file with a wrong line (99) or a claim without sources fails (exit 1) |
+| `oldguy audit` on lines with a `speaker` field | passes unchanged; the same file with a wrong line (99) or a claim without sources fails (exit 1) |
 | Two Kokoro voices (`bm_george` 1.15x, `am_adam` 1.1x), joined with 120 ms gaps | 8 lines, 22.4 s |
 | `hyperframes check` on the 1080x1920 stage | passed after fixing one real overlap it found; 21/21 text contrast checks pass |
 | `hyperframes render`, draft | 1080x1920 H.264 + AAC, 22.4 s, rendered in 28.6 s |

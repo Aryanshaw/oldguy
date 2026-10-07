@@ -1,4 +1,4 @@
-# Yap video templates
+# oldguy video templates
 
 Date: 2026-10-07. Status: draft, waiting for owner review.
 Parent spec: `2026-10-02-yap-design.md`. This document adds templates; where it disagrees with the parent, section 12
@@ -6,7 +6,7 @@ lists the amendments.
 
 ## 1. What templates deliver
 
-Today Yap makes one kind of video: a calm narrator explaining a flow, landscape, with Claude-designed scenes. A
+Today oldguy makes one kind of video: a calm narrator explaining a flow, landscape, with Claude-designed scenes. A
 **template** is a different way of *telling* the same verified explanation: two cartoon characters bickering over
 gameplay footage, a professor building it up from basics, a real-life analogy. The user types their question and picks
 a template; nothing else.
@@ -33,14 +33,14 @@ Done means:
 
 | Topic | Decision |
 |---|---|
-| Who makes templates | Only the Yap repo ships templates. Others contribute new ones by pull request. |
+| Who makes templates | Only the oldguy repo ships templates. Others contribute new ones by pull request. |
 | Depth | The architecture supports script, cast and stage changes (tiers 1 to 3); the first build is tier 1. |
 | Characters | Each template has fixed characters. No cast option: users type the question and pick a template. |
 | Scope of a template | Whole video. Follow-up chapters use the video's template. |
 | Shape | 16:9 by default; the user can ask for 9:16 or 1:1. One shape per video. |
 | Template structure | A fixed stage (code) plus one creative slot that Claude designs per chapter. |
-| Template as a skill | No. A template is a folder loaded on demand. Two skills are added: `/yap:templates` (users) and a repo-only `new-template` skill (contributors). |
-| Choosing | `/yap:templates <id> [shape]` sets the project's template; plain words in a request override it once. |
+| Template as a skill | No. A template is a folder loaded on demand. Two skills are added: `/oldguy:templates` (users) and a repo-only `new-template` skill (contributors). |
+| Choosing | `/oldguy:templates <id> [shape]` sets the project's template; plain words in a request override it once. |
 | Pace | Each template sets its pace. No limit on total video length; chapter length is guidance only. |
 | Player | Shows the template and shape, and offers **Remake as…**. Not a video editor. |
 | Assets | Small assets in the repo; big media downloaded on first use, with consent and a checksum. |
@@ -56,7 +56,7 @@ templates/peter-and-stewie/
   template.md     script rules for Claude, loaded only when this template is used
   stage.html      the fixed layout, one per shape, with one creative slot
   assets/         small files: character PNGs, stickers, fonts
-  sample.mp4      a short preview for /yap:templates and the landing page
+  sample.mp4      a short preview for /oldguy:templates and the landing page
 ```
 
 ### 3.1 template.json
@@ -82,7 +82,7 @@ templates/peter-and-stewie/
   },
   "assets": [
     { "path": "assets/stewie.png" },
-    { "path": "background.mp4", "url": "https://github.com/Aryanshaw/yap/releases/download/assets-1/parkour.mp4",
+    { "path": "background.mp4", "url": "https://github.com/Aryanshaw/oldguy/releases/download/assets-1/parkour.mp4",
       "sha256": "…", "bytes": 23000000 }
   ]
 }
@@ -138,7 +138,7 @@ times.
 - **`build.json` records `template`, `template_version` and `shape`.** A render is reused only for the same template,
   version and shape.
 - **`manifest.json` records the video's `template` and `shape`.** The player reads them.
-- **`.yap/settings.json` (new) holds the project's `template` and `shape`.** It is written by `yap templates`. With no
+- **`.oldguy/settings.json` (new) holds the project's `template` and `shape`.** It is written by `oldguy templates`. With no
   file, the template is `explainer` and the shape is 16:9.
 
 ## 5. Making a video with a template
@@ -150,7 +150,7 @@ The steps are today's; steps 3 to 5 change.
 3. **Script.**
    - Claude reads `template.md` and writes each chapter's sentences with a `speaker` each, within
      `max_words_per_line`.
-   - `yap audit` adds two checks: every `speaker` exists in the template, and every line stays within
+   - `oldguy audit` adds two checks: every `speaker` exists in the template, and every line stays within
      `max_words_per_line`.
 4. **Narrate.**
    - Each line is spoken with its speaker's voice and `voice_speed` (`hyperframes tts --voice --speed`). The lines are
@@ -182,7 +182,7 @@ Users cannot change pace; they pick a different template.
    every chapter in the new template.
 3. Chapters are built by subagents under the existing memory slots.
 4. The page shows "Remaking as <template>…", and the old video stays playable.
-5. The new video gets its own folder, `.yap/<slug>-<template>/`, and its own server and link once every chapter is
+5. The new video gets its own folder, `.oldguy/<slug>-<template>/`, and its own server and link once every chapter is
    ready. Each server still serves exactly one video folder.
 6. When the remake is ready, Claude replies in the old page's chat with the new link ("Open the remade video"). The
    old folder is kept.
@@ -209,21 +209,21 @@ Users cannot change pace; they pick a different template.
 **Big media is downloaded on first use:**
 
 - It is hosted as GitHub Release attachments and listed in `template.json` with `url`, `sha256` and `bytes`.
-- The first time a template is used, Yap asks once, naming the size. It downloads into the plugin data folder
+- The first time a template is used, oldguy asks once, naming the size. It downloads into the plugin data folder
   (`<data>/templates/<id>/`), next to the voice venv, so every project shares one copy.
 - A checksum mismatch deletes the file and reports which one failed.
-- The same consent rule as `yap setup` applies: nothing is downloaded without a yes.
+- The same consent rule as `oldguy setup` applies: nothing is downloaded without a yes.
 
 **The footage is square** so one file serves every shape by cropping.
 
 ## 7. Commands and surfaces
 
-### 7.1 `/yap:templates` (new plugin skill) and `yap templates` (new CLI command)
+### 7.1 `/oldguy:templates` (new plugin skill) and `oldguy templates` (new CLI command)
 
 ```
-yap templates                          list: id, description, shapes, which one the project uses
-yap templates <id> [16:9|9:16|1:1]     set the project's template (and shape) in .yap/settings.json
-yap templates <id> --show              details: description, shapes, pace, assets still to download, sample path
+oldguy templates                          list: id, description, shapes, which one the project uses
+oldguy templates <id> [16:9|9:16|1:1]     set the project's template (and shape) in .oldguy/settings.json
+oldguy templates <id> --show              details: description, shapes, pace, assets still to download, sample path
 ```
 
 - The skill is a thin wrapper that runs the command and shows its output.
@@ -231,7 +231,7 @@ yap templates <id> --show              details: description, shapes, pace, asset
 
 ### 7.2 In a request
 
-The `/yap` skill reads a template and shape named in plain words ("as peter-and-stewie, vertical") and uses them for
+The `/oldguy` skill reads a template and shape named in plain words ("as peter-and-stewie, vertical") and uses them for
 that video only. An unknown name gets the list and a question; Claude never guesses.
 
 ### 7.3 The player
@@ -242,7 +242,7 @@ that video only. An unknown name gets the list and a question; Claude never gues
 - **Vertical and square video:** the stage is sized to the shape, beside the chat. The timeline and controls are
   unchanged.
 
-### 7.4 The landing page (later, getyap.dev)
+### 7.4 The landing page (later, the oldguy landing page)
 
 - A gallery with one card per template, playing its `sample.mp4`.
 - Every sample is made from the same example repo and question.
@@ -264,7 +264,7 @@ that video only. An unknown name gets the list and a question; Claude never gues
   (scope) notes the template and shape in use, and the per-chapter length rule becomes "aim for the template's
   `chapter_seconds`".
 - **`references/templates.md`** (new) covers:
-  - reading `.yap/settings.json` and request overrides
+  - reading `.oldguy/settings.json` and request overrides
   - loading `template.md`
   - writing speaker lines
   - the asset download consent
@@ -279,7 +279,7 @@ that video only. An unknown name gets the list and a question; Claude never gues
 | Shape not supported by the template | Say which shapes it supports and use its default, saying so. |
 | Big asset not downloaded | Ask once. On no, the template cannot be used; there is no silent fallback. |
 | Download fails or checksum mismatch | Delete the file; name the file and the reason; a retry is safe. |
-| A line names an unknown speaker | `yap audit` fails the chapter; the existing redo path applies. |
+| A line names an unknown speaker | `oldguy audit` fails the chapter; the existing redo path applies. |
 | A claim line without sources | Audit failure, as today, whatever the speaker. |
 | A chapter far past `chapter_seconds` | Not an error; narrate prints the seconds. |
 | No whisper, word captions | Estimated word times; the doctor notes whisper. |
@@ -301,7 +301,7 @@ TDD, as in every phase.
   - speaker swaps on the right line
   - the caption word at a given time
   - the slot holding the scene
-- **Settings and commands:** `yap templates` list, set and show; request overrides; `.yap/settings.json` round trip.
+- **Settings and commands:** `oldguy templates` list, set and show; request overrides; `.oldguy/settings.json` round trip.
 - **Assets:** a checksum check against a local fixture server, refusal on mismatch, the consent prompt.
 - **Player:** the label, the Remake menu sending `remake`, and vertical and square layouts at both page widths.
 - **End to end:** one real `peter-and-stewie` 9:16 run on a fixture repo, with frames inspected.
@@ -309,7 +309,7 @@ TDD, as in every phase.
 ## 11. Build order
 
 1. **Template system plus `explainer`.** Today's look expressed as a template, proving nothing changed. Also
-   `/yap:templates`, `.yap/settings.json`, the player label, vertical support in the player, and Remake.
+   `/oldguy:templates`, `.oldguy/settings.json`, the player label, vertical support in the player, and Remake.
 2. **`real-life-analogy`** (tier 1: script only).
 3. **`tutor`** (tier 2: one character).
 4. **`peter-and-stewie`** (tier 3: two characters, background footage, word captions, props).

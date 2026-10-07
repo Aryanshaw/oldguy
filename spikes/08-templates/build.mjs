@@ -71,7 +71,7 @@ const dad = `<svg viewBox="0 0 340 520" class="who" id="peter"><rect x="70" y="1
   <path d="M75 50 L170 15 L265 50 L170 85 Z" fill="#14110A"/><rect x="120" y="55" width="100" height="30" fill="#14110A"/><path d="M250 52 v45" stroke="#F6C945" stroke-width="6"/>
   <text x="170" y="505" text-anchor="middle" font-size="26" font-weight="900" fill="#fff" stroke="#14110A" stroke-width="5" paint-order="stroke">STAND-IN</text></svg>`;
 const props = {
-  check: (l) => `<div class="card"><div class="mono">$ yap reply --source cli/client.mts:141</div><div class="big ok">✓ ${esc(l)}</div></div>`,
+  check: (l) => `<div class="card"><div class="mono">$ oldguy reply --source cli/client.mts:141</div><div class="big ok">✓ ${esc(l)}</div></div>`,
   refused: (l) => `<div class="card bad"><div class="big">✗ ${esc(l)}</div><div class="mono">--source x.mts:90: past end of file</div></div>`,
   file: (l) => `<div class="card"><div class="file">${Array.from({ length: 8 }, () => '<i></i>').join('')}<b>line 90 →</b></div><div class="mono">${esc(l)}</div></div>`,
   ok: (l) => `<div class="card"><div class="big ok">✓ ${esc(l)}</div></div>`,

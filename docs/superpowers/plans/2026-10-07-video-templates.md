@@ -1,4 +1,4 @@
-# Yap: Video Templates Implementation Plan
+# oldguy: Video Templates Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or
 > superpowers:executing-plans to implement this plan task by task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -21,7 +21,7 @@
   - keyword props and source chips
   - the slot, which holds today's scene pieces scaled into it
 - Narrate learns per-speaker voices with one Kokoro process per chapter.
-- The project's choice lives in `.yap/settings.json`, and each video records its own in `manifest.json`.
+- The project's choice lives in `.oldguy/settings.json`, and each video records its own in `manifest.json`.
 - The player shows the template, plays any shape, and sends `remake`.
 
 **Spec:** `docs/superpowers/specs/2026-10-07-video-templates-design.md`, including section 13 (spike findings).
@@ -39,8 +39,8 @@ pinned Hyperframes 0.8.112, Kokoro through the plugin's Python venv.
 4. One template per video; follow-up chapters inherit it.
 5. 16:9 by default; 9:16 and 1:1 on request; one shape per video.
 6. A fixed stage plus one creative slot (approach 3).
-7. A template is not a skill. `/yap:templates` is a plugin skill; `new-template` is a repo-only contributor skill.
-8. `/yap:templates <id> [shape]` sets the project; plain words in a request override it once.
+7. A template is not a skill. `/oldguy:templates` is a plugin skill; `new-template` is a repo-only contributor skill.
+8. `/oldguy:templates <id> [shape]` sets the project; plain words in a request override it once.
 9. Each template sets its pace. There is no total-length limit; `chapter_seconds` is guidance.
 10. The player shows `<template> · <shape>` and **Remake as…**.
 11. Small assets live in the repo. Big media is downloaded on first use, with consent and a sha256.
@@ -70,7 +70,7 @@ pinned Hyperframes 0.8.112, Kokoro through the plugin's Python venv.
 |---|---|---|
 | `lib/template.mts` | new | Template types, loading, validation, listing |
 | `lib/voices.mts` | new | The pinned list of Kokoro voice ids (checked against `hyperframes tts --list` in a test) |
-| `lib/settings.mts` | new | `.yap/settings.json` read and write; the request-override merge |
+| `lib/settings.mts` | new | `.oldguy/settings.json` read and write; the request-override merge |
 | `lib/stage.mts` | new | Builds a chapter page from a template, shape, timing and scene |
 | `lib/word-times.mts` | new | Word times estimated inside lines; keyword anchor resolution |
 | `lib/speak.py` | new | One Kokoro process that speaks many lines with per-line voice and speed |
@@ -82,14 +82,14 @@ pinned Hyperframes 0.8.112, Kokoro through the plugin's Python venv.
 | `lib/manifest.mts` | change | Optional `template` and `shape` on the manifest |
 | `lib/events.mts` | change | New viewer event `remake` with `template` and `shape` |
 | `lib/build-record.mts` | change | Optional `template` block (id, version, shape); assets fingerprinted |
-| `cli/templates.mts` | new | `yap templates` list, set, show and fetch |
-| `cli/remake.mts` | new | `yap remake`: a new video folder that reuses the checked sources |
+| `cli/templates.mts` | new | `oldguy templates` list, set, show and fetch |
+| `cli/remake.mts` | new | `oldguy remake`: a new video folder that reuses the checked sources |
 | `cli/narrate.mts`, `cli/audit.mts`, `cli/scaffold.mts` | change | Read the video's template |
-| `bin/yap.mts` | change | Register `templates` and `remake` |
+| `bin/oldguy.mts` | change | Register `templates` and `remake` |
 | `templates/explainer/` and the other three | new | The four templates |
-| `skills/templates/SKILL.md` | new | `/yap:templates` |
-| `skills/yap/references/templates.md` | new | Template rules for the main skill |
-| `skills/yap/SKILL.md`, `references/ask-loop.md`, `references/scope.md` | change | Pointer line, `remake` row, length as guidance |
+| `skills/templates/SKILL.md` | new | `/oldguy:templates` |
+| `skills/oldguy/references/templates.md` | new | Template rules for the main skill |
+| `skills/oldguy/SKILL.md`, `references/ask-loop.md`, `references/scope.md` | change | Pointer line, `remake` row, length as guidance |
 | `.claude/skills/new-template/SKILL.md` | new | Contributor skill (repo only) |
 | `player/src/...` | change | Label, any-shape stage, Remake menu, `remake` event |
 | `tests/*.test.cjs` | new and change | One test file per new module, plus `tests/templates-shipped.test.cjs` |
@@ -99,7 +99,7 @@ pinned Hyperframes 0.8.112, Kokoro through the plugin's Python venv.
 
 # Phase A: the template system, with `explainer`
 
-Ships: templates as folders, `/yap:templates`, settings, any-shape stage, the player label and vertical playback,
+Ships: templates as folders, `/oldguy:templates`, settings, any-shape stage, the player label and vertical playback,
 Remake, and assets. Today's videos are unchanged.
 
 ### Task A1: Template model and validation
@@ -195,7 +195,7 @@ function chooseForVideo(settings: VideoChoice, override: Partial<VideoChoice>, t
 
 **Files:** change `lib/audit.mts`, `cli/audit.mts`, `tests/audit.test.cjs`.
 
-`yap audit <chapter.json> --root <repo> [--template <id>]`. When the chapter sits in a video folder, the template is
+`oldguy audit <chapter.json> --root <repo> [--template <id>]`. When the chapter sits in a video folder, the template is
 read from that folder's manifest. Added checks: unknown speaker, words per line. Every existing check is untouched.
 
 **Test cases:**
@@ -221,11 +221,11 @@ function buildStagePage(input: { template: Template; shape: Shape; chapter: Chap
 **`stage.html` contract.** It is a fragment, not a page:
 - one `<style>` block that may use `{{W}}`, `{{H}}` and `[data-shape="9:16"]` selectors
 - markup with these markers:
-  - `<!-- yap:background -->`
-  - `<!-- yap:slot -->` (a box with a size)
-  - `<!-- yap:speakers -->`
-  - `<!-- yap:captions -->`
-  - `<!-- yap:chips -->`
+  - `<!-- oldguy:background -->`
+  - `<!-- oldguy:slot -->` (a box with a size)
+  - `<!-- oldguy:speakers -->`
+  - `<!-- oldguy:captions -->`
+  - `<!-- oldguy:chips -->`
 
 `stage.mts` fills the markers and writes the GSAP timeline lines. `explainer`'s stage is today's 1920x1080 root with
 only the slot marker, so for explainer at 16:9 the page is byte-identical to `buildRootComposition` today.
@@ -329,16 +329,16 @@ async function fetchAsset(t: Template, a: Asset, dataDir: string, get: Getter): 
 
 - [ ] TDD. Commit `feat: template assets with checksummed download on first use`.
 
-### Task A9: `yap templates` and `/yap:templates`
+### Task A9: `oldguy templates` and `/oldguy:templates`
 
 **Files:** create `cli/templates.mts`, `tests/templates-cli.test.cjs`, `skills/templates/SKILL.md`; change
-`bin/yap.mts`.
+`bin/oldguy.mts`.
 
 ```
-yap templates                          list (id, description, shapes, ← current)
-yap templates <id> [16:9|9:16|1:1]     set .yap/settings.json; prints what was set and any shape fallback
-yap templates <id> --show              description, shapes, pace, missing assets with sizes, sample path
-yap templates <id> --fetch             download missing assets (the skill runs this only after the user's yes)
+oldguy templates                          list (id, description, shapes, ← current)
+oldguy templates <id> [16:9|9:16|1:1]     set .oldguy/settings.json; prints what was set and any shape fallback
+oldguy templates <id> --show              description, shapes, pace, missing assets with sizes, sample path
+oldguy templates <id> --fetch             download missing assets (the skill runs this only after the user's yes)
 ```
 
 An unknown id or shape exits 2 and lists the valid ones.
@@ -356,29 +356,29 @@ An unknown id or shape exits 2 and lists the valid ones.
 - an unknown id exits 2
 - the skill lint: the skill exists, names only real commands, stays within the line cap
 
-- [ ] TDD. Commit `feat: yap templates and the /yap:templates skill`.
+- [ ] TDD. Commit `feat: oldguy templates and the /oldguy:templates skill`.
 
 ### Task A10: Remake (event, CLI helper, skill)
 
 **Files:**
 - `lib/events.mts`: add `remake` with required `template` and `shape`; validation messages like `ref`'s
 - `server/api.mts`: `handleMessage` forwards `template` and `shape`
-- `cli/remake.mts` (new), `bin/yap.mts`
-- `skills/yap/references/ask-loop.md` (`remake` row), `skills/yap/references/templates.md` (new)
+- `cli/remake.mts` (new), `bin/oldguy.mts`
+- `skills/oldguy/references/ask-loop.md` (`remake` row), `skills/oldguy/references/templates.md` (new)
 - tests: `tests/events.test.cjs`, `tests/server-api.test.cjs`, `tests/remake.test.cjs`
 
 ```
-yap remake --from .yap/<slug> --template <id> [--shape <s>]
-  → creates .yap/<slug>-<id>/ with: manifest (template, shape, chapter ids and titles, every row pending),
+oldguy remake --from .oldguy/<slug> --template <id> [--shape <s>]
+  → creates .oldguy/<slug>-<id>/ with: manifest (template, shape, chapter ids and titles, every row pending),
     sources.json and script.md copied, order.json copied; prints the new folder. Refuses if it exists.
 ```
 
 **The skill's `remake` row:**
 1. ack the event
-2. `yap remake`
+2. `oldguy remake`
 3. rewrite each chapter's sentences for the template (reusing the copied sources)
 4. build chapters with subagents
-5. `yap serve --detach` the new folder
+5. `oldguy serve --detach` the new folder
 6. reply in the old page's chat with the new link
 
 **Test cases:**
@@ -417,9 +417,9 @@ yap remake --from .yap/<slug> --template <id> [--shape <s>]
 ### Task A12: Skill text and length rules
 
 **Files:**
-- `skills/yap/SKILL.md`: one pointer line to `references/templates.md`; the per-chapter length rule becomes "aim for
+- `skills/oldguy/SKILL.md`: one pointer line to `references/templates.md`; the per-chapter length rule becomes "aim for
   the template's `chapter_seconds`; no total length limit"
-- `skills/yap/references/scope.md`: length from the material, not 2 to 3 minutes
+- `skills/oldguy/references/scope.md`: length from the material, not 2 to 3 minutes
 - `references/templates.md`:
   - settings and request overrides
   - load `template.md`
@@ -436,7 +436,7 @@ yap remake --from .yap/<slug> --template <id> [--shape <s>]
 **Files:**
 - `.claude/skills/new-template/SKILL.md` (repo only), which:
   - scaffolds `templates/<id>/`
-  - runs `yap templates <id> --show`
+  - runs `oldguy templates <id> --show`
   - builds a fixture chapter through `buildStagePage` in every shape
   - runs `hyperframes check`
   - renders `sample.mp4`
@@ -449,10 +449,10 @@ yap remake --from .yap/<slug> --template <id> [--shape <s>]
 
 ### Task A14: Phase A acceptance and roll-up
 
-- Existing video `how-yap-works-v2`: re-narrate and re-render one chapter. Its `index.html` is unchanged and its
+- An existing explainer video: re-narrate and re-render one chapter. Its `index.html` is unchanged and its
   build record is still current.
 - A new 2-chapter explainer video at 9:16 renders and plays in the player as a tall stage. Take screenshots.
-- `/yap:templates` list, set and show work in a real Claude Code session (isolated config).
+- `/oldguy:templates` list, set and show work in a real Claude Code session (isolated config).
 - Remake from 16:9 explainer to 9:16 explainer runs end to end through the page (Playwright plus the live loop, as
   in Phase 4).
 - Write `docs/templates/SUMMARY.md` and update `docs/STATUS.md` and the parent spec's amendments A25 to A28.
