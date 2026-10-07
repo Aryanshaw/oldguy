@@ -1,6 +1,7 @@
 {
   "name": "yap",
   "version": "0.1.0",
+  "license": "MIT",
   "private": true,
   "description": "Claude Code plugin that turns a topic into an explainer video; this CLI does the deterministic steps.",
   "bin": {
