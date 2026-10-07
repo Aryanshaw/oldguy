@@ -61,8 +61,34 @@ overconfident veteran:
 He is long-winded, never senile: jokes are about how much he talks and how long he has been there, never about
 his age making him wrong.
 
-**Reference.** Concept board variant B (layout and icon) with variant A's mug and grubbiness, generated
-2026-10-07 during brainstorming. These are concept images, not shippable art.
+**Reference art.** The images below were generated on 2026-10-07 during brainstorming and are stored in
+`docs/assets/brand/`. They are the source of truth for how the old guy looks. They are concept images, though, not
+art to ship: the SVGs listed further down are redrawn from them.
+
+| File | What it is | Use it for |
+|---|---|---|
+| `oldguy-concept-board-b.webp` | full brand board, variant B | the chosen layout and the logo cover |
+| `oldguy-concept-board-a.webp` | full brand board, variant A | the mug text, the grubbiness, the sticker sheet |
+| `oldguy-concept-icon.webp` | variant B, panel 01 | the head-in-yellow-circle mark and the "oldguy" wordmark |
+| `oldguy-concept-body-a.webp` | variant A, panel 02 | full body: torn shirt, "LEGACY CODE FUEL" mug, socks with sandals |
+| `oldguy-concept-body-b.webp` | variant B, panel 02 | full body, cleaner pose |
+
+The chosen direction is **B's layout and icon, plus A's mug and grubbiness**.
+
+![Concept board B (chosen layout)](../../assets/brand/oldguy-concept-board-b.webp)
+
+![Concept board A (mug and grubbiness)](../../assets/brand/oldguy-concept-board-a.webp)
+
+| Mark | Body A | Body B |
+|---|---|---|
+| ![icon](../../assets/brand/oldguy-concept-icon.webp) | ![body A](../../assets/brand/oldguy-concept-body-a.webp) | ![body B](../../assets/brand/oldguy-concept-body-b.webp) |
+
+**Known gaps in the concept art.** Fix these in the shipped assets, not by editing the images:
+
+- **Terminal panel.** It is empty on both boards. Marketing material should show the result: chapters with citations
+  such as `src/cart/submit.ts:12-40`.
+- **Small sizes.** The glasses on the cap and the pencil turn to mush at 32px, which is why there is a separate small
+  mark.
 
 **Shipped assets.** Each one is hand-built SVG in the existing palette, with thick `#14110A` outlines and flat fills:
 
@@ -73,6 +99,7 @@ his age making him wrong.
 | Player logo | `player/src/components/Logo.tsx` | mark: the head in a yellow circle; wordmark "oldguy" on the existing tilted yellow chip |
 | Small mark | inside `Logo.tsx` (`size="sm"`) and the favicon | reduced head: cap, mop, open mouth only, no glasses or pencil, so it reads at 32px |
 | Favicon | `player/index.html` | inline SVG of the small mark |
+| Full body | `docs/assets/oldguy-full.svg` | finger-raised pose with the mug, from Body A; used by the README and, later, by templates that feature him as host |
 
 **The character is fixed.** He looks and behaves exactly as on the concept board: dopey, scruffy, blabbering. Do
 not make him sharper, wiser or more polished to suit wider use. The joke is that this guy is the one who can
