@@ -11,7 +11,7 @@ const { loadManifest } = require('../lib/manifest.mts');
 const { readOrder } = require('../lib/chapter-scan.mts');
 const { readEventsAfter, readThread } = require('../lib/events.mts');
 const { askServer } = require('../lib/ask-server.mts');
-const { runReply, runAddChapter, runSetStatus, runOrder } = require('../cli/client.mts');
+const { runReply, runAddChapter, runSetStatus, runOrder, runAck } = require('../cli/client.mts');
 
 const NO_SERVER = 'no server is running: start it with `yap serve --detach`\n';
 
@@ -453,4 +453,30 @@ test('order: a server.json left by a dead server counts as no server; a server t
   assert.equal(bad.code, 1);
   assert.match(bad.err, /^[^\n]*the page keeps its old order\n$/);
   assert.deepEqual(readOrder(slugDir).ids, ['outro', 'intro']);
+});
+
+test('ack: closes an event and prints "event evt_<n> acked"; usage errors exit 2', async (t) => {
+  const { slugDir, srv } = await withServer(t);
+  const evt = await viewerMessage(srv);
+  const r = await run(runAck, [evt, '--dir', slugDir]);
+  assert.deepEqual([r.code, r.out], [0, `event ${evt} acked\n`]);
+  assert.equal(fs.readFileSync(path.join(slugDir, 'state', 'acks.jsonl'), 'utf8').includes(evt), true);
+  assert.equal((await run(runAck, ['--dir', slugDir])).code, 2);
+  assert.equal((await run(runAck, ['evt_x', '--dir', slugDir])).code, 2);
+  assert.equal((await run(runAck, [evt, 'more', '--dir', slugDir])).code, 2);
+  const missing = await run(runAck, ['evt_99', '--dir', slugDir]);
+  assert.equal(missing.code, 1);
+  assert.match(missing.err, /not a known event/);
+});
+
+test('reply --offer-video stores offer_video: true; add-chapter --question stores the question', async (t) => {
+  const { slugDir, srv, manifest } = await withServer(t);
+  const evt = await viewerMessage(srv);
+  assert.equal((await run(runReply, ['--dir', slugDir, '--in-reply-to', evt, '--text', 'plain'])).code, 0);
+  assert.equal((await run(runReply, ['--dir', slugDir, '--in-reply-to', evt, '--offer-video', '--text', 'offered'])).code, 0);
+  const thread = readThread(path.join(slugDir, 'state', 'thread.jsonl'));
+  assert.deepEqual(thread.map((r) => r.offer_video), [undefined, true]);
+  const r = await run(runAddChapter, ['--dir', slugDir, '--id', 'what-if-it-fails', '--question', 'What if it fails?']);
+  assert.equal(r.code, 0, r.err);
+  assert.equal(manifest().chapters[0].question, 'What if it fails?');
 });

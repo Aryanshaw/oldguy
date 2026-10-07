@@ -1,10 +1,10 @@
 // The JSON API the player and Claude's CLI use: state, live stream, chat, replies, chapter changes and the heartbeat.
 import path from 'node:path';
-import { appendEvent, readEventsAfter, appendReply, readThread } from '../lib/events.mts';
+import { appendEvent, readEventsAfter, appendReply, readThread, appendAck } from '../lib/events.mts';
 import { loadManifest, insertChapter, reorderChapters, setChapterFields } from '../lib/manifest.mts';
 import { scanChapter } from '../lib/chapter-scan.mts';
 import { handleExport } from './export-route.mts';
-import type { EventContext, EventType, Reply, SourceRef, ThreadEntry, ViewerEvent } from '../lib/events.mts';
+import type { Ack, EventContext, EventType, Reply, SourceRef, ThreadEntry, ViewerEvent } from '../lib/events.mts';
 import type { Manifest, ManifestRow, NewRow } from '../lib/manifest.mts';
 import type { ChapterPayload, StatePayload, StreamData, StreamEventName } from '../lib/sse.mts';
 import type { JsonObject } from '../lib/http-guard.mts';
@@ -15,6 +15,8 @@ import type { Route, RouteContext, ServerState } from './types.mts';
 type MessageBody = { type: EventType; text?: string; context?: EventContext; ref?: string };
 // What a client sends to POST /api/reply.
 type ReplyBody = { in_reply_to: string; text: string; sources?: SourceRef[]; offer_video?: true };
+// What a client sends to POST /api/ack: the event Claude has handled without a text reply.
+type AckBody = { event_id: string };
 // The chapter fields POST /api/chapters may change with op "set".
 type SettableFields = Partial<Pick<ManifestRow, 'status' | 'quality' | 'title' | 'placement_reason' | 'question'>>;
 // What a client sends to POST /api/chapters: add a chapter, put all of them in a new order, or change one.
@@ -29,6 +31,7 @@ type StateResponse = StatePayload;
 // What POST /api/message, /api/reply, /api/chapters and /api/export answer on success.
 type MessageResponse = { event: ViewerEvent };
 type ReplyResponse = { reply: Reply };
+type AckResponse = { ack: Ack };
 type ChaptersResponse = { manifest: Manifest };
 type ExportResponse = ExportResult;
 // A change to the manifest: gets the loaded manifest, returns the new one (it may throw an Error that carries a status).
@@ -62,6 +65,7 @@ function tell<E extends StreamEventName>(state: ServerState, event: E, makeData:
 // Where the chat files live.
 const eventsFile = (state: ServerState): string => path.join(state.slugDir, 'state', 'events.jsonl');
 const threadFile = (state: ServerState): string => path.join(state.slugDir, 'state', 'thread.jsonl');
+const acksFile = (state: ServerState): string => path.join(state.slugDir, 'state', 'acks.jsonl');
 const manifestFile = (state: ServerState): string => path.join(state.slugDir, 'manifest.json');
 
 // The injected clock in milliseconds (tests move it by hand).
@@ -132,6 +136,17 @@ async function handleReply({ req, res, state, sendJson, readJsonBody }: RouteCon
   const reply = lib(() => appendReply(threadFile(state), input, { eventsFile: eventsFile(state), now: clockDate(state) }));
   tell(state, 'reply', () => ({ ...reply, role: 'claude' }));
   sendJson(res, 200, { reply });
+}
+
+// POST /api/ack: records that Claude handled an event that gets no text reply (a button press), so yap listen stops
+// showing it. An unknown event is a 404; a malformed id a 400.
+async function handleAck({ req, res, state, sendJson, readJsonBody }: RouteContext): Promise<void> {
+  const { event_id } = await readJsonBody(req);
+  if (typeof event_id === 'string' && /^evt_\d+$/.test(event_id) && !readEventsAfter(eventsFile(state), null).some((e) => e.id === event_id)) {
+    throw httpError(404, `${event_id} is not a known event`);
+  }
+  const ack = lib(() => appendAck(acksFile(state), event_id, { eventsFile: eventsFile(state), now: clockDate(state) }));
+  sendJson(res, 200, { ack });
 }
 
 // Stops the "Claude went quiet" timer, if one is armed (close() uses this too).
@@ -255,13 +270,14 @@ const API_ROUTES: Route[] = [
   { method: 'GET', pattern: '/api/stream', handler: handleStream },
   { method: 'POST', pattern: '/api/message', handler: handleMessage },
   { method: 'POST', pattern: '/api/reply', handler: handleReply },
+  { method: 'POST', pattern: '/api/ack', handler: handleAck },
   { method: 'POST', pattern: '/api/chapters', handler: handleChapters },
   { method: 'POST', pattern: '/api/heartbeat', handler: handleHeartbeat },
   { method: 'POST', pattern: '/api/export', handler: handleExport },
 ];
 
 export { API_ROUTES, clearHeartbeatTimer };
-export type {
+export type { AckBody, AckResponse,
   MessageBody, ReplyBody, ChaptersBody, ExportBody, SettableFields, StateResponse, MessageResponse, ReplyResponse,
   ChaptersResponse, ExportResponse,
 };

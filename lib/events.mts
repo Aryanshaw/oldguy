@@ -21,6 +21,8 @@ type SourceRef = { file: string; lines: string };
 // One line of thread.jsonl, as stored: Claude's answer to an event.
 // offer_video: true puts a "Make this a video" button under the reply; without it the page shows none.
 type Reply = { id: string; ts: string; in_reply_to: string; text: string; sources?: SourceRef[]; offer_video?: true };
+// One line of acks.jsonl: Claude has handled an event that gets no text reply (a button press).
+type Ack = { id: string; ts: string; event_id: string };
 // One entry of the chat as the page shows it: the viewer's message or Claude's reply, tagged with who sent it.
 type ThreadEntry = (ViewerEvent & { role: 'viewer' }) | (Reply & { role: 'claude' });
 // Options shared by the writers: a clock and the largest line they will store.
@@ -124,7 +126,7 @@ function stamp(now: () => Date): string {
 }
 
 // Writes one complete line with a single append call; starts a fresh line first if a crash left a partial one.
-function appendLine(file: string, entry: ViewerEvent | Reply, maxBytes: number): void {
+function appendLine(file: string, entry: ViewerEvent | Reply | Ack, maxBytes: number): void {
   const line = JSON.stringify(entry) + '\n';
   if (Buffer.byteLength(line, 'utf8') > maxBytes) fail(`entry is too large (over ${maxBytes} bytes)`);
   fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -196,5 +198,19 @@ function readThread(file: string): Reply[] {
   return readEntries<Reply>(file, 'rep');
 }
 
-export { appendEvent, readEventsAfter, appendReply, readThread };
-export type { EventType, EventContext, ViewerEvent, SourceRef, Reply, ThreadEntry, WriteOptions };
+// Records that Claude has handled an event that gets no text reply; the event must exist. Acking twice is harmless.
+function appendAck(file: string, eventId: unknown, { eventsFile = '', now = () => new Date(), maxBytes = DEFAULT_MAX_BYTES }: WriteOptions & { eventsFile?: string } = {}): Ack {
+  if (!validId(eventId, 'evt')) fail('event_id must look like evt_<number>');
+  if (!readEntries<ViewerEvent>(eventsFile, 'evt').some((e) => e.id === eventId)) fail(`${eventId} is not a known event`);
+  const ack: Ack = { id: nextId(file, 'ack'), ts: stamp(now), event_id: eventId };
+  appendLine(file, ack, maxBytes);
+  return ack;
+}
+
+// Returns every valid ack, oldest first.
+function readAcks(file: string): Ack[] {
+  return readEntries<Ack>(file, 'ack');
+}
+
+export { appendEvent, readEventsAfter, appendReply, readThread, appendAck, readAcks };
+export type { EventType, EventContext, ViewerEvent, SourceRef, Reply, Ack, ThreadEntry, WriteOptions };

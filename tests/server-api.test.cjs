@@ -354,3 +354,16 @@ test('POST /api/message stores ref on make_video; POST /api/reply stores offer_v
   assert.equal(state.json.thread.find((e) => e.role === 'claude').offer_video, true);
   assert.equal(JSON.parse(lines(path.join(slugDir, 'state', 'events.jsonl'))[1]).ref, 'rep_1');
 });
+
+test('POST /api/ack: closes an event; unknown event 404; bad id 400; a second ack is fine', async (t) => {
+  const { srv, slugDir, root } = await setup(t);
+  await call(srv, 'POST', '/api/message', { type: 'just_text' });
+  const ok = await call(srv, 'POST', '/api/ack', { event_id: 'evt_1' });
+  assert.equal(ok.status, 200, ok.text);
+  assert.deepEqual(Object.keys(ok.json.ack).sort(), ['event_id', 'id', 'ts']);
+  assert.equal((await call(srv, 'POST', '/api/ack', { event_id: 'evt_1' })).status, 200);
+  assertCleanError(await call(srv, 'POST', '/api/ack', { event_id: 'evt_7' }), 404, root);
+  assertCleanError(await call(srv, 'POST', '/api/ack', { event_id: 'x' }), 400, root);
+  assertCleanError(await call(srv, 'POST', '/api/ack', {}), 400, root);
+  assert.equal(lines(path.join(slugDir, 'state', 'acks.jsonl')).length, 2);
+});

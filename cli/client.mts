@@ -122,28 +122,43 @@ function readFlags(args: string[], allowed: string[], required: string[]): Recor
   return flags;
 }
 
-// `yap reply --in-reply-to <evt_n> --text <text> [--source <file>:<a>-<b> ...]`: posts Claude's answer to the viewer.
+// `yap reply --in-reply-to <evt_n> --text <text> [--source <file>:<a>-<b> ...] [--offer-video]`: posts Claude's answer
+// to the viewer; --offer-video puts a "Make this a video" button under it.
 function runReply(args: string[], opts?: ClientOpts): Promise<number> {
   return serverCommand('reply', (): Request<ReplyBody> => {
     const { sources, rest } = takeSources(args);
-    const flags = readFlags(rest, ['--dir', '--in-reply-to', '--text'], ['--in-reply-to', '--text']);
+    // --offer-video takes no value, so it is taken out before the flags are parsed
+    const offer = rest.includes('--offer-video');
+    const flags = readFlags(rest.filter((a) => a !== '--offer-video'), ['--dir', '--in-reply-to', '--text'], ['--in-reply-to', '--text']);
     const body: ReplyBody = { in_reply_to: flags['--in-reply-to'], text: flags['--text'] };
     if (sources.length) body.sources = sources.map(parseSource);
+    if (offer) body.offer_video = true;
     return { slugDir: resolveSlugDir(flags['--dir']), body };
   }, '/api/reply', (json) => `reply ${strictMatch(json.reply.id, /^rep_\d+$/)} sent`, opts);
 }
 
-// `yap add-chapter --id <id> [--after <id>] [--title <t>] [--parent <id>] [--reason <text>]`: adds a chapter row.
+// `yap add-chapter --id <id> [--after <id>] [--title <t>] [--parent <id>] [--reason <text>] [--question <text>]`: adds
+// a chapter row; --question is the viewer's question it answers, shown under it while it is being made.
 function runAddChapter(args: string[], opts?: ClientOpts): Promise<number> {
   return serverCommand('add-chapter', (): Request<AddBody> => {
-    const flags = readFlags(args, ['--dir', '--id', '--after', '--title', '--parent', '--reason'], ['--id']);
+    const flags = readFlags(args, ['--dir', '--id', '--after', '--title', '--parent', '--reason', '--question'], ['--id']);
     const body: AddBody = { op: 'add', id: checkId('--id', flags['--id']) };
-    for (const [flag, key] of [['--after', 'after'], ['--title', 'title'], ['--parent', 'parent_id'], ['--reason', 'placement_reason']]) {
+    for (const [flag, key] of [['--after', 'after'], ['--title', 'title'], ['--parent', 'parent_id'], ['--reason', 'placement_reason'], ['--question', 'question']]) {
       if (flags[flag] === undefined) continue;
       body[key] = flag === '--after' || flag === '--parent' ? checkId(flag, flags[flag]) : flags[flag];
     }
     return { slugDir: resolveSlugDir(flags['--dir']), body };
   }, '/api/chapters', (json, { body }) => `chapter ${body.id} added at position ${positionOf(json, body.id)}`, opts);
+}
+
+// `yap ack <evt_n> [--dir <slugDir>]`: tells the server Claude has handled an event that gets no text reply.
+function runAck(args: string[], opts?: ClientOpts): Promise<number> {
+  return serverCommand('ack', (): Request<{ event_id: string }> => {
+    const { positional, flags } = parseFlags(args, ['--dir']);
+    if (positional.length !== 1) throw new Error('give exactly one event id, for example evt_12');
+    if (!/^evt_\d+$/.test(positional[0])) throw new Error(`"${oneLine(positional[0]).slice(0, 60)}" is not an event id (evt_<number>)`);
+    return { slugDir: resolveSlugDir(flags['--dir']), body: { event_id: positional[0] } };
+  }, '/api/ack', (_json, { body }) => `event ${body.event_id} acked`, opts);
 }
 
 // `yap set-status --id <id> --status <pending|rendering|ready|failed|stale>`: changes one chapter's status.
@@ -230,4 +245,4 @@ async function runOrder(args: string[], opts: ClientOpts = {}): Promise<number> 
   return moved === 'failed' ? 1 : 0;
 }
 
-export { runReply, runAddChapter, runSetStatus, runOrder };
+export { runReply, runAddChapter, runSetStatus, runOrder, runAck };
