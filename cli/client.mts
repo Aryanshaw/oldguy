@@ -180,6 +180,14 @@ function runSetStatus(args: string[], opts?: ClientOpts): Promise<number> {
   }, '/api/chapters', (json, { body }) => `chapter ${body.id} is ${body.fields.status}`, opts);
 }
 
+// `yap remove-chapter --id <id>`: takes a chapter out of the story (after "just text"; delete its folder first).
+function runRemoveChapter(args: string[], opts?: ClientOpts): Promise<number> {
+  return serverCommand('remove-chapter', () => {
+    const flags = readFlags(args, ['--dir', '--id'], ['--id']);
+    return { slugDir: resolveSlugDir(flags['--dir']), body: { op: 'remove' as const, id: checkId('--id', flags['--id']) } };
+  }, '/api/chapters', (_json, { body }) => `chapter ${body.id} removed`, opts);
+}
+
 // Checks the comma-separated ids: each already in its plain slug form, none repeated, at least one.
 function parseOrderIds(text: string): string[] {
   const ids = text === '' ? [] : text.split(',');
@@ -255,4 +263,4 @@ async function runOrder(args: string[], opts: ClientOpts = {}): Promise<number> 
   return moved === 'failed' ? 1 : 0;
 }
 
-export { runReply, runAddChapter, runSetStatus, runOrder, runAck };
+export { runReply, runAddChapter, runSetStatus, runRemoveChapter, runOrder, runAck };

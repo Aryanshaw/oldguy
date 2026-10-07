@@ -31,7 +31,7 @@ type _Checks = [
   Expect<Equal<ViewerEvent['ref'], string | undefined>>,
   Expect<Equal<Reply['offer_video'], true | undefined>>,
   // the API's request and response shapes
-  Expect<Equal<ChaptersBody['op'], 'add' | 'reorder' | 'set'>>,
+  Expect<Equal<ChaptersBody['op'], 'add' | 'reorder' | 'set' | 'remove'>>,
   Expect<Equal<StateResponse['manifest'], Manifest>>,
   Expect<Equal<ReturnType<RunningServer['close']>, Promise<void>>>,
 ];

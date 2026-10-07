@@ -11,7 +11,7 @@ import { runNarrate } from '../cli/narrate.mts';
 import { runRender } from '../cli/render.mts';
 import { runServe } from '../cli/server.mts';
 import { runListen } from '../cli/listen.mts';
-import { runReply, runAddChapter, runSetStatus, runOrder, runAck } from '../cli/client.mts';
+import { runReply, runAddChapter, runSetStatus, runRemoveChapter, runOrder, runAck } from '../cli/client.mts';
 
 // A command: what `--help` says about it, and the function that runs it (it returns the exit code, or nothing for 0).
 type Command = { summary: string; run: (args: string[]) => number | void | Promise<number | void> };
@@ -32,6 +32,7 @@ const COMMANDS: Record<string, Command> = {
   ack: { summary: 'mark a viewer event as handled when it gets no text reply: yap ack <evt_n>', run: runAck },
   'add-chapter': { summary: 'add a chapter to the story (--id, --after, --title, --parent, --reason, --question)', run: runAddChapter },
   'set-status': { summary: 'set a chapter\'s status (--id, --status)', run: runSetStatus },
+  'remove-chapter': { summary: 'take a chapter that will not be made out of the story (--id; delete its folder first)', run: runRemoveChapter },
   order: { summary: 'write the story order (and move chapters on a running page): yap order <id,id,...>', run: runOrder },
 };
 

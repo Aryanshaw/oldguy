@@ -1,7 +1,8 @@
 // The JSON API the player and Claude's CLI use: state, live stream, chat, replies, chapter changes and the heartbeat.
+import fs from 'node:fs';
 import path from 'node:path';
 import { appendEvent, readEventsAfter, appendReply, readThread, appendAck } from '../lib/events.mts';
-import { loadManifest, insertChapter, reorderChapters, setChapterFields } from '../lib/manifest.mts';
+import { loadManifest, insertChapter, reorderChapters, removeChapter, setChapterFields } from '../lib/manifest.mts';
 import { scanChapter } from '../lib/chapter-scan.mts';
 import { handleExport } from './export-route.mts';
 import type { Ack, EventContext, EventType, Reply, SourceRef, ThreadEntry, ViewerEvent } from '../lib/events.mts';
@@ -19,11 +20,12 @@ type ReplyBody = { in_reply_to: string; text: string; sources?: SourceRef[]; off
 type AckBody = { event_id: string };
 // The chapter fields POST /api/chapters may change with op "set".
 type SettableFields = Partial<Pick<ManifestRow, 'status' | 'quality' | 'title' | 'placement_reason' | 'question'>>;
-// What a client sends to POST /api/chapters: add a chapter, put all of them in a new order, or change one.
+// What a client sends to POST /api/chapters: add a chapter, put all of them in a new order, change one, or remove one.
 type ChaptersBody =
   | { op: 'add'; id: string; title?: string | null; parent_id?: string | null; placement_reason?: string | null; question?: string | null; after?: string | null }
   | { op: 'reorder'; ids: string[] }
-  | { op: 'set'; id: string; fields: SettableFields };
+  | { op: 'set'; id: string; fields: SettableFields }
+  | { op: 'remove'; id: string };
 // What a client sends to POST /api/export.
 type ExportBody = { dest: string; mode?: 'full' | 'drafts' };
 // What GET /api/state answers (and what every "state" stream event carries).
@@ -241,12 +243,25 @@ function setChange(state: ServerState, body: JsonObject): ManifestChange {
   };
 }
 
+// The change for op "remove": takes out a chapter that was added but will not be made (the viewer chose "just text").
+// Its folder must be gone first, so the folder watcher cannot bring it back as a failed row.
+function removeChange(state: ServerState, body: JsonObject): ManifestChange {
+  const id = body.id;
+  if (typeof id !== 'string') throw httpError(400, 'id must be text');
+  return (m) => {
+    if (!m.chapters.some((c) => c.id === id)) throw httpError(404, `no chapter "${id.replace(/\s+/g, ' ')}"`);
+    if (fs.existsSync(path.join(state.slugDir, 'chapters', id))) throw httpError(409, `delete the folder chapters/${id} first`);
+    return lib(() => removeChapter(m, id));
+  };
+}
+
 // Picks the change for the requested op, or refuses an unknown one.
 function chooseChange(state: ServerState, body: JsonObject): ManifestChange {
   if (body.op === 'add') return addChange(body);
   if (body.op === 'reorder') return reorderChange(body);
   if (body.op === 'set') return setChange(state, body);
-  throw httpError(400, 'op must be add, reorder or set');
+  if (body.op === 'remove') return removeChange(state, body);
+  throw httpError(400, 'op must be add, reorder, set or remove');
 }
 
 // POST /api/chapters: the only way Claude changes the manifest. Goes through the one save queue, then tells the tabs.

@@ -186,6 +186,21 @@ test('chapters reorder: a permutation works; anything else is 400 and the manife
   assert.equal(fs.readFileSync(manifestFile, 'utf8'), before);
 });
 
+test('chapters remove: takes out a row; refused while its folder exists, for a parent, or an unknown id', async (t) => {
+  const { srv, slugDir, root, manifestFile } = await setup(t, [['a', 'pending'], ['b', 'rendering'], ['c', 'pending']]);
+  const remove = (id) => call(srv, 'POST', '/api/chapters', { op: 'remove', id });
+  let r = await remove('b');
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.json.manifest.chapters.map((c) => c.id), ['a', 'c']);
+  fs.mkdirSync(path.join(slugDir, 'chapters', 'c'), { recursive: true });
+  assertCleanError(await remove('c'), 409, root);
+  await call(srv, 'POST', '/api/chapters', { op: 'add', id: 'kid', parent_id: 'a' });
+  assertCleanError(await remove('a'), 400, root);
+  assertCleanError(await remove('nope'), 404, root);
+  assertCleanError(await call(srv, 'POST', '/api/chapters', { op: 'remove', id: 5 }), 400, root);
+  assert.deepEqual(loadManifest(manifestFile).chapters.map((c) => c.id), ['a', 'kid', 'c']);
+});
+
 test('chapters set: allowed fields only; unknown id 404; bad field or value 400', async (t) => {
   const { srv, root } = await setup(t, [['a', 'pending']]);
   const set = (id, fields) => call(srv, 'POST', '/api/chapters', { op: 'set', id, fields });
