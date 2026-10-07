@@ -6,6 +6,14 @@
 
 <p align="center"><b>Claude yaps. You watch.</b></p>
 
+<p align="center">
+  <a href="LICENSE"><img alt="license MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
+  <a href="https://github.com/Aryanshaw/yap/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/Aryanshaw/yap?style=social"></a>
+  <a href="https://github.com/Aryanshaw/yap/actions/workflows/player.yml"><img alt="tests" src="https://img.shields.io/github/actions/workflow/status/Aryanshaw/yap/player.yml?branch=master&label=tests"></a>
+  <a href="https://claude.com/claude-code"><img alt="works with Claude Code" src="https://img.shields.io/badge/works%20with-Claude%20Code-D97757"></a>
+  <img alt="node 22.18 or newer" src="https://img.shields.io/badge/node-%E2%89%A522.18-339933">
+</p>
+
 Yap is a Claude Code plugin that explains your own codebase as a short narrated video. Ask how a feature works, and
 Claude reads the code, writes a script where every claim points at real lines, records a voice-over and renders a
 few short chapters. Then it opens them in a player in your browser, where you can keep asking questions.
