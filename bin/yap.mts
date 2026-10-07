@@ -6,6 +6,7 @@ import { runPadWav } from '../cli/wav.mts';
 import { runBeats } from '../cli/beats.mts';
 import { runCaptions } from '../cli/captions.mts';
 import { runDoctorCli } from '../cli/doctor.mts';
+import { runSetupCli } from '../cli/setup.mts';
 import { runScaffold } from '../cli/scaffold.mts';
 import { runNarrate } from '../cli/narrate.mts';
 import { runRender } from '../cli/render.mts';
@@ -19,6 +20,7 @@ type Command = { summary: string; run: (args: string[]) => number | void | Promi
 // One row per command.
 const COMMANDS: Record<string, Command> = {
   doctor: { summary: 'check that the tools yap needs are installed', run: runDoctorCli },
+  setup: { summary: 'show what is missing; --install <items> installs only the items you agreed to', run: runSetupCli },
   audit: { summary: 'check that every claim in a chapter points at real code', run: runAudit },
   beats: { summary: 'split narration into timed beats', run: runBeats },
   captions: { summary: 'build captions from a transcript', run: runCaptions },

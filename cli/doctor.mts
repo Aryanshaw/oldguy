@@ -76,5 +76,5 @@ async function runDoctorCli(args: string[], deps: DoctorCliDeps = realDeps()): P
   return ok ? 0 : 1;
 }
 
-export { runDoctorCli, realExec };
+export { runDoctorCli, realExec, formatText };
 export type { DoctorCliDeps };
