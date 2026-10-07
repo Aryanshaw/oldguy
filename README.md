@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/mascot-dark.svg">
-    <img src="docs/assets/mascot.svg" width="150" alt="Yap's mascot, a cheerful wind-up alarm clock">
+    <img src="docs/assets/mascot.svg" width="160" alt="Yap's mascot, a cheerful wind-up alarm clock">
   </picture>
 </p>
 
@@ -12,19 +12,25 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/stars/Aryanshaw/yap?style=flat-square&color=111111&label=stars" alt="Stars">
-  <img src="https://img.shields.io/npm/v/getyap?style=flat-square&color=111111&label=npm" alt="npm">
-  <img src="https://img.shields.io/badge/works%20with-Claude%20Code-111111?style=flat-square" alt="Works with Claude Code">
-  <img src="https://img.shields.io/badge/license-MIT-111111?style=flat-square" alt="MIT license">
+  <a href="https://github.com/Aryanshaw/yap/stargazers"><img src="https://img.shields.io/github/stars/Aryanshaw/yap?style=flat&logo=github&label=stars" alt="Stars"></a>
+  <a href="https://www.npmjs.com/package/getyap"><img src="https://img.shields.io/npm/v/getyap?style=flat&logo=npm&color=CB3837&label=npm" alt="npm"></a>
+  <a href="https://github.com/Aryanshaw/yap/actions/workflows/player.yml"><img src="https://img.shields.io/github/actions/workflow/status/Aryanshaw/yap/player.yml?branch=master&style=flat&label=tests" alt="Tests"></a>
+  <a href="https://claude.com/claude-code"><img src="https://img.shields.io/badge/works%20with-Claude%20Code-D97757?style=flat" alt="Works with Claude Code"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat" alt="MIT license"></a>
+</p>
+
+<p align="center">
+  <strong>2&ndash;3 minute videos &middot; every claim cites your code &middot; rendered on your machine</strong><br>
+  <sub>Short narrated chapters about how a feature of <em>your</em> codebase works, checked against the real lines before a word is recorded.</sub>
 </p>
 
 ---
 
-You joined a new codebase. Someone sends you a 40-page design doc. You open it, scroll, close it, and ask in Slack
-how checkout works instead.
+You know the drill. New repo. A 40-page design doc. A Slack thread from last spring that ends in "let's hop on a
+call". You open the doc, scroll, close it, and go ask someone how checkout works.
 
-Yap makes Claude answer with a short video. It reads your code, explains the flow in two or three minutes of
-narrated chapters, and every claim points at the real lines it came from.
+Yap puts a narrator inside Claude Code. Ask how something works, and Claude reads the code and answers with a short
+video: a few chapters, a calm voice, and on every claim, the file and lines it came from.
 
 <p align="center">
   <img src="docs/assets/player.png" width="860" alt="The Yap player: a chapter playing, a timeline of chapters, and a chat where Claude answers with the code it used">
@@ -32,13 +38,13 @@ narrated chapters, and every claim points at the real lines it came from.
 
 ## Install
 
+**Terminal**, one command:
+
 ```
 npx getyap
 ```
 
-That's it. It adds Yap to Claude Code and asks before setting up anything else (the local voice, mostly).
-
-Prefer doing it from inside Claude Code? Two prompts:
+**Claude Code**, as two separate prompts:
 
 ```
 /plugin marketplace add Aryanshaw/yap
@@ -47,31 +53,64 @@ Prefer doing it from inside Claude Code? Two prompts:
 /plugin install yap@yap
 ```
 
-## Use
+Either way, Yap asks before it sets anything up on your machine (mostly the local voice). To update later, run
+`npx getyap` again.
+
+That was it. Go ask it something.
+
+## Before / after
+
+You want to know how checkout works.
+
+**Before:** the design doc, a Slack search, a 30-minute call, and a diagram that was right two refactors ago.
+
+**After:**
 
 ```
 /yap how does checkout work
 ```
 
-Claude picks the flow, checks it against the code, records the chapters and opens them in your browser. Keep asking
-in the chat: it answers with the code it used, and when a picture would help it offers **Make this a video**.
+A few minutes later your browser opens on something like this (an example; your chapters come from your code):
+
+```
+1. One click, start to finish           0:28
+2. What the cart sends                  0:34    src/cart/submit.ts:12-40
+3. Where the price gets checked         0:31    api/orders/create.ts:55-71
+4. Paying, and what happens if it fails 0:37    api/payments/charge.ts:20-48
+```
+
+Still confused about step 3? Ask in the chat. Claude answers with the code it used, and when a picture would help,
+it offers **Make this a video**: one click, one new chapter.
 
 ## How it works
 
 ```
-1. Scope      one flow from your question
+1. Scope      one flow from your question, for a beginner
 2. Verify     every claim cites real lines; a quote that does not match is cut
 3. Narrate    a local voice, with captions timed to it
 4. Render     short chapters, several at once
 5. Watch      a local player, with a chat back to Claude
 ```
 
-Everything runs on your machine. Your repository is only read, never edited.
+Your repository is only read, never edited. If the feature you asked about is not in the code, Yap says so instead of
+making something up.
+
+## Commands
+
+| Command | What it does |
+|---------|--------------|
+| `/yap <question>` | Make a video about how something in this repo works. |
+| `/yap doctor` | Check this machine has what Yap needs, and offer to set up what is missing. |
+| Chat, in the player | Ask follow-up questions; Claude answers with the code it used. |
+| **Make this a video** | Turn an answer into a new chapter, placed where it fits the story. |
+| **Sources**, in the player | The files and lines behind the chapter you are watching. |
+| **Export**, in the player | Save the whole video as one mp4, with its script and sources. |
+| `npx getyap [--yes \| --plugin-only]` | Install or update Yap; `--yes` sets everything up without asking. |
 
 ## FAQ
 
 **Does my code leave my machine?**
-No more than it already does with Claude Code. The voice, the rendering and the player are all local.
+No more than it already does with Claude Code. The voice, the rendering and the player all run locally.
 
 **Can it be wrong?**
 It can pick a boring flow. It cannot quietly invent one: every sentence that makes a claim is checked against the
@@ -89,3 +128,13 @@ Claude talks a lot anyway. This time you get to watch.
 ## License
 
 [MIT](LICENSE). Want to help? See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Star History
+
+<a href="https://www.star-history.com/#Aryanshaw/yap&Date">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=Aryanshaw/yap&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=Aryanshaw/yap&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=Aryanshaw/yap&type=Date" />
+ </picture>
+</a>
