@@ -8,3 +8,5 @@ player/test-results/
 player/playwright-report/
 .oldguy
 .yap
+tools/art/.venv/
+tools/art/__pycache__/
