@@ -4,6 +4,7 @@ import { Controls } from '@/components/Controls';
 import { ExportDialog } from '@/components/ExportDialog';
 import { Header } from '@/components/Header';
 import { Notice } from '@/components/Notice';
+import { RemakeMenu } from '@/components/RemakeMenu';
 import { SourcesTab } from '@/components/SourcesTab';
 import { Timeline } from '@/components/Timeline';
 import { useCaptionsPref, usePlayer } from '@/components/usePlayer';
@@ -25,13 +26,19 @@ function Page({ store, manifest, onExport }: { store: Store; manifest: Manifest;
 
   return (
     <div className="mx-auto flex max-w-[1400px] flex-col gap-5 p-4">
-      <Header title={manifest.title} connected={claudeConnected} onExport={onExport} />
+      <Header
+        title={manifest.title}
+        connected={claudeConnected}
+        onExport={onExport}
+        label={manifest.template ? `${manifest.template} · ${manifest.shape ?? '16:9'}` : undefined}
+        remake={<RemakeMenu />}
+      />
       <div
         data-layout
         className="grid grid-cols-1 items-start gap-5 min-[1000px]:grid-cols-[minmax(0,1fr)_360px]"
       >
         <div className="flex min-w-0 flex-col gap-4">
-          <VideoStage player={player} chapters={chapters} captionsOn={captionsOn} />
+          <VideoStage player={player} chapters={chapters} captionsOn={captionsOn} shape={manifest.shape} />
           <Controls player={player} chapters={chapters} captionsOn={captionsOn} onToggleCaptions={toggleCaptions} />
           <Timeline
             chapters={chapters}

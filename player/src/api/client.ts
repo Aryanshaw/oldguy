@@ -1,4 +1,4 @@
-import type { AppState, ChapterSource, StoredEvent } from '@/types';
+import type { AppState, ChapterSource, Shape, StoredEvent, TemplatesInfo } from '@/types';
 
 export class ApiError extends Error {
   status: number;
@@ -53,14 +53,21 @@ export function getState(): Promise<AppState> {
 }
 
 export async function postMessage(body: {
-  type: 'message' | 'make_video' | 'just_text' | 'retry_chapter';
+  type: 'message' | 'make_video' | 'just_text' | 'retry_chapter' | 'remake';
   text?: string;
   context?: { chapter_id: string; t: number };
   /** make_video only: the id of the reply to turn into a chapter. */
   ref?: string;
+  /** remake only: the template and shape to make the whole video again in. */
+  template?: string;
+  shape?: Shape;
 }): Promise<StoredEvent> {
   const res = await post<{ event: StoredEvent }>('/api/message', body);
   return res.event;
+}
+
+export function getTemplates(): Promise<TemplatesInfo> {
+  return json<TemplatesInfo>('/api/templates');
 }
 
 export function postExport(

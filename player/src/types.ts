@@ -11,11 +11,22 @@ export interface Chapter {
   question: string | null;
 }
 
+export type Shape = '16:9' | '9:16' | '1:1';
+
 export interface Manifest {
   version: 1;
   title: string;
   slug: string;
+  /** How the video is told; absent on videos made before templates (explainer at 16:9). */
+  template?: string;
+  shape?: Shape;
   chapters: Chapter[];
+}
+
+/** GET /api/templates: the video's own template and shape, and every template it could be remade as. */
+export interface TemplatesInfo {
+  current: { template: string; shape: Shape };
+  templates: { id: string; title: string; shapes: Shape[] }[];
 }
 
 /** "12" or "12-20", as sent in replies. */

@@ -1,16 +1,33 @@
 import { playable } from '@/lib/timeline';
-import type { Chapter } from '@/types';
+import type { Chapter, Shape } from '@/types';
 import { Captions } from './Captions';
 import type { Player } from './usePlayer';
 
-export function VideoStage({ player, chapters, captionsOn }: { player: Player; chapters: Chapter[]; captionsOn: boolean }) {
+// The stage box for each shape. A tall or square video is capped in height so it fits beside the chat, and centred.
+const SHAPE_CLASS: Record<Shape, string> = {
+  '16:9': 'aspect-video w-full',
+  '9:16': 'mx-auto aspect-[9/16] h-[min(72vh,760px)] max-w-full',
+  '1:1': 'mx-auto aspect-square h-[min(72vh,760px)] max-w-full',
+};
+
+export function VideoStage({
+  player,
+  chapters,
+  captionsOn,
+  shape = '16:9',
+}: {
+  player: Player;
+  chapters: Chapter[];
+  captionsOn: boolean;
+  shape?: Shape;
+}) {
   const none = playable(chapters).length === 0;
   const waiting = chapters.some((c) => c.status === 'rendering' || c.status === 'pending');
   const showPlay = !none && (player.state === 'blocked' || player.state === 'idle');
   // The idle element stays composited (opacity 0, not visibility hidden) so it is already decoded at the swap.
   const idle = { opacity: 0, pointerEvents: 'none' } as const;
   return (
-    <div className="bd sh-lg relative aspect-video w-full overflow-hidden rounded-[14px] bg-og-black">
+    <div data-shape={shape} className={`bd sh-lg relative ${SHAPE_CLASS[shape]} overflow-hidden rounded-[14px] bg-og-black`}>
       <video
         ref={player.refA}
         playsInline
