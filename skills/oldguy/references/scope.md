@@ -31,7 +31,8 @@ theme switch, setting, or style for it." Then ask one question ("Did you mean th
 
 - Audience: a beginner who has never seen this code. Assume no knowledge of the framework. They want to see how
   it works (what happens, in what order, what can go wrong); code and other real material appear when they help.
-- Length: 2 to 3 minutes by default, which is 4 to 8 chapters of 20 to 40 seconds. Honour a length the user asks
+- Length: as long as the flow needs; there is no limit on the whole video. Each chapter aims for the template's
+  length (explainer: 20 to 40 seconds), so a small flow is about 4 to 8 chapters. Honour a length the user asks
   for by changing the chapter count, not the chapter length.
 - Slug: a short lower-case name for the folder, from the request (`add-todo`). The video lives in `.oldguy/<slug>/`.
 
@@ -40,4 +41,4 @@ theme switch, setting, or style for it." Then ask one question ("Did you mean th
 Create `.oldguy/<slug>/script.md` with a top section: the request, the flow in one sentence, the file where it
 starts, the file where it ends, and the planned chapter count. The chapters themselves come in the storyboard step.
 
-**Gate:** `script.md` names one flow, its start file, its end file and 4 to 8 chapters; or you stopped with one question and wrote nothing.
+**Gate:** `script.md` names one flow, its start file, its end file and a planned chapter count; or you stopped with one question and wrote nothing.

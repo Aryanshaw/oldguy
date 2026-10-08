@@ -5,8 +5,9 @@ complete enough to watch on its own.
 
 ## 1. Chapters
 
-- Each chapter is 20 to 40 seconds of speech: about 50 to 100 words. Count them.
-- 4 to 8 chapters for a 2 to 3 minute video. One idea per chapter: "what the form sends", "where the todo is
+- Each chapter aims for the template's length (`oldguy templates <id> --show` prints it). For explainer that is 20 to
+  40 seconds of speech: about 50 to 100 words. Count them. Going over is not an error; split a chapter that runs long.
+- As many chapters as the flow needs. One idea per chapter: "what the form sends", "where the todo is
   saved", "what if saving fails".
 - Each chapter has a stable id with no number in it: `what-the-form-sends`, never `chapter-2` or `part-b`. The id
   becomes the folder name (lower-case letters, digits and single hyphens, no leading digit, at most 60 characters).
@@ -58,4 +59,4 @@ picture: design: the form, the request travelling to the server, the list gainin
 words: 61
 ```
 
-**Gate:** Every chapter in `script.md` has a number-free id, a title, 50 to 100 words, one sentence per entry with a kind, no reference to another chapter, and a picture plan whose changes start at beat 0.
+**Gate:** Every chapter in `script.md` has a number-free id, a title, a word count near the template's length, one sentence per entry with a kind, no reference to another chapter, and a picture plan whose changes start at beat 0.

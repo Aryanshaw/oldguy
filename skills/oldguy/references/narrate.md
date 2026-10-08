@@ -41,8 +41,10 @@ and the folder gains `narration.wav`, `beats.json`, `captions.vtt`, `captions.js
 `narrated`, render that chapter (see [render.md](render.md)) in the foreground, wait for the render to finish, and
 only then move on to the next chapter. It takes a while per chapter; never run two narrates at once.
 
-Check the printed seconds: a chapter under 20 s or over 40 s goes back to the storyboard (add or trim sentences
-in the spec, then redo the chapter).
+Check the printed seconds against the template's length (explainer: 20 to 40 s): a chapter far past it is split,
+a very short one gets more sentences (fix the spec, then redo the chapter). Going over is never an error. A template
+with speakers speaks each line in its speaker's voice and prints `timing lines`; it may also copy the template's
+pictures and footage into the chapter folder.
 
 ## The build record
 
@@ -66,4 +68,4 @@ the CLI messages and this list agree on the one path:
 `oldguy narrate` exits 1 with one line saying why. A sentence or scene problem: fix the spec and redo the chapter.
 A speech or timing tool problem: run `oldguy doctor`, show the fix text, stop.
 
-**Gate:** `oldguy narrate` printed `narrated` for every chapter, each 20 to 40 s, and each folder has the seven generated files.
+**Gate:** `oldguy narrate` printed `narrated` for every chapter, each near its template's length, and each folder has the generated files.
