@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """PNG -> flat SVG for the art library (repo-only tool, never imported by shipped code).
 
-Pipeline: cut the background (the image's alpha, or near-white flooded in from the border),
-trace with vtracer, snap every fill to the nearest PALETTE.json colour (CIE76), then bake and
-merge the paths so the file is small and every fill is a palette token.
---presnap snaps the pixels before tracing instead (fewer fills, but lumpier edges; see
-spikes/09-flat-art/FINDINGS.md).
+Pipeline: cut the background (the image's alpha, or its flat background colour keyed in from the
+border), trace with vtracer, snap every fill to the nearest PALETTE.json colour (CIE76), then bake
+the paths into whole-number relative commands and merge same-fill runs, so a person is ~8 KB and
+every fill is a palette token. --presnap snaps the pixels before tracing instead (clean lettering,
+slightly lumpier curves). Settings and why: spikes/09-flat-art/FINDINGS.md; per-kind flags:
+tools/art/RUNBOOK.md.
 
 Usage:
-  tools/art/.venv/bin/python tools/art/vectorize.py IN.png OUT.svg [--mode spline|polygon]
-      [--allow tok,tok] [--presnap [--clean 2] [--min-area 60] [--merge-de 0]] [--speckle 8]
-      [--max-side 1400] [--work-side 0] [--seam 0] [--opaque] [--json]
+  tools/art/.venv/bin/python tools/art/vectorize.py IN.png OUT.svg [--allow tok,tok]
+      [--presnap [--clean 2] [--min-area 60]] [--speckle 8] [--length 8] [--prec 0] [--max-side 1400]
+      [--ground TOKEN --key-tol 20 --holes 0 --erode 0] [--json]   (--help lists the rest)
 """
 import argparse
 import json
@@ -59,25 +60,24 @@ def nearest(rgb, pal_lab):
     return d.argmin(axis=1)
 
 
-# Alpha mask for the subject: the image's own alpha if it has one, else near-white flooded in from the border.
-def subject_mask(img):
+# Alpha mask for the subject: the image's own alpha if it has one; otherwise the flat background colour (the
+# median border pixel, white for most items) keyed out where it connects to the border, within key_tol per channel.
+# Enclosed gaps (between legs) stay opaque this way, so a background-removal pass (Bria) is still preferred.
+def subject_mask(img, key_tol=20, holes=0):
     if img.mode == 'RGBA' and img.getchannel('A').getextrema()[0] < 250:
         return np.array(img.getchannel('A')) >= 128
     rgb = np.array(img.convert('RGB')).astype(int)
-    white = (rgb.min(axis=2) >= 235)
-    # Flood fill from every border pixel through near-white pixels; what is reached is background.
-    h, w = white.shape
-    bg = np.zeros_like(white)
-    stack = [(y, x) for y in range(h) for x in (0, w - 1)] + [(y, x) for x in range(w) for y in (0, h - 1)]
-    while stack:
-        y, x = stack.pop()
-        if bg[y, x] or not white[y, x]:
-            continue
-        bg[y, x] = True
-        if y > 0: stack.append((y - 1, x))
-        if y < h - 1: stack.append((y + 1, x))
-        if x > 0: stack.append((y, x - 1))
-        if x < w - 1: stack.append((y, x + 1))
+    border = np.concatenate([rgb[0], rgb[-1], rgb[:, 0], rgb[:, -1]])
+    key = np.median(border, axis=0)
+    near = np.abs(rgb - key).max(axis=2) <= key_tol
+    lab, _ = ndimage.label(near)
+    edge = np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))
+    bg = np.isin(lab, edge[edge > 0])
+    # Optionally key enclosed background too (the gap between legs): only for grounds no subject colour is near.
+    if holes:
+        sizes = np.bincount(lab.reshape(-1))
+        big = np.nonzero(sizes >= holes)[0]
+        bg |= np.isin(lab, big[big > 0])
     return ~bg
 
 
@@ -157,26 +157,61 @@ def presnap(rgb, mask, pal_rgb, pal_lab, clean, min_area=60, merge_de=0.0, allow
     return out
 
 
-# Add (tx, ty) to every coordinate pair of a vtracer path (vtracer writes absolute M/L/C/Z only).
+# Rewrite a vtracer path (absolute M/L/C/Z only) with its translate baked in, as compact relative commands.
+# Points are snapped to a 10^-prec grid first and deltas taken between snapped points, so rounding never drifts.
 def bake(d, tx, ty, prec):
-    res, pair = [], []
-    for tok in re.findall(r'[MLCZ]|-?\d*\.?\d+(?:e-?\d+)?', d):
-        if tok in ('M', 'L', 'C', 'Z'):
-            res.append(tok)
+    q = 10 ** prec
+    cmds = []
+    for m in re.finditer(r'([MLCZ])([^MLCZ]*)', d):
+        nums = [float(n) for n in re.findall(r'-?\d*\.?\d+(?:e-?\d+)?', m.group(2))]
+        pts = [(round((nums[i] + tx) * q), round((nums[i + 1] + ty) * q)) for i in range(0, len(nums) - 1, 2)]
+        cmds.append((m.group(1), pts))
+    out, cur, start, last = [], (0, 0), (0, 0), ''
+    for c, pts in cmds:
+        if c == 'Z':
+            out.append('z'); cur, last = start, 'z'
             continue
-        # Numbers come as x,y pairs; shift each pair by the translate.
-        pair.append(float(tok))
-        if len(pair) == 2:
-            res.append(f'{fmt(pair[0] + tx, prec)} {fmt(pair[1] + ty, prec)}')
-            pair = []
-    # Drop spaces around command letters; a leading '-' also separates numbers, so ' -' becomes '-'.
-    return re.sub(r' ?([MLCZ]) ?', r'\1', ' '.join(res)).replace(' -', '-')
+        if c == 'M':
+            # Every subpath starts absolute, so merged paths stay independent.
+            cur = start = pts[0]
+            out.append('M' + join([cur[0], cur[1]], q)); last = 'M'
+            continue
+        step = 3 if c == 'C' else 1
+        for i in range(0, len(pts), step):
+            seg = pts[i:i + step]
+            nums = [v for p in seg for v in (p[0] - cur[0], p[1] - cur[1])]
+            letter = c.lower()
+            # A repeated command letter can be left out.
+            out.append(('' if letter == last else letter) + join(nums, q, lead=letter != last))
+            last, cur = letter, seg[-1]
+    return ''.join(out)
 
 
-# Short number text: fixed decimals with trailing zeros removed.
-def fmt(v, prec):
-    s = f'{v:.{prec}f}'.rstrip('0').rstrip('.') if prec else str(int(round(v)))
-    return '0' if s in ('-0', '') else s
+# Numbers on the grid -> shortest SVG text: no leading zero, '-' and '.' double as separators.
+def join(ints, q, lead=True):
+    s, prev = '', None
+    for n in ints:
+        t = fmt(n / q)
+        if prev is not None or not lead:
+            # '.5' can follow '1.2' directly ('1.2.5' reads as 1.2, .5); anything else needs a space.
+            glued = t[0] == '-' or (t[0] == '.' and prev is not None and '.' in prev)
+            if not glued:
+                t_out = ' ' + t
+            else:
+                t_out = t
+        else:
+            t_out = t
+        s += t_out
+        prev = t
+    return s
+
+
+# Short number text: up to 3 decimals, trailing zeros and the leading zero dropped (0.5 -> .5).
+def fmt(v):
+    s = f'{v:.3f}'.rstrip('0').rstrip('.')
+    if s in ('-0', ''):
+        return '0'
+    return s.replace('0.', '.', 1) if s.startswith(('0.', '-0.')) else s
 
 
 # Parse vtracer's SVG into (fill, d) pairs in paint order, with translates baked in.
@@ -211,8 +246,9 @@ def merge_runs(paths):
 
 
 # Full pipeline for one image; returns (svg text, stats dict).
-def vectorize(src, mode='spline', presnap_on=False, clean=2, speckle=8, max_side=1400, seam=0.0, prec=1, min_area=60,
-              merge_de=0.0, allow=None, work_side=0, opaque=False, color_precision=5, layer_difference=24, hierarchical='stacked'):
+def vectorize(src, mode='spline', presnap_on=False, clean=2, speckle=8, max_side=1400, seam=0.0, prec=0, min_area=60,
+              merge_de=0.0, allow=None, work_side=0, opaque=False, color_precision=5, layer_difference=24, hierarchical='stacked',
+              corner=60, length=8.0, ground=None, key_tol=20, erode=0, holes=0, median=0):
     names, pal_rgb, pal_lab = load_palette()
     img = Image.open(src)
     img = img.convert('RGBA') if img.mode in ('RGBA', 'LA', 'P') else img.convert('RGB')
@@ -223,26 +259,36 @@ def vectorize(src, mode='spline', presnap_on=False, clean=2, speckle=8, max_side
     if scale > 1:
         img = img.resize((round(img.width * scale), round(img.height * scale)), Image.LANCZOS)
     # A full frame (scene with its ground) keeps every pixel; an item keeps only its subject.
-    mask = np.ones(img.size[::-1], dtype=bool) if opaque else subject_mask(img)
-    rgb = np.array(img.convert('RGB'))
+    mask = np.ones(img.size[::-1], dtype=bool) if opaque else subject_mask(img, key_tol, holes)
+    # On a dark ground the anti-aliased rim blends toward the ground and snaps to a dark token, which reads as an
+    # outline; shaving a pixel or two off the subject removes it.
+    if erode and not opaque:
+        mask = ndimage.binary_erosion(mask, iterations=erode)
+    # A median filter wipes out thin interior lines (finger creases, pocket seams) that the flat style forbids,
+    # while shapes wider than the window keep their edges.
+    if median > 1:
+        rgb = np.array(img.convert('RGB').filter(ImageFilter.MedianFilter(median)))
+    else:
+        rgb = np.array(img.convert('RGB'))
     allow_idx = [names.index(t) for t in allow] if allow else None
     if presnap_on:
         rgba = presnap(rgb, mask, pal_rgb, pal_lab, clean, min_area * scale * scale, merge_de, allow_idx)
     else:
         rgba = np.dstack([rgb, (mask * 255).astype(np.uint8)])
-    # Crop to the subject plus a small margin so the viewBox hugs the drawing.
-    ys, xs = np.nonzero(rgba[:, :, 3])
-    pad = 6
-    y0, y1 = max(ys.min() - pad, 0), min(ys.max() + pad + 1, rgba.shape[0])
-    x0, x1 = max(xs.min() - pad, 0), min(xs.max() + pad + 1, rgba.shape[1])
-    rgba = rgba[y0:y1, x0:x1]
+    # Crop to the subject plus a small margin so the viewBox hugs the drawing (a framed scene keeps the frame).
+    if not ground:
+        ys, xs = np.nonzero(rgba[:, :, 3])
+        pad = 6
+        y0, y1 = max(ys.min() - pad, 0), min(ys.max() + pad + 1, rgba.shape[0])
+        x0, x1 = max(xs.min() - pad, 0), min(xs.max() + pad + 1, rgba.shape[1])
+        rgba = rgba[y0:y1, x0:x1]
     h, w = rgba.shape[:2]
     buf = BytesIO()
     Image.fromarray(rgba, 'RGBA').save(buf, 'PNG')
     raw = vtracer.convert_raw_image_to_svg(
         buf.getvalue(), img_format='png', colormode='color', hierarchical=hierarchical, mode=mode,
         filter_speckle=speckle, color_precision=color_precision, layer_difference=layer_difference,
-        corner_threshold=60, length_threshold=4.0, splice_threshold=45, path_precision=prec)
+        corner_threshold=corner, length_threshold=length, splice_threshold=45, path_precision=3)
     paths = parse_paths(raw, prec)
     paths, used = snap_fills(paths, names, pal_rgb, pal_lab, allow_idx)
     raw_count = len(paths)
@@ -251,6 +297,12 @@ def vectorize(src, mode='spline', presnap_on=False, clean=2, speckle=8, max_side
     stroke = f' stroke-width="{seam}" stroke-linejoin="round"' if seam else ''
     body = ''.join(
         f'<path fill="{f}"{(" stroke=" + chr(34) + f + chr(34) + stroke) if seam else ""} d="{d}"/>' for f, d in paths)
+    # A scene frame: the cut-out subjects over one flat ground rectangle (grounds are flat colour, as in the engine).
+    if ground:
+        hexes = dict(zip(names, ['#%02X%02X%02X' % tuple(int(v) for v in c) for c in pal_rgb]))
+        body = f'<path fill="{hexes[ground]}" d="M0 0h{w}v{h}H0z"/>' + body
+        used[hexes[ground]] = ground
+        paths.insert(0, (hexes[ground], ''))
     svg = f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}">{body}</svg>\n'
     stats = {
         'bytes': len(svg.encode()), 'paths_traced': raw_count, 'paths': len(paths),
@@ -269,17 +321,29 @@ def main():
     ap.add_argument('--presnap', action='store_true', help='snap pixels to the palette before tracing')
     ap.add_argument('--clean', type=int, default=2, help='mode-filter passes after presnap')
     ap.add_argument('--speckle', type=int, default=8)
+    ap.add_argument('--color-precision', type=int, default=5, help='vtracer colour bits kept (raise for dark-on-dark frames)')
+    ap.add_argument('--layer-diff', type=int, default=24, help='vtracer layer_difference (lower separates close colours)')
+    ap.add_argument('--prec', type=int, default=0, help='decimals kept in path coordinates')
+    ap.add_argument('--corner', type=int, default=60, help='vtracer corner_threshold (degrees)')
+    ap.add_argument('--length', type=float, default=8.0, help='vtracer length_threshold (3.5-10; higher = fewer, longer segments)')
     ap.add_argument('--max-side', type=int, default=1400)
     ap.add_argument('--seam', type=float, default=0.0, help='same-colour stroke width, 0 = none')
     ap.add_argument('--min-area', type=int, default=60, help='absorb blobs smaller than this many px')
     ap.add_argument('--merge-de', type=float, default=0.0, help='fold a used colour into a commoner one closer than this (CIE76)')
     ap.add_argument('--allow', default='', help='comma list of tokens the snap may use (default: all)')
     ap.add_argument('--work-side', type=int, default=0, help='upscale so the long side is this many px before tracing')
+    ap.add_argument('--key-tol', type=int, default=20, help='no-alpha input: per-channel tolerance when keying out the flat background')
+    ap.add_argument('--median', type=int, default=0, help='median filter size before tracing (odd; 5 removes 1-2 px lines)')
+    ap.add_argument('--holes', type=int, default=0, help='also key enclosed background blobs of at least this many px (coloured grounds only)')
+    ap.add_argument('--erode', type=int, default=0, help='shave this many px off the subject edge (dark-ground sources)')
+    ap.add_argument('--ground', default='', help='scene frame: keep the full frame and paint this palette token under the cut-out')
     ap.add_argument('--opaque', action='store_true', help='full frame: keep the background (scene frames)')
     ap.add_argument('--json', action='store_true', help='print stats as JSON')
     a = ap.parse_args()
     svg, stats = vectorize(a.src, a.mode, a.presnap, a.clean, a.speckle, a.max_side, a.seam, min_area=a.min_area,
-                           merge_de=a.merge_de, allow=[t for t in a.allow.split(',') if t], work_side=a.work_side, opaque=a.opaque)
+                           merge_de=a.merge_de, allow=[t for t in a.allow.split(',') if t], work_side=a.work_side, opaque=a.opaque,
+                           prec=a.prec, corner=a.corner, length=a.length,
+                           color_precision=a.color_precision, layer_difference=a.layer_diff, ground=a.ground or None, key_tol=a.key_tol, erode=a.erode, holes=a.holes, median=a.median)
     Path(a.out).write_text(svg)
     if a.json:
         print(json.dumps(stats))

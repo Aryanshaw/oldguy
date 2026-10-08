@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Per-item checks for the flat art library (repo-only tool; the same rules as the library test).
-// Usage: node tools/art/check.mjs FILE.svg... [--max-kb 40] [--json]
+// Usage: node tools/art/check.mjs FILE.svg... [--max-kb 20] [--json]
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,7 +15,7 @@ export function loadPalette(file = PALETTE_FILE) {
 }
 
 // Every problem with one SVG's text, as plain sentences; [] means it passes.
-export function svgErrors(svg, palette, { maxKb = 40 } = {}) {
+export function svgErrors(svg, palette, { maxKb = 20 } = {}) {
   const errors = [];
   const kb = Buffer.byteLength(svg) / 1024;
   if (kb > maxKb) errors.push(`${kb.toFixed(1)} KB is over the ${maxKb} KB limit`);
@@ -53,10 +53,10 @@ function main(argv) {
   const args = argv.slice(2);
   const json = args.includes('--json');
   const mi = args.indexOf('--max-kb');
-  const maxKb = mi >= 0 ? Number(args[mi + 1]) : 40;
+  const maxKb = mi >= 0 ? Number(args[mi + 1]) : 20;
   const files = args.filter((a, i) => !a.startsWith('--') && !(mi >= 0 && i === mi + 1));
   if (!files.length) {
-    console.error('usage: node tools/art/check.mjs FILE.svg... [--max-kb 40] [--json]');
+    console.error('usage: node tools/art/check.mjs FILE.svg... [--max-kb 20] [--json]');
     return 2;
   }
   const palette = loadPalette();

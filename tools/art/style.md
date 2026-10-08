@@ -17,6 +17,12 @@ outlines, a small warm-on-cool palette, geometric people with long necks, dot ey
 - Colour: only palette colours (below), cool grounds with warm accents. Skin and hair from the skin/hair tokens.
 - One subject, centred, full body unless the pose says close-up, on plain `#FFFFFF` (cut out later).
 
+## Size
+
+Every library SVG is at most **20 KB** (compiled scenes inline every drawing). Prompts ask for big simple shapes and
+minimal detail partly for this reason: a person at the default `vectorize.py` settings is about 7-9 KB, a prop 3 KB, a host with lettering 15-19 KB.
+Small text (mug slogans, badges) costs the most bytes; keep it to the few words the identity needs.
+
 ## Palette (exact hex, from `art/flat/PALETTE.json`)
 
 Grounds: `ground-indigo #1E1A4D`, `ground-blue #1C79BC`, `ground-paper #E3E1DC`, `ground-night #111019`.
@@ -66,34 +72,46 @@ Keep each body's colour groups separate fills (skin, hair, top, bottom, shoes) s
 
 ### host pose
 
+The first attempt ("redraw the brand-sheet character in TED-Ed style") kept the brand sheets' cartoon construction
+(bulb noses, outlines, finger lines). What worked was to lead with our own TED-flat person as the style anchor and
+use the brand sheets for identity only, then draw each host alone at `size: "2K"`:
+
 ```
-Redraw <the old guy | the new guy> from the brand-sheet reference in EXACTLY the flat TED-Ed style of the other
-references: <STYLE block, from "flat 2D vector art"> NO sketchy lines, NO hair strands.
-<host identity line, below>. Full body head to toe, <pose sentence>, <expression>.
+Draw <the old guy | the new guy> in EXACTLY the same drawing style as the man in the first reference image and the
+TED-Ed people in the other references: flat 2D vector art built from big solid flat colour shapes ONLY. Absolutely
+NO lines of any kind: no outlines, no contour lines, no interior lines on hands, belly, clothes, shoes or hair, no
+sketch lines, no gradients, no shading, no texture. Face built exactly like the first reference man: small solid dark
+oval dot eyes, thick flat bar eyebrows, one simple angular nose shape a step darker than the skin, a small flat mouth
+shape. Hands are simple flat mitten shapes with a thumb. Hair and beards are single smooth flat shapes with simple
+silhouettes, never strands or tufts. The identity comes from the brand-sheet reference (features and costume only,
+NOT its sketchy cartoon drawing style).
+<host identity line, below>. Full body head to toe, <pose sentence>, <expression>. Text in big thick letters.
 Use only these exact colours. Centred on a plain pure white #FFFFFF background, nothing else, no floor, no shadow.
 ```
 
 Identity lines (keep every feature; text exactly as written):
 
-- Old guy: `short and chubby older developer with a round belly, big bushy red-orange beard and hair as one simple
-  flat shape #D9541E, skin #EE9F79, round glasses with flat dark frames #2D1F7A, a trucker cap in #3A3AA8 with a cream
-  front panel #F8F0DC reading "#1 DEV", a small headset with mic arm #111019, a yellow pencil behind his ear, a yellow
-  t-shirt #F7CF46 with a simple flat sunflower, blue jeans #1C79BC, dark sandals, holding a cream mug #F8F0DC that says
-  "LEGACY CODE FUEL"`
-- New guy: `skinny excited junior, tall and thin, big curly brown hair as one flat cloud shape #3E2A20, a backwards
-  blue cap #1C79BC with a small white price tag hanging off it, skin #FAD3B8, white polo shirt #FFFFFF, a pink name
-  sticker on the chest reading "HELLO my name is NEW GUY", a blue lanyard with a small white badge reading "VISITOR",
-  khaki trousers #D8B56A, white sneakers with blue accents`
+- Old guy: `short and chubby older developer, round belly, big red-orange beard and hair as one smooth flat shape
+  #D9541E, skin #EE9F79, round glasses with flat dark frames #2D1F7A, trucker cap: crown #3A3AA8 and cream front panel
+  #F8F0DC reading "#1 DEV" in #2D1F7A, small flat headset with mic arm #111019, yellow pencil behind his ear, yellow
+  t-shirt #F7CF46 with a simple flat sunflower (petals #F2843A, centre #3E2A20), jeans #1C79BC, dark sandals #3E2A20,
+  holding a cream mug #F8F0DC reading "LEGACY CODE FUEL" in #2D1F7A`
+- New guy: `tall skinny excited junior with a long neck, big curly brown hair as one simple flat cloud shape #3E2A20,
+  backwards cap #1C79BC with a small cream tag #F8F0DC hanging off it, skin #FAD3B8, white polo shirt #FFFFFF, a pink
+  #E8636F name sticker with "HELLO" in white on the top band and a white panel reading "NEW GUY" in big #2D1F7A
+  letters, blue lanyard with a lilac #9D8FE0 badge reading "VISITOR" in big white letters, khaki trousers #D8B56A,
+  white sneakers with blue #1C79BC accents`
 
-References: TED-Ed people strip + TED-Ed crowd frame + the host's brand-sheet panel (+ the approved host model sheet
-from Task 4 on).
+References, in this order: the style-bible person (`body-a-point`), the TED-Ed people strip, the TED-Ed crowd frame
+(its bearded men are the model for the old guy's beard), the host's brand-sheet panel; from Task 4 on, the approved
+host model sheet first.
 
 ### prop
 
 ```
 <STYLE block, from "flat 2D vector art"> Big simple geometric shapes, minimal detail, crisp straight edges.
-Subject: ONE <prop>, <view, e.g. seen from the front with a slight three-quarter angle so the top shows as a thin
-strip>. <parts, each with one hex>. <state, e.g. empty top, nothing on it>.
+Subject: ONE <prop>, <view: seen straight from the FRONT (flat orthographic, no perspective, no side face); a
+three-quarter view drew a skewed side face>. <parts, each with one hex>. <proportions>. <state, e.g. empty top>.
 Use only these exact colours. Centred on a plain pure white #FFFFFF background, nothing else, no floor, no shadow,
 no text.
 ```
@@ -113,3 +131,8 @@ Use only these exact colours plus white. No text, no subtitles.
 
 Third-party TED-Ed frames are used as references from a local scratch folder only; they are never committed or
 published. Approved style-bible frames (Task 3) become the main reference set for everything after.
+
+Style bible (Task 3, waiting for the owner's approval): `art/flat/_review/style-bible/` holds `body-a-point.svg`,
+`shop-counter.svg`, `scene-bell.svg`, `oldguy-stand.svg`, `newguy-wave.svg` and `hosts-together.svg`; the contact
+sheet is `art/flat/_review/style-bible.png`. The source PNGs were generated with the templates above (cast and prop
+from the people strip, the hosts from the style-bible person plus the brand sheets).
