@@ -27,6 +27,7 @@ const BINARY = /\.(png|webp|jpe?g|gif|mp4|wav|mp3|woff2?|ttf|ico)$/i;
 // - links to the original design spec, whose file name is part of the historical record
 // - the rename notice and the owner's steps to retire the old npm installer
 // - the .gitignore entry that keeps old local .yap/ video folders out of git
+// - "yappy", the tutor's personality, an ordinary English word
 const ALLOWED = [
   /Claude yaps\. You watch\./,
   /2026-10-02-yap-design\.md/,
@@ -34,7 +35,10 @@ const ALLOWED = [
   /npm deprecate getyap/,
   /old installer, `getyap`/,
   /^\.yap\/?$/,
+  /\byappy\b/i,
 ];
+// Inline data URIs (base64 pictures in a stage) can hold any three letters by chance; they are not text.
+const DATA_URI = /data:[\w/+.-]+;base64,[A-Za-z0-9+/=]+/g;
 
 // Tracked files that should no longer name the product "yap".
 function checkedFiles() {
@@ -52,7 +56,8 @@ test('no shipped file or path still uses the old product name', () => {
     const full = path.join(ROOT, file);
     if (!fs.existsSync(full)) continue;
     fs.readFileSync(full, 'utf8').split('\n').forEach((line, i) => {
-      if (/yap/i.test(line) && !ALLOWED.some((re) => re.test(line))) hits.push(`${file}:${i + 1}: ${line.trim().slice(0, 120)}`);
+      const text = line.replace(DATA_URI, '');
+      if (/yap/i.test(text) && !ALLOWED.some((re) => re.test(line))) hits.push(`${file}:${i + 1}: ${line.trim().slice(0, 120)}`);
     });
   }
   assert.deepEqual(hits, [], `${hits.length} leftover "yap" mentions:\n${hits.join('\n')}`);
