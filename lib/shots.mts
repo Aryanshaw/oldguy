@@ -7,6 +7,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { findItem, closest, colourway, recolour, recolourMap, ART_DIR } from './catalog.mts';
 import { f, rng, burst, sight, strings, leader, underline, circle, chalkFilter, ground, motion } from './shots-runtime.mts';
+import { readOrder } from './chapter-scan.mts';
+import { renderPiece, GSAP_FILE, KIT_DIR } from './pieces.mts';
 import type { Catalog, Item, Layers } from './catalog.mts';
 
 const PLACES = ['left', 'center', 'right', 'left-third', 'right-third'] as const;
@@ -347,7 +349,10 @@ function shotErrors(ch: ChapterShots, cat: Catalog, ctx: ShotContext): string[] 
     return found.length === 0;
   });
   if (!shapeOk.every(Boolean)) return errs;
+  const known = errs.length;
   const resolved = resolveShots(ch, cat, errs);
+  // an item the library does not have stops the check here: everything after would only repeat it
+  if (errs.length > known) return errs;
   resolved.forEach((r, i) => {
     const s = r.shot;
     const focus = [...r.things.values()].filter((t) => t.focus).length;
@@ -923,5 +928,115 @@ function shotWarnings(ch: ChapterShots): string[] {
   return raw > MAX_RAW ? [`${raw} raw shots; more than ${MAX_RAW} means the library is missing something${rule('10')}`] : [];
 }
 
-export { RULES, PLACES, GROUND_IDS, shotErrors, shotWarnings, resolveShots, splitRef, layout, layoutChapter, anchorPoint, compileChapter, handFontCss };
-export type { Place, Ground, CastEntry, PropEntry, Card, Chalk, Camera, Shot, ChapterShots, SourceRange, ShotContext, Thing, ResolvedShot, Box, Pt, Placed, CardBox, ShotLayout };
+// ---- a video folder ------------------------------------------------------------------------------------------------
+
+// One chapter's result: its problems and warnings, and its shots when they could be read.
+type ChapterResult = { id: string; errors: string[]; warnings: string[]; shots?: ChapterShots };
+
+// Reads a JSON file; null when it is missing or not JSON.
+function readJsonFile(file: string): unknown {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+// The cited ranges in a chapter spec's sources: [{file, lines: [from, to]}].
+function specSources(spec: Record<string, unknown>): SourceRange[] {
+  const list: unknown[] = Array.isArray(spec.sources) ? spec.sources : [];
+  return list.flatMap((s) => {
+    if (!isObject(s) || typeof s.file !== 'string' || !Array.isArray(s.lines) || s.lines.length !== 2) return [];
+    const [a, b] = s.lines;
+    return typeof a === 'number' && typeof b === 'number' ? [{ file: s.file, lines: [a, b] as [number, number] }] : [];
+  });
+}
+
+// Checks every chapter of a video folder, in order.json's order: shots/<id>.json against the library and the rules,
+// with its sentences and sources taken from specs/<id>.json. The first chapter's first shot sets the bookend the
+// last chapter's last shot must echo.
+function checkShotsFolder(slugDir: string, cat: Catalog): ChapterResult[] {
+  const { ids } = readOrder(slugDir);
+  if (!ids || ids.length === 0) throw new Error('no chapters in order.json: run oldguy order first');
+  const read = ids.map((id) => {
+    const raw = readJsonFile(path.join(slugDir, 'shots', `${id}.json`));
+    const spec = readJsonFile(path.join(slugDir, 'specs', `${id}.json`));
+    return { id, shots: isObject(raw) ? (raw as ChapterShots) : undefined, spec: isObject(spec) ? spec : undefined };
+  });
+  const first = read[0].shots;
+  return read.map(({ id, shots, spec }, i): ChapterResult => {
+    const errors: string[] = [];
+    if (!shots) errors.push(`shots/${id}.json is missing or not JSON`);
+    if (!spec) errors.push(`specs/${id}.json is missing or not JSON: write the spec (its sentences and sources) before the shots`);
+    if (!shots || !spec) return { id, errors, warnings: [] };
+    if (shots.id !== id) errors.push(`"id" must be "${id}", the chapter's id in order.json`);
+    const sentences = Array.isArray(spec.sentences) ? spec.sentences.length : 0;
+    errors.push(...shotErrors(shots, cat, { sentences, sources: specSources(spec), first, last: i === read.length - 1 }));
+    return { id, errors, warnings: shotWarnings(shots), shots };
+  });
+}
+
+// ---- the contact sheet -----------------------------------------------------------------------------------------------
+
+// For a look before narrating, beats are faked: the first sentence gets the title card plus 3 s, every other 3 s.
+const SHOW_BEAT_S = 3;
+// One tile of the sheet: a still at 1/3 size.
+const TILE_W = 640;
+const TILE_H = 360;
+const SHEET_COLS = 3;
+const SHEET_GAP = 20;
+const CAPTION_H = 36;
+
+// The faked sentence start times for n shots, and the moment each shot is shown in full (just before it leaves).
+function showTimes(n: number): { beatsS: number[]; durationS: number; stills: { label: string; t: number }[] } {
+  const beatsS = Array.from({ length: n }, (_, k) => (k === 0 ? 0 : TITLE_S + SHOW_BEAT_S * k));
+  const durationS = TITLE_S + SHOW_BEAT_S * n + 0.6;
+  const end = (k: number) => (k + 1 < n ? beatsS[k + 1] : durationS - 0.6);
+  return { beatsS, durationS, stills: [{ label: 'title', t: 0.9 }, ...beatsS.map((_, k) => ({ label: `beat ${k}`, t: end(k) - 0.4 }))] };
+}
+
+// A standalone page of the scene stopped at second t: the design piece drawn as a chapter page draws it, with GSAP,
+// the theme and the hand font inline, so it needs no other file.
+function stillPage(scene: string, beatsS: number[], durationS: number, t: number): string {
+  const r = renderPiece({ piece: 'design', params: { html: scene } }, { startS: 0, durationS, idPrefix: 'p0', beatsS });
+  const gsap = fs.readFileSync(GSAP_FILE, 'utf8');
+  const theme = fs.readFileSync(path.join(KIT_DIR, 'theme.css'), 'utf8');
+  return [
+    '<!doctype html><html><head><meta charset="utf-8">',
+    `<style>${handFontCss()}\nhtml, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; }\n#root { position: relative; width: 1920px; height: 1080px; overflow: hidden; }\n${theme}</style>`,
+    `<script>${gsap}</script></head><body><div id="root">${r.html}</div>`,
+    `<script>const tl = gsap.timeline({ paused: true });\n${r.timeline}\ntl.seek(${t});</script></body></html>`,
+  ].join('\n');
+}
+
+// The contact sheet page: one tile per still (the title card, then every shot), each an iframe holding a still page,
+// three to a row, with a caption. Its size is returned for the screenshot.
+function contactSheetHtml(scene: string, n: number, title: string): { html: string; width: number; height: number } {
+  const { beatsS, durationS, stills } = showTimes(n);
+  const rows = Math.ceil(stills.length / SHEET_COLS);
+  const width = SHEET_COLS * TILE_W + (SHEET_COLS + 1) * SHEET_GAP;
+  const height = rows * (TILE_H + CAPTION_H + SHEET_GAP) + SHEET_GAP + CAPTION_H;
+  const tiles = stills.map((s) => {
+    const page = esc(stillPage(scene, beatsS, durationS, s.t));
+    return `<div class="tile"><div class="frame"><iframe srcdoc="${page}" width="1920" height="1080" scrolling="no"></iframe></div><div class="cap">${esc(s.label)}</div></div>`;
+  });
+  const html = [
+    '<!doctype html><html><head><meta charset="utf-8"><style>',
+    `html, body { margin: 0; background: #222; color: #ddd; font: 16px/1.4 system-ui, sans-serif; width: ${width}px; }`,
+    `h1 { margin: 0; padding: ${SHEET_GAP}px ${SHEET_GAP}px 0; height: ${CAPTION_H}px; font-size: 20px; font-weight: 600; }`,
+    `.grid { display: grid; grid-template-columns: repeat(${SHEET_COLS}, ${TILE_W}px); gap: ${SHEET_GAP}px; padding: ${SHEET_GAP}px; }`,
+    `.frame { width: ${TILE_W}px; height: ${TILE_H}px; overflow: hidden; position: relative; }`,
+    `iframe { border: 0; position: absolute; left: 0; top: 0; transform: scale(${TILE_W / 1920}); transform-origin: 0 0; }`,
+    `.cap { height: ${CAPTION_H - 8}px; padding-top: 8px; }`,
+    '</style></head><body>',
+    `<h1>${esc(title)}</h1><div class="grid">${tiles.join('')}</div>`,
+    '</body></html>',
+  ].join('\n');
+  return { html, width, height };
+}
+
+export {
+  RULES, PLACES, GROUND_IDS, shotErrors, shotWarnings, resolveShots, splitRef, layout, layoutChapter, anchorPoint, compileChapter, handFontCss,
+  checkShotsFolder, contactSheetHtml, stillPage, showTimes,
+};
+export type { Place, Ground, CastEntry, PropEntry, Card, Chalk, Camera, Shot, ChapterShots, SourceRange, ShotContext, Thing, ResolvedShot, Box, Pt, Placed, CardBox, ShotLayout, ChapterResult };

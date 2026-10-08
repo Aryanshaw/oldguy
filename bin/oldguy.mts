@@ -15,6 +15,7 @@ import { runListen } from '../cli/listen.mts';
 import { runTemplates, runVideo } from '../cli/templates.mts';
 import { runRemake } from '../cli/remake.mts';
 import { runLesson } from '../cli/lesson.mts';
+import { runShots } from '../cli/shots.mts';
 import { runReply, runAddChapter, runSetStatus, runRemoveChapter, runOrder, runAck } from '../cli/client.mts';
 
 // A command: what `--help` says about it, and the function that runs it (it returns the exit code, or nothing for 0).
@@ -42,6 +43,7 @@ const COMMANDS: Record<string, Command> = {
   remake: { summary: 'start a new video folder that tells a video again in another template or shape (--from, --template, --shape)', run: runRemake },
   video: { summary: 'record the template and shape a video folder is made in (--dir, --template, --shape)', run: runVideo },
   lesson: { summary: 'check a whole video teaches: one example followed, a "So" line per chapter, short sentences, labels (--dir)', run: runLesson },
+  shots: { summary: 'for a template with shots: check shots/<id>.json and write scenes/<id>.html (--dir; --show <id> for a contact sheet)', run: runShots },
   order: { summary: 'write the story order (and move chapters on a running page): oldguy order <id,id,...>', run: runOrder },
 };
 

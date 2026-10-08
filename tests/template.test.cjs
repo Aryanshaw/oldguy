@@ -78,11 +78,18 @@ test('every rule fails on its own, naming the field', (t) => {
     [(r) => { r.slots['16:9'] = [1000, 0, 1000, 100]; }, /slots\.16:9 must be \[x, y, width, height\] inside the 1920x1080 frame/],
     [(r) => { r.background = 'assets/none.mp4'; }, /background must name a listed asset/],
     [(r) => { r.narrator_voice = 'nobody'; }, /narrator_voice "nobody" is not a Kokoro voice/],
+    [(r) => { r.shots = 'yes'; }, /shots must be true or false/],
   ];
   for (const [edit, pattern] of cases) {
     const found = problems(t, edit);
     assert.ok(found.some((p) => pattern.test(p)), `expected ${pattern} in ${JSON.stringify(found)}`);
   }
+});
+
+test('a template may say its scenes come from shots (oldguy shots)', (t) => {
+  assert.equal(loadTemplate('duo', FIXTURES).shots, undefined);
+  const root = duoWith(t, (r) => { r.shots = true; });
+  assert.equal(loadTemplate('duo', root).shots, true);
 });
 
 test('the valid fixture has no problems, and a missing stage.html or template.md is one', (t) => {

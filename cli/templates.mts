@@ -62,6 +62,7 @@ function showLines(t: Template, data: string): string[] {
     `pace: chapters of ${pace.chapter_seconds[0]} to ${pace.chapter_seconds[1]} s, captions ${pace.captions}, pictures on each ${pace.visual_beat}` +
       (pace.max_words_per_line ? `, at most ${pace.max_words_per_line} words per line` : ''),
     missing.length ? `to download first: ${missing.map((a) => `${a.path} (${megabytes(a.bytes ?? 0)})`).join(', ')}` : 'nothing to download',
+    ...(t.shots ? ['pictures: shot lists (write shots/<id>.json for each chapter, then oldguy shots)'] : []),
     `script rules: ${path.join(t.dir, 'template.md')}`,
     ...(fs.existsSync(sample) ? [`sample: ${sample}`] : []),
   ];

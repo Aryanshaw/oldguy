@@ -40,6 +40,13 @@ const SLUG = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 // The library that ships with oldguy.
 const ART_DIR = path.join(import.meta.dirname, '..', 'art', 'flat');
 
+// The art folder in use: the shipped library, or OLDGUY_ART_DIR when set to an absolute path (the tests, and a
+// contributor trying new art).
+function artRoot(): string {
+  const override = process.env.OLDGUY_ART_DIR;
+  return override && path.isAbsolute(override) ? override : ART_DIR;
+}
+
 // True when the value is a plain object (not null, not a list).
 function isObject(v: unknown): v is Record<string, unknown> {
   return v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -160,8 +167,8 @@ function catalogErrors(raw: unknown, dir: string): string[] {
   return list.flatMap((it, i) => (isObject(it) && typeof it.id === 'string' ? itemErrors(it, dir, ids) : [`items[${i}] needs an id`]));
 }
 
-// Loads and checks the library in dir (the shipped art/flat by default) with its palette; a bad one lists every problem.
-function loadCatalog(dir: string = ART_DIR): Catalog {
+// Loads and checks the library in dir (the art folder, see artRoot) with its palette; a bad one lists every problem.
+function loadCatalog(dir: string = artRoot()): Catalog {
   let raw: unknown;
   try {
     raw = JSON.parse(fs.readFileSync(path.join(dir, 'catalog.json'), 'utf8'));
@@ -238,5 +245,5 @@ function recolour(svg: string, map: Record<string, string>): string {
   return svg.replace(/fill="(#[0-9A-Fa-f]{6})"/g, (whole, hex: string) => (Object.hasOwn(upper, hex.toUpperCase()) ? `fill="${upper[hex.toUpperCase()]}"` : whole));
 }
 
-export { ART_DIR, SIZES, loadCatalog, catalogErrors, loadPalette, paletteErrors, findItem, closest, colourway, recolourMap, recolour };
+export { ART_DIR, SIZES, artRoot, loadCatalog, catalogErrors, loadPalette, paletteErrors, findItem, closest, colourway, recolourMap, recolour };
 export type { Anchor, Size, Layers, Item, Catalog, Palette, PaletteFile };
