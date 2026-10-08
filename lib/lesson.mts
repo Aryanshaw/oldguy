@@ -110,7 +110,9 @@ function checkAcrossChapters(chapters: LessonChapter[]): LessonFinding[] {
     const fresh = [...new Set(text.match(CODE_NAME) ?? [])].filter((n) => !named.has(n));
     if (fresh.length > MAX_NEW_TERMS) out.push({ id: c.id, reason: `brings in ${fresh.length} new code names (${fresh.join(', ')}); at most ${MAX_NEW_TERMS}` });
     for (const n of fresh) named.add(n);
-    const early = [...new Set(screenTexts(c).join(' ').match(VALUE) ?? [])].filter((v) => !said.has(v));
+    // a file's line numbers ("lib/wav.mts · lines 123–126") say where the code is, not a value to explain
+    const shown = screenTexts(c).join(' ').replace(/\blines? \d+(?:\s*(?:[–,-]|and)\s*\d+)*/g, '');
+    const early = [...new Set(shown.match(VALUE) ?? [])].filter((v) => !said.has(v));
     if (early.length) out.push({ id: c.id, reason: `shows ${early.join(', ')} before any sentence says it` });
     const cut = c.scenes.flatMap(codeLines).filter((l) => /(…|\.\.\.)\s*$/.test(l));
     if (cut.length) out.push({ id: c.id, reason: `code cut short ("${cut[0].trim().slice(-40)}"); show whole lines, or fewer of them` });
