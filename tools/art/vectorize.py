@@ -10,7 +10,7 @@ spikes/09-flat-art/FINDINGS.md).
 Usage:
   tools/art/.venv/bin/python tools/art/vectorize.py IN.png OUT.svg [--mode spline|polygon]
       [--allow tok,tok] [--presnap [--clean 2] [--min-area 60] [--merge-de 0]] [--speckle 8]
-      [--max-side 1400] [--work-side 0] [--seam 0] [--json]
+      [--max-side 1400] [--work-side 0] [--seam 0] [--opaque] [--json]
 """
 import argparse
 import json
@@ -212,7 +212,7 @@ def merge_runs(paths):
 
 # Full pipeline for one image; returns (svg text, stats dict).
 def vectorize(src, mode='spline', presnap_on=False, clean=2, speckle=8, max_side=1400, seam=0.0, prec=1, min_area=60,
-              merge_de=0.0, allow=None, work_side=0, color_precision=5, layer_difference=24, hierarchical='stacked'):
+              merge_de=0.0, allow=None, work_side=0, opaque=False, color_precision=5, layer_difference=24, hierarchical='stacked'):
     names, pal_rgb, pal_lab = load_palette()
     img = Image.open(src)
     img = img.convert('RGBA') if img.mode in ('RGBA', 'LA', 'P') else img.convert('RGB')
@@ -222,7 +222,8 @@ def vectorize(src, mode='spline', presnap_on=False, clean=2, speckle=8, max_side
     scale = work_side / max(img.size) if work_side and work_side > max(img.size) else 1.0
     if scale > 1:
         img = img.resize((round(img.width * scale), round(img.height * scale)), Image.LANCZOS)
-    mask = subject_mask(img)
+    # A full frame (scene with its ground) keeps every pixel; an item keeps only its subject.
+    mask = np.ones(img.size[::-1], dtype=bool) if opaque else subject_mask(img)
     rgb = np.array(img.convert('RGB'))
     allow_idx = [names.index(t) for t in allow] if allow else None
     if presnap_on:
@@ -274,10 +275,11 @@ def main():
     ap.add_argument('--merge-de', type=float, default=0.0, help='fold a used colour into a commoner one closer than this (CIE76)')
     ap.add_argument('--allow', default='', help='comma list of tokens the snap may use (default: all)')
     ap.add_argument('--work-side', type=int, default=0, help='upscale so the long side is this many px before tracing')
+    ap.add_argument('--opaque', action='store_true', help='full frame: keep the background (scene frames)')
     ap.add_argument('--json', action='store_true', help='print stats as JSON')
     a = ap.parse_args()
     svg, stats = vectorize(a.src, a.mode, a.presnap, a.clean, a.speckle, a.max_side, a.seam, min_area=a.min_area,
-                           merge_de=a.merge_de, allow=[t for t in a.allow.split(',') if t], work_side=a.work_side)
+                           merge_de=a.merge_de, allow=[t for t in a.allow.split(',') if t], work_side=a.work_side, opaque=a.opaque)
     Path(a.out).write_text(svg)
     if a.json:
         print(json.dumps(stats))
