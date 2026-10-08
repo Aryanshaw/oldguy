@@ -31,6 +31,12 @@ const EXAMPLE_OPENING = 2;
 const MAX_RECAP_WORDS = 12;
 // At least this share of chapters shows real code.
 const CODE_SHARE = 0.5;
+// New code names (snake_case, camelCase, dotted names) a chapter's sentences may bring in.
+const MAX_NEW_TERMS = 3;
+// A code name in a sentence: words joined by _ or a dot, or a lower-case word with a capital inside.
+const CODE_NAME = /\b[A-Za-z]\w*(?:[_.][A-Za-z0-9]\w*)+\b|\b[a-z]+[A-Z]\w*\b/g;
+// A number a viewer reads as a value: one with a decimal point or of two digits or more.
+const VALUE = /\b\d+\.\d+\b|\b\d{2,}\b/g;
 // A sentence that says what a step means for the viewer starts with "So".
 const CONSEQUENCE = /^So\b/;
 // Words that point at another chapter by its place, or at a moment by its time: a chapter may be watched alone.
@@ -87,11 +93,37 @@ function checkScreen(chapter: LessonChapter): LessonFinding[] {
   return long.map((t) => ({ id: chapter.id, reason: `on-screen text "${t.slice(0, 60)}" is ${wordCount(t)} words; show a label of at most ${MAX_LABEL_WORDS}, the voice says the rest` }));
 }
 
+// The lines of code a designed scene shows, from its <pre> blocks.
+function codeLines(html: string): string[] {
+  return [...html.matchAll(/<pre\b[^>]*>([\s\S]*?)<\/pre>/gi)].flatMap((m) => m[1].replace(/<[^>]*>/g, '').split('\n'));
+}
+
+// The rules that need the chapters before: no value on screen before it is said, no more than a few new code names
+// per chapter, and code shown as whole lines.
+function checkAcrossChapters(chapters: LessonChapter[]): LessonFinding[] {
+  const out: LessonFinding[] = [];
+  const said = new Set<string>();
+  const named = new Set<string>();
+  for (const c of chapters) {
+    const text = c.sentences.map((s) => s.text).join(' ');
+    for (const v of text.match(VALUE) ?? []) said.add(v);
+    const fresh = [...new Set(text.match(CODE_NAME) ?? [])].filter((n) => !named.has(n));
+    if (fresh.length > MAX_NEW_TERMS) out.push({ id: c.id, reason: `brings in ${fresh.length} new code names (${fresh.join(', ')}); at most ${MAX_NEW_TERMS}` });
+    for (const n of fresh) named.add(n);
+    const early = [...new Set(screenTexts(c).join(' ').match(VALUE) ?? [])].filter((v) => !said.has(v));
+    if (early.length) out.push({ id: c.id, reason: `shows ${early.join(', ')} before any sentence says it` });
+    const cut = c.scenes.flatMap(codeLines).filter((l) => /(…|\.\.\.)\s*$/.test(l));
+    if (cut.length) out.push({ id: c.id, reason: `code cut short ("${cut[0].trim().slice(-40)}"); show whole lines, or fewer of them` });
+  }
+  return out;
+}
+
 // Checks a whole video against the lesson rules and returns every finding (none means it passes).
 function checkLesson({ example, chapters }: LessonInput): LessonFinding[] {
   const out: LessonFinding[] = [];
   if (chapters.length === 0) return [{ id: 'video', reason: 'no chapters in order.json' }];
   for (const c of chapters) out.push(...checkSentences(c), ...checkScreen(c));
+  out.push(...checkAcrossChapters(chapters));
   const words = example ? exampleWords(example) : [];
   if (words.length === 0) {
     out.push({ id: 'video', reason: 'script.md names no running example: add a line "example: <the one thing the video follows>"' });

@@ -119,11 +119,21 @@ async function voiceAsNarrator(work: string, sentences: string[], verifiedText: 
   return { padded, durationS: roundUpTenth(parseWav(padded).durationS), timing, beats };
 }
 
+// A question gets at least this long before its answer, so the viewer can try to answer it.
+const QUESTION_HOLD_MS = 3000;
+
 // The silence after each line: the template's gap, twice that after a "So" line (what a step means needs a moment to
-// land), and nothing after the last line, whose hold is the chapter's tail.
+// land), at least three seconds after a question, and nothing after the last line, whose hold is the chapter's tail.
 function gapsAfter(sentences: string[], gapMs: number): number[] {
-  return sentences.map((text, i) => (i === sentences.length - 1 ? 0 : /^So\b/.test(text.trim()) ? gapMs * 2 : gapMs));
+  return sentences.map((text, i) => {
+    if (i === sentences.length - 1) return 0;
+    if (text.trim().endsWith('?')) return Math.max(QUESTION_HOLD_MS, gapMs * 2);
+    return /^So\b/.test(text.trim()) ? gapMs * 2 : gapMs;
+  });
 }
+
+// A time in seconds to the millisecond, so the timing record reads 4.409, not 4.4093333333333335.
+const ms = (s: number) => Math.round(s * 1000) / 1000;
 
 // The lines path: every sentence in its speaker's voice and speed (the narrator's for a template without speakers),
 // spoken by one Kokoro process and joined with the template's silences, then held at the end for twice the gap so the
@@ -136,7 +146,7 @@ async function voiceAsLines(work: string, chapter: ChapterSpec, sentences: strin
   const padded = padWav(spoken.wav, { leadMs: LEAD_MS, tailMs: TAIL_MS + gapMs * 2 });
   fs.writeFileSync(path.join(work, 'narration.wav'), padded);
   const lead = LEAD_MS / 1000;
-  const beats = spoken.spans.map((span, i) => ({ text: sentences[i], start: span.start + lead, end: span.end + lead }));
+  const beats = spoken.spans.map((span, i) => ({ text: sentences[i], start: ms(span.start + lead), end: ms(span.end + lead) }));
   return { padded, durationS: roundUpTenth(parseWav(padded).durationS), timing: 'lines', beats };
 }
 

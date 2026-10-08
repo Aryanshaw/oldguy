@@ -102,3 +102,14 @@ test('oldguy lesson reads order.json, the specs and their scenes', (t) => {
   assert.equal(r.stdout, 'lesson ok\n');
   assert.equal(spawnSync(process.execPath, [BIN, 'lesson'], { encoding: 'utf8' }).status, 2);
 });
+
+test('a value on screen is said first, code lines are whole, and a chapter brings in at most three code names', () => {
+  const early = good('a', { scenes: ['<div>todo: buy milk</div><div>at 4.41 s</div><pre>x</pre>'] });
+  assert.deepEqual(reasons(checkLesson({ example: 'buy milk', chapters: [early] })), ['a: shows 4.41 before any sentence says it']);
+  const said = { ...early, sentences: [...early.sentences.slice(0, 2), { text: 'So it shows at 4.41 seconds.' }] };
+  assert.deepEqual(reasons(checkLesson({ example: 'buy milk', chapters: [said] })), []);
+  const cut = good('c', { scenes: ['<div>todo: buy milk</div><pre>const start = frames / format.sam…</pre>'] });
+  assert.match(reasons(checkLesson({ example: 'buy milk', chapters: [cut] }))[0], /c: code cut short/);
+  const names = good('n', { sentences: [...good('x').sentences, { text: 'So af_heart reads voice_speed, line_gap_ms and buildStagePage.' }] });
+  assert.match(reasons(checkLesson({ example: 'buy milk', chapters: [names] }))[0], /n: brings in 4 new code names \(af_heart, voice_speed, line_gap_ms, buildStagePage\); at most 3/);
+});

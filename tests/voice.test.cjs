@@ -103,11 +103,11 @@ test('narrate with speakers: exact line beats, a stage page, the template pictur
   const r = await narrateChapter(dir, { run, venvPython: '/venv/bin/python', whisperAvailable: true, template: DUO, kokoro: { model: '/m/k.onnx', voices: '/m/v.bin' }, dataDir: dataDir(t) });
   assert.equal(r.timing, 'lines');
   assert.equal(calls.length, 1, 'no tts or transcribe call: one speak.py run, whisper or not');
-  // 0.04 lead, line 0 is 6 words (0.6 s), the gap is 120 ms, line 1 is 7 words (0.7 s)
-  assert.deepEqual(r.beats.map((b) => [Number(b.start.toFixed(3)), Number(b.end.toFixed(3))]), [[0.04, 0.64], [0.76, 1.46]]);
+  // 0.04 lead, line 0 is 6 words (0.6 s) and a question, so 3 s to think instead of the 120 ms gap; line 1 is 7 words
+  assert.deepEqual(r.beats.map((b) => [Number(b.start.toFixed(3)), Number(b.end.toFixed(3))]), [[0.04, 0.64], [3.64, 4.34]]);
   const page = fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
   assert.match(page, /data-width="1080" data-height="1920"/);
-  assert.match(page, /tl\.set\("#og-sp-dad", \{opacity: 1\}, 0\.76\);/);
+  assert.match(page, /tl\.set\("#og-sp-dad", \{opacity: 1\}, 3\.64\);/);
   assert.match(page, /<div id="og-chip-1" class="og-chip">a\.js:3-4<\/div>/);
   for (const pic of ['assets/kid.svg', 'assets/dad.svg', 'assets/dad-talk.svg', 'assets/loop.mp4']) assert.ok(fs.existsSync(path.join(dir, pic)), pic);
   const record = JSON.parse(fs.readFileSync(path.join(dir, 'build.json'), 'utf8'));
@@ -186,4 +186,16 @@ test('narrate (explainer): each sentence spoken on its own at 0.9, a pause after
 
 test('speak.py is the Python script, never a file a test fake wrote over', () => {
   assert.match(fs.readFileSync(SPEAK_PY, 'utf8').split('\n')[0], /^# Speaks many lines in one process/);
+});
+
+test('narrate holds at least 3 s after a question, and writes times to the millisecond', async (t) => {
+  const slugDir = tempDir(t);
+  const sentences = [
+    { kind: 'framing', source_ids: [], text: 'Where does the time come from?' },
+    { kind: 'framing', source_ids: [], text: 'From the sound itself, one third of a second.' },
+  ];
+  const dir = scaffoldChapter({ root: slugDir, id: 'ask', title: 'Ask', sources: [], sentences, scene: [{ piece: 'title', params: { heading: 'Ask' }, beat: 0 }] });
+  const r = await narrateChapter(dir, { run: fakeSpeak().run, venvPython: '/p', whisperAvailable: false });
+  // 0.04 lead, 6 words (0.6 s), then 3 s for the viewer to think, then 9 words (0.9 s)
+  assert.deepEqual(r.beats.map((b) => [b.start, b.end]), [[0.04, 0.64], [3.64, 4.54]]);
 });

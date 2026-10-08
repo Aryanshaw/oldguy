@@ -20,13 +20,14 @@ second copy of the narration. Slowing the voice alone does not fix a video that 
   an id, a time), never a made-up one.
 - **Before and after**, when the code replaced something: show the old way next to the new one once, early.
 - **A quick check near the end:** ask one question the viewer can answer from the map ("Where does that time come
-  from?"), leave the pause, then answer it.
+  from?") as its own sentence ending in "?"; narrate holds at least three seconds after it, then answer it.
 - **End on a recap line** of at most twelve words that the viewer could repeat: "One spec per job. One planner.
   One runner."
 
 ## 2. The shape of one chapter
 
-- **One idea**, at most three new terms, at most eight sentences, within the template's length.
+- **One idea**, at most three new terms (the check counts code names), at most eight sentences, within the
+  template's length.
 - **Open on where the example is now**, in the first or second sentence. A chapter may be watched alone, so it
   starts by placing the example on the map. Never point at another chapter by position ("next chapter", "in part 2") or a time; name
   the thing instead ("The todo row from the form is still pending").
@@ -54,8 +55,12 @@ second copy of the narration. Slowing the voice alone does not fix a video that 
   a caption band; viewers who want captions turn them on while watching.
 - **Hand-offs are arrows.** When the example moves from one part to the next, draw the arrow it travels along.
 - **Never show a value before it is said.** A number or name appears on the sentence that says it.
-- **Code with its important lines lit**, in at least half the chapters: the few real lines that matter, each with
-  its file and line, the newest lit and the earlier ones dimmed.
+- **Code with its important lines lit**, in at least half the chapters: two to six whole lines with their
+  indentation, never cut, with the file and line, and the key word lit on the sentence that says it. The voice names
+  what the code does ("each start is the samples so far, divided by the sample rate"); code nobody talks about is
+  noise, so leave it out.
+- **Derive a number, don't just state it.** When a value matters, show where it comes from (3.71 s plus a 0.70 s
+  pause is 4.41 s), so a quick check about it can be answered from the screen.
 - **Planned work is said once.** A video about something not built yet says so in one chapter (the planned badge
   there), not on every frame.
 
@@ -75,7 +80,8 @@ oldguy lesson --dir .oldguy/<slug>
 
 It checks the running example (named in full, early in each chapter, and on screen), a "So" sentence in every
 chapter, sentence and chapter length, pointing by position, on-screen text length (designed scenes and piece
-labels), code on screen in half the chapters, the recap length and the planned badge. Fix the specs until it prints `lesson ok`. It cannot
+labels), code on screen in half the chapters and never cut short, values shown only once said, new code names
+per chapter, the recap length and the planned badge. Fix the specs until it prints `lesson ok`. It cannot
 check that the map is drawn empty first or that things pile up: look at the snapshots for that
 ([visuals.md](visuals.md) section 4).
 
