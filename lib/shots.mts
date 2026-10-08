@@ -365,7 +365,206 @@ function shotErrors(ch: ChapterShots, cat: Catalog, ctx: ShotContext): string[] 
       errs.push(`bookend: the last shot must reuse the first shot's ground (${g.id}, ${g.color}) and focus prop (${firstFocus ?? 'none'})${rule('08')}`);
     }
   }
+  // the layout only means something once every reference holds
+  if (errs.length === 0) errs.push(...layoutChapter(ch, cat).flatMap((l) => l.errors));
   return [...new Set(errs)];
+}
+
+// ---- layout ------------------------------------------------------------------------------------------------------
+
+// The stage is 1920x1080; things stand on the floor line; the card keeps this far from the frame's edges.
+const STAGE_W = 1920;
+const STAGE_H = 1080;
+const FLOOR_Y = 880;
+const SAFE = 60;
+// How tall each size class is drawn at scale 1, in stage pixels.
+const SIZE_PX: Record<Item['size'], number> = { tiny: 70, small: 140, medium: 260, large: 420, person: 620, huge: 820 };
+// Where each place puts an item's centre (its floor anchor) across the stage.
+const PLACE_X: Record<Place, number> = { left: 480, 'left-third': 640, center: 960, 'right-third': 1280, right: 1440 };
+// The paper card: its width, padding and line heights (title in the hand font, code in monospace, the src line).
+const CARD_W = 520;
+const CARD_PAD = 26;
+const CARD_TITLE_H = 58;
+const CARD_CODE_H = 42;
+const CARD_SRC_H = 40;
+// How far above its hang point the card's bottom edge sits, and how far aside it moves to clear the focus item.
+const CARD_DROP = 90;
+const CARD_GAP = 40;
+// Depth: ground 0, props on the floor 10+, people 20+, props standing on things 30+, the card 40, chalk 50.
+const Z = { floor: 10, cast: 20, on: 30, card: 40, chalk: 50 };
+
+// A box on the stage, in pixels.
+type Box = { x: number; y: number; w: number; h: number };
+// A point on the stage.
+type Pt = { x: number; y: number };
+// An item placed on the stage: its box, depth, whether it is mirrored, and how many stage pixels one viewBox unit is.
+type Placed = { ref: string; item: Item; colourway?: string; box: Box; z: number; flip: boolean; s: number; talk: boolean };
+// The card placed on the stage, with the strings that hang it (card bottom -> the hang point).
+type CardBox = { box: Box; z: number; strings: [Pt, Pt][] };
+// One shot laid out: what is where, the card, and anything that does not fit.
+type ShotLayout = { placed: Placed[]; card?: CardBox; focus?: string; errors: string[] };
+
+// Where one of an item's anchors lands on the stage (a mirrored item mirrors it inside its box). An item with no
+// such anchor uses its box centre (floor: its bottom centre).
+function anchorPoint(p: Placed, name: string): Pt {
+  const [vx, vy] = p.item.viewBox;
+  const a = Object.hasOwn(p.item.anchors, name) ? p.item.anchors[name] : undefined;
+  if (!a) return name === 'floor' ? { x: p.box.x + p.box.w / 2, y: p.box.y + p.box.h } : { x: p.box.x + p.box.w / 2, y: p.box.y + p.box.h / 2 };
+  const dx = (a.x - vx) * p.s;
+  return { x: p.flip ? p.box.x + p.box.w - dx : p.box.x + dx, y: p.box.y + (a.y - vy) * p.s };
+}
+
+// The box an item gets when its floor anchor (or bottom centre) sits on point `at`, at its size class times scale.
+function boxAt(item: Item, scale: number, at: Pt, flip: boolean): { box: Box; s: number } {
+  const [vx, vy, vw, vh] = item.viewBox;
+  const h = SIZE_PX[item.size] * scale;
+  const s = h / vh;
+  const w = vw * s;
+  const f = Object.hasOwn(item.anchors, 'floor') ? item.anchors.floor : { x: vx + vw / 2, y: vy + vh };
+  // mirrored, the floor anchor sits as far from the right edge as it sat from the left
+  const fx = flip ? (vx + vw - f.x) * s : (f.x - vx) * s;
+  return { box: { x: at.x - fx, y: at.y - (f.y - vy) * s, w, h }, s };
+}
+
+// True when two boxes overlap.
+function overlap(a: Box, b: Box): boolean {
+  return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+}
+
+// The card's height for its content.
+function cardHeight(card: Card): number {
+  const title = hasText(card.title) ? CARD_TITLE_H : 0;
+  const code = hasText(card.code) ? CARD_CODE_H : 0;
+  return CARD_PAD * 2 + title + code + (title && code ? 8 : 0) + CARD_SRC_H;
+}
+
+// Keeps a value inside [lo, hi].
+function clamp(v: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, v));
+}
+
+// Places the card: above its hang point (strings down to it) or at its place near the top, inside the safe frame,
+// moved aside when it would cover the focus item. Returns nothing (and reports) when no place clears the focus item.
+function placeCard(card: Card, placed: Placed[], focus: Placed | undefined, bad: (msg: string) => void): CardBox | undefined {
+  const w = CARD_W;
+  const h = cardHeight(card);
+  let hangPt: Pt | undefined;
+  let x: number;
+  let y: number;
+  if (typeof card.hang === 'string') {
+    const { name, anchor } = splitRef(card.hang);
+    const target = placed.find((p) => p.ref === name);
+    if (!target || !anchor) return undefined;
+    hangPt = anchorPoint(target, anchor);
+    x = hangPt.x - w / 2;
+    y = hangPt.y - CARD_DROP - h;
+  } else {
+    x = PLACE_X[card.at ?? 'right-third'] - w / 2;
+    y = SAFE;
+  }
+  const inside = (bx: number, by: number): Box => ({ x: clamp(bx, SAFE, STAGE_W - SAFE - w), y: clamp(by, SAFE, STAGE_H - SAFE - h), w, h });
+  let box = inside(x, y);
+  if (focus && overlap(box, focus.box)) {
+    // try beside the focus item, left and right, and take the one nearer where the card wanted to be
+    const tries = [inside(focus.box.x - CARD_GAP - w, y), inside(focus.box.x + focus.box.w + CARD_GAP, y)]
+      .filter((b) => !overlap(b, focus.box))
+      .sort((a, b) => Math.abs(a.x - x) - Math.abs(b.x - x));
+    if (!tries.length) {
+      bad(`the card cannot sit clear of the focus item (${focus.ref}); make it smaller or hang the card elsewhere`);
+      return undefined;
+    }
+    box = tries[0];
+  }
+  const bottom = (t: number): Pt => ({ x: box.x + box.w * t, y: box.y + box.h });
+  const strings: [Pt, Pt][] = hangPt ? [[bottom(0.3), hangPt], [bottom(0.7), hangPt]] : [];
+  return { box, z: Z.card, strings };
+}
+
+// Lays one resolved shot out: carried items keep their place from `before`, listed ones go to their place or onto
+// the anchor they stand on; people face the focus item; then the card. Problems go to bad().
+function placeShot(r: ResolvedShot, before: Map<string, Placed>, bad: (msg: string) => void): ShotLayout {
+  const placed: Placed[] = [];
+  const things = [...r.things.values()];
+  const focus = things.find((t) => t.focus);
+  const takenAt = new Set<string>();
+  for (const t of things.filter((x) => x.kind !== 'prop' && x.listed)) {
+    if (t.at && takenAt.has(t.at)) bad(`two people stand at "${t.at}"`);
+    if (t.at) takenAt.add(t.at);
+  }
+  // the focus item's centre across the stage, for people to face: where it is, or where what it stands on is
+  const focusX = (): number | undefined => {
+    if (!focus) return undefined;
+    const name = focus.on ? splitRef(focus.on).name : focus.ref;
+    const p = placed.find((x) => x.ref === name);
+    return p ? p.box.x + p.box.w / 2 : focus.at ? PLACE_X[focus.at] : undefined;
+  };
+  let floorN = 0;
+  let castN = 0;
+  let onN = 0;
+  // props on the floor first, then people, then props standing on things (each after what it stands on)
+  const rank = (t: Thing) => (t.kind === 'prop' && !t.on ? 0 : t.kind === 'prop' ? 2 : 1);
+  const pending = [...things].sort((a, b) => rank(a) - rank(b));
+  let guard = pending.length * pending.length + 1;
+  while (pending.length && guard-- > 0) {
+    const t = pending.shift()!;
+    const kept = before.get(t.ref);
+    if (!t.listed && kept) {
+      placed.push({ ...kept, talk: false });
+      continue;
+    }
+    if (t.on) {
+      const { name, anchor } = splitRef(t.on);
+      const target = placed.find((p) => p.ref === name);
+      if (!target) {
+        // what it stands on is not placed yet: try again after the others (a loop of "on" never places)
+        if (pending.some((p) => p.ref === name)) pending.push(t);
+        continue;
+      }
+      const { box, s } = boxAt(t.item, t.scale, anchorPoint(target, anchor ?? 'top'), false);
+      placed.push({ ref: t.ref, item: t.item, box, s, z: Z.on + onN++, flip: false, talk: false });
+      continue;
+    }
+    const cx = PLACE_X[t.at ?? 'center'];
+    let flip = false;
+    if (t.kind !== 'prop') {
+      const native = t.item.faces ?? 'right';
+      const fx = focusX();
+      const want = t.face ?? (fx === undefined || Math.abs(fx - cx) < 1 ? native : fx > cx ? 'right' : 'left');
+      flip = want !== native;
+    }
+    const { box, s } = boxAt(t.item, t.scale, { x: cx, y: FLOOR_Y }, flip);
+    const z = t.kind === 'prop' ? Z.floor + floorN++ : Z.cast + castN++;
+    placed.push({ ref: t.ref, item: t.item, colourway: t.colourway, box, s, z, flip, talk: t.talk });
+  }
+  for (const t of pending) bad(`${t.ref} stands on ${t.on}, which never gets placed`);
+  for (const p of placed) {
+    const b = p.box;
+    if (b.x < -1 || b.y < -1 || b.x + b.w > STAGE_W + 1 || b.y + b.h > STAGE_H + 1) bad(`${p.ref} leaves the frame`);
+  }
+  placed.sort((a, b) => a.z - b.z);
+  const focusPlaced = focus ? placed.find((p) => p.ref === focus.ref) : undefined;
+  const card = isObject(r.shot.card) ? placeCard(r.shot.card, placed, focusPlaced, bad) : undefined;
+  return { placed, card, focus: focusPlaced?.ref, errors: [] };
+}
+
+// Lays out every shot of a chapter in order, carrying kept items' places from shot to shot.
+function layoutChapter(ch: ChapterShots, cat: Catalog): ShotLayout[] {
+  const ignored: string[] = [];
+  let before = new Map<string, Placed>();
+  return resolveShots(ch, cat, ignored).map((r, i) => {
+    const errors: string[] = [];
+    const l = placeShot(r, before, (msg) => errors.push(`shot ${i}: ${msg}`));
+    before = new Map(l.placed.map((p) => [p.ref, p]));
+    return { ...l, errors };
+  });
+}
+
+// Lays out one shot on its own (nothing carried in), naming problems as "shot <beat>: ...".
+function layout(shot: Shot, cat: Catalog): ShotLayout {
+  const errors: string[] = [];
+  const [r] = resolveShots({ id: 'one', metaphor: '', example: '', ground: 'indigo', title: '', shots: [shot] }, cat, errors);
+  const l = placeShot(r, new Map(), (msg) => errors.push(`shot ${shot.beat}: ${msg}`));
+  return { ...l, errors };
 }
 
 // The warnings for a chapter that still compiles: too many raw shots (rule 10).
@@ -374,5 +573,5 @@ function shotWarnings(ch: ChapterShots): string[] {
   return raw > MAX_RAW ? [`${raw} raw shots; more than ${MAX_RAW} means the library is missing something${rule('10')}`] : [];
 }
 
-export { RULES, PLACES, GROUND_IDS, shotErrors, shotWarnings, resolveShots, splitRef };
-export type { Place, Ground, CastEntry, PropEntry, Card, Chalk, Camera, Shot, ChapterShots, SourceRange, ShotContext, Thing, ResolvedShot };
+export { RULES, PLACES, GROUND_IDS, shotErrors, shotWarnings, resolveShots, splitRef, layout, layoutChapter, anchorPoint };
+export type { Place, Ground, CastEntry, PropEntry, Card, Chalk, Camera, Shot, ChapterShots, SourceRange, ShotContext, Thing, ResolvedShot, Box, Pt, Placed, CardBox, ShotLayout };

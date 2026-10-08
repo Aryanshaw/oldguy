@@ -140,3 +140,87 @@ test('more than two raw shots is a warning, not an error', () => {
   assert.deepEqual(shotErrors(ch, CAT, CTX), []);
   assert.deepEqual(shotWarnings(ch), ['4 raw shots; more than 2 means the library is missing something (rule 10)']);
 });
+
+// ---- layout ----
+const { layout, layoutChapter, anchorPoint } = require('../lib/shots.mts');
+
+// The placed item called ref in a layout.
+function placed(l, ref) {
+  return l.placed.find((p) => p.ref === ref);
+}
+
+// True when two boxes overlap.
+function overlaps(a, b) {
+  return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+}
+
+test('a bell on a counter lands with its base on the counter top', () => {
+  const l = layout({ beat: 0, props: [{ id: 'shop-counter', at: 'center' }, { id: 'bell', on: 'shop-counter.top', focus: true }] }, CAT);
+  assert.deepEqual(l.errors, []);
+  const top = anchorPoint(placed(l, 'shop-counter'), 'top');
+  const base = anchorPoint(placed(l, 'bell'), 'floor');
+  assert.ok(Math.abs(top.x - base.x) <= 1 && Math.abs(top.y - base.y) <= 1, JSON.stringify({ top, base }));
+  // the counter stands on the floor line
+  assert.equal(Math.round(anchorPoint(placed(l, 'shop-counter'), 'floor').y), 880);
+});
+
+test('a small prop is never taller than a person at scale 1', () => {
+  const l = layout({ beat: 0, cast: [{ who: 'body-a/coral', pose: 'stand', at: 'left' }], props: [{ id: 'kettle', at: 'right' }] }, CAT);
+  assert.ok(placed(l, 'kettle').box.h < placed(l, 'body-a').box.h);
+  assert.equal(Math.round(placed(l, 'body-a').box.h), 620);
+});
+
+test('the card hangs clear of the focus item, or the layout says it cannot', () => {
+  // hung from the counter, the card would sit right on the bell above it, so it moves aside
+  const l = layout({
+    beat: 0,
+    props: [{ id: 'shop-counter', at: 'center' }, { id: 'bell', on: 'shop-counter.top', focus: true }],
+    card: { title: 'THE ORDER', code: 'cart.checkout()', src: 'shop.js:12', hang: 'shop-counter.card' },
+  }, CAT);
+  assert.deepEqual(l.errors, []);
+  assert.ok(!overlaps(l.card.box, placed(l, 'bell').box), JSON.stringify(l.card.box));
+  assert.ok(l.card.box.x >= 60 && l.card.box.x + l.card.box.w <= 1860 && l.card.box.y >= 60);
+  assert.equal(l.card.strings.length, 2);
+  // a counter twice the size fills the frame: there is nowhere for the card
+  const full = layout({
+    beat: 0,
+    props: [{ id: 'shop-counter', at: 'center', scale: 2, focus: true }],
+    card: { title: 'THE ORDER', src: 'shop.js:12', hang: 'shop-counter.card' },
+  }, CAT);
+  assert.deepEqual(full.errors, ['shot 0: the card cannot sit clear of the focus item (shop-counter); make it smaller or hang the card elsewhere']);
+});
+
+test('depth: floor props, then people, then props standing on things, then the card', () => {
+  const l = layout({
+    beat: 0,
+    cast: [{ who: 'body-a/coral', pose: 'point', at: 'left' }],
+    props: [{ id: 'shop-counter', at: 'center' }, { id: 'bell', on: 'shop-counter.top', focus: true }],
+    card: { title: 'BELL', src: 'shop.js:12', hang: 'bell.card' },
+  }, CAT);
+  assert.deepEqual(l.placed.map((p) => [p.ref, p.z]), [['shop-counter', 10], ['body-a', 20], ['bell', 30]]);
+  assert.equal(l.card.z, 40);
+});
+
+test('people face the focus item unless face says otherwise', () => {
+  const at = (where, face) => placed(layout({ beat: 0, cast: [{ who: 'body-a/coral', pose: 'point', at: where, face }], props: [{ id: 'bell', at: 'center', focus: true }] }, CAT), 'body-a');
+  assert.equal(at('left').flip, false, 'drawn facing right, the bell is to the right');
+  assert.equal(at('right').flip, true);
+  assert.equal(at('right', 'right').flip, false);
+  // a flipped drawing mirrors its anchors: the pointing hand is on the bell's side
+  const p = at('right');
+  assert.ok(anchorPoint(p, 'hand').x < anchorPoint(p, 'floor').x);
+});
+
+test('items that leave the frame and people who share a place are errors', () => {
+  assert.deepEqual(layout({ beat: 0, cast: [{ who: 'body-a/coral', pose: 'stand', at: 'left' }, { who: 'oldguy', pose: 'stand', at: 'left' }] }, CAT).errors,
+    ['shot 0: two people stand at "left"']);
+  assert.deepEqual(layout({ beat: 0, props: [{ id: 'shop-counter', at: 'right', scale: 2 }] }, CAT).errors, ['shot 0: shop-counter leaves the frame']);
+});
+
+test('a carried item keeps its place in the next shot, and layout problems count as shot errors', () => {
+  const shots = layoutChapter(good(), CAT);
+  assert.deepEqual(shots.flatMap((s) => s.errors), []);
+  assert.deepEqual(placed(shots[1], 'shop-counter').box, placed(shots[0], 'shop-counter').box);
+  assert.deepEqual(shots[3].placed.map((p) => p.ref).sort(), ['bell', 'body-a', 'oldguy', 'shop-counter']);
+  assert.ok(errorsAfter((ch) => { ch.shots[0].props[0].scale = 2; ch.shots[0].props[0].at = 'right'; }).includes('shot 0: shop-counter leaves the frame'));
+});
