@@ -17,8 +17,8 @@
   "speakers": [],
   "narrator_voice": "af_heart",
   "pace": {
-    "voice_speed": 1,
-    "line_gap_ms": 0,
+    "voice_speed": 0.9,
+    "line_gap_ms": 700,
     "captions": "none",
     "visual_beat": "sentence",
     "chapter_seconds": [

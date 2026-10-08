@@ -9,6 +9,9 @@ const { HYPERFRAMES_VERSION } = require('../lib/hyperframes.mts');
 const { buildRecord } = require('../lib/build-record.mts');
 const { scaffoldChapter } = require('../lib/chapter.mts');
 const { narrateChapter } = require('../lib/narrate.mts');
+const { loadTemplate } = require('../lib/template.mts');
+// The one-call narrator path these tests drive: the shipped explainer without silence between sentences.
+const ONE_CALL = (() => { const t = loadTemplate('explainer'); return { ...t, pace: { ...t.pace, line_gap_ms: 0, voice_speed: 1 } }; })();
 
 const CHANGED = 'chapter changed after narrate: fix the spec, delete the chapter folder, then scaffold, audit and narrate again';
 
@@ -205,7 +208,7 @@ async function narratedChapter(t) {
     fs.copyFileSync(path.join(__dirname, 'fixtures', 'narration.wav'), args[args.indexOf('-o') + 1]);
     return { code: 0, stdout: '{}', stderr: '' };
   };
-  await narrateChapter(dir, { run, venvPython: '/py', whisperAvailable: false });
+  await narrateChapter(dir, { run, venvPython: '/py', template: ONE_CALL, whisperAvailable: false });
   return { repo, chapters, dir };
 }
 

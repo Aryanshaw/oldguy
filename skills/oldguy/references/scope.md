@@ -39,6 +39,8 @@ theme switch, setting, or style for it." Then ask one question ("Did you mean th
 ## 5. Write it down
 
 Create `.oldguy/<slug>/script.md` with a top section: the request, the flow in one sentence, the file where it
-starts, the file where it ends, and the planned chapter count. The chapters themselves come in the storyboard step.
+starts, the file where it ends, the planned chapter count, and the running example the video follows on its own
+line, `example: the todo "buy milk"` (a real request, job or value from the code, or a plainly generic one; see
+[teaching.md](teaching.md)). The chapters themselves come in the storyboard step.
 
-**Gate:** `script.md` names one flow, its start file, its end file and a planned chapter count; or you stopped with one question and wrote nothing.
+**Gate:** `script.md` names one flow, its start file, its end file, a planned chapter count and an `example:` line; or you stopped with one question and wrote nothing.

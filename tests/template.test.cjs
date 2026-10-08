@@ -103,7 +103,7 @@ test('voiceFor gives each speaker its voice and speed, and the narrator a single
   assert.deepEqual(voiceFor(duo, 'dad'), { voice: 'am_adam', speed: 1.1 });
   assert.deepEqual(voiceFor(duo, 'kid'), { voice: 'bm_george', speed: 1.15 });
   assert.throws(() => voiceFor(duo, 'mum'), /no speaker "mum"/);
-  assert.deepEqual(voiceFor(loadTemplate('explainer', FIXTURES), undefined), { voice: 'af_heart', speed: 1 });
+  assert.deepEqual(voiceFor(loadTemplate('explainer', FIXTURES), undefined), { voice: 'af_heart', speed: 0.9 });
 });
 
 test('slotBox uses the template box, or the whole frame', () => {

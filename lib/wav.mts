@@ -99,7 +99,7 @@ function writeWav(format: WavFormat, pcm: Buffer): Buffer {
 
 // Joins WAVs of the same format into one, with gapMs of silence between each pair. Returns the joined file and where
 // each part starts and ends in it (seconds), so the caller knows when each line is spoken.
-function joinWavs(parts: Buffer[], gapMs: number): { wav: Buffer; spans: { start: number; end: number }[] } {
+function joinWavs(parts: Buffer[], gapMs: number | number[]): { wav: Buffer; spans: { start: number; end: number }[] } {
   if (parts.length === 0) throw new Error('wav: nothing to join');
   const infos = parts.map((p) => parseWav(p));
   const format = infos[0].format;
@@ -109,12 +109,14 @@ function joinWavs(parts: Buffer[], gapMs: number): { wav: Buffer; spans: { start
     }
   });
   const frameBytes = format.channels * BYTES_PER_SAMPLE;
-  const gap = Buffer.alloc(Math.round((format.sampleRate * gapMs) / 1000) * frameBytes);
+  // one gap for every join, or gapMs[i] after part i
+  const gapAfter = (i: number) => Buffer.alloc(Math.round((format.sampleRate * (Array.isArray(gapMs) ? gapMs[i] ?? 0 : gapMs)) / 1000) * frameBytes);
   const chunks: Buffer[] = [];
   const spans: { start: number; end: number }[] = [];
   let frames = 0;
   infos.forEach((info, i) => {
     if (i > 0) {
+      const gap = gapAfter(i - 1);
       chunks.push(gap);
       frames += gap.length / frameBytes;
     }

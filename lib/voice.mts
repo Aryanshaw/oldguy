@@ -8,8 +8,9 @@ import type { RunProgram } from './narrate.mts';
 
 // One line to speak.
 type SpokenLine = { text: string; voice: string; speed: number };
-// What speakLines needs: the venv's python, the model and voices files, the gap, a work folder and the program runner.
-type SpeakOptions = { python: string; model: string; voices: string; gapMs: number; work: string; run: RunProgram };
+// What speakLines needs: the venv's python, the model and voices files, the gap (one for every join, or one after
+// each line), a work folder and the program runner.
+type SpeakOptions = { python: string; model: string; voices: string; gapMs: number | number[]; work: string; run: RunProgram };
 // The joined audio (not yet padded) and when each line starts and ends in it, in seconds.
 type Spoken = { wav: Buffer; spans: { start: number; end: number }[] };
 

@@ -92,9 +92,9 @@ function clampBeats(beats: Beat[], audioS: number): Beat[] {
   return beats.map((b) => ({ ...b, start: Math.min(b.start, endS), end: Math.min(b.end, endS) }));
 }
 
-// The narrator path (a template with no speakers, explainer among them): one tts call for the whole text, as oldguy has
-// always done, with the sentence times from whisper's words or a share of the audio by length. The voice and speed are
-// passed only when the template asks for something other than Hyperframes' own default, so explainer's call is unchanged.
+// The narrator path without gaps (a template with no speakers and no silence between sentences): one tts call for the
+// whole text, with the sentence times from whisper's words or a share of the audio by length. The voice and speed are
+// passed only when the template asks for something other than Hyperframes' own default.
 async function voiceAsNarrator(work: string, sentences: string[], verifiedText: Buffer, t: Template, { run, venvPython, whisperAvailable }: NarrateDeps): Promise<Voiced> {
   const env = { HYPERFRAMES_PYTHON: venvPython };
   // tts reads a private copy of the bytes that were checked, so a later edit to narration.txt cannot be spoken
@@ -119,12 +119,21 @@ async function voiceAsNarrator(work: string, sentences: string[], verifiedText: 
   return { padded, durationS: roundUpTenth(parseWav(padded).durationS), timing, beats };
 }
 
-// The speakers path: every line in its speaker's voice and speed, spoken by one Kokoro process, joined with the
-// template's gap. Each line's start and end come from the audio itself, so the beats are exact.
-async function voiceAsSpeakers(work: string, chapter: ChapterSpec, sentences: string[], t: Template, { run, venvPython, kokoro = KOKORO_FILES }: NarrateDeps): Promise<Voiced> {
+// The silence after each line: the template's gap, twice that after a "So" line (what a step means needs a moment to
+// land), and nothing after the last line, whose hold is the chapter's tail.
+function gapsAfter(sentences: string[], gapMs: number): number[] {
+  return sentences.map((text, i) => (i === sentences.length - 1 ? 0 : /^So\b/.test(text.trim()) ? gapMs * 2 : gapMs));
+}
+
+// The lines path: every sentence in its speaker's voice and speed (the narrator's for a template without speakers),
+// spoken by one Kokoro process and joined with the template's silences, then held at the end for twice the gap so the
+// chapter's last point settles before the next one starts. Each line's start and end come from the audio itself, so
+// the beats are exact.
+async function voiceAsLines(work: string, chapter: ChapterSpec, sentences: string[], t: Template, { run, venvPython, kokoro = KOKORO_FILES }: NarrateDeps): Promise<Voiced> {
   const lines = chapter.sentences.map((s, i) => ({ text: sentences[i], ...voiceFor(t, s.speaker) }));
-  const spoken = await speakLines(lines, { python: venvPython, model: kokoro.model, voices: kokoro.voices, gapMs: t.pace.line_gap_ms, work, run });
-  const padded = padWav(spoken.wav, { leadMs: LEAD_MS, tailMs: TAIL_MS });
+  const gapMs = t.pace.line_gap_ms;
+  const spoken = await speakLines(lines, { python: venvPython, model: kokoro.model, voices: kokoro.voices, gapMs: gapsAfter(sentences, gapMs), work, run });
+  const padded = padWav(spoken.wav, { leadMs: LEAD_MS, tailMs: TAIL_MS + gapMs * 2 });
   fs.writeFileSync(path.join(work, 'narration.wav'), padded);
   const lead = LEAD_MS / 1000;
   const beats = spoken.spans.map((span, i) => ({ text: sentences[i], start: span.start + lead, end: span.end + lead }));
@@ -151,8 +160,10 @@ function timingOf(chapter: ChapterSpec, beats: Beat[], durationS: number): Timin
 async function buildOutputs(
   work: string, chapter: ChapterSpec, sentences: string[], verifiedText: Buffer, t: Template, shape: Shape, deps: NarrateDeps,
 ): Promise<Omit<NarrateResult, 'commit'> & { assets: string[] }> {
-  const { durationS, timing, beats } = t.speakers.length
-    ? await voiceAsSpeakers(work, chapter, sentences, t, deps)
+  // speakers, or a narrator with silence between sentences, need each line spoken on its own; a narrator without
+  // gaps is one tts call for the whole text
+  const { durationS, timing, beats } = t.speakers.length || t.pace.line_gap_ms > 0
+    ? await voiceAsLines(work, chapter, sentences, t, deps)
     : await voiceAsNarrator(work, sentences, verifiedText, t, deps);
 
   // captions are cut from the beats, so they show the audited sentences, never what the recogniser misheard

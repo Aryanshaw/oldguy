@@ -9,10 +9,13 @@ Polite, cheery and efficient: a friendly helper who likes explaining things. Sho
 the system does: name a part by what it does before its code name, and name code only when it is on screen. Say what happens and why,
 once, and move on. No filler ("so basically", "as you can see"), no jokes at the code's expense, and nothing about
 what making the video uses up (the repository's own payment code is a flow like any other: explain it).
-Audience is a beginner: explain a term the first time it appears, in half a sentence.
+Audience is a beginner: explain a term the first time it appears, in half a sentence. Follow the running example
+by name, and give each step its "So" sentence: what it means for the viewer.
 
-Each entry is exactly one sentence, each chapter stands alone, and no sentence mentions another chapter or a time.
-The rules and the splitter traps are in [storyboard.md](storyboard.md).
+Each entry is exactly one sentence, each chapter opens by placing the example, and no sentence points at another
+chapter by position or a time. The rules are in [teaching.md](teaching.md); the splitter traps are in
+[storyboard.md](storyboard.md). The template's pace adds the silence after each sentence, so never pack two ideas
+into one sentence.
 
 ## Before narrating
 

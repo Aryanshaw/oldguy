@@ -36,6 +36,8 @@ the slot shows. Then write the sentences as usual, with these additions:
   to dodge a source.
 - **Line length.** A template may cap words per line (`--show` prints it). Write short lines; the audit counts them.
 - **Length.** Aim for the template's chapter seconds; there is no limit on the whole video.
+- **Teaching.** Every template keeps the rules of [teaching.md](teaching.md): one example followed through, a "So"
+  line per chapter, labels on screen. Characters change who says it, never whether it teaches.
 
 The audit adds the template's rules to the claim checks: an unknown or missing speaker, or a line over the cap, fails
 the chapter, and the usual redo path applies.

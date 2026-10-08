@@ -33,8 +33,8 @@ function silence(seconds) {
 function fakeSpeak({ failAt } = {}) {
   const calls = [];
   const run = async (cmd, args) => {
-    calls.push({ cmd, args });
     const request = JSON.parse(fs.readFileSync(args[3], 'utf8'));
+    calls.push({ cmd, args, request });
     if (failAt !== undefined) return { code: 1, stdout: `${JSON.stringify({ error: 'ValueError: bad phoneme', line: failAt })}\n`, stderr: '' };
     const lines = request.lines.map((l, i) => {
       const seconds = l.text.split(/\s+/).length / 10;
@@ -152,4 +152,34 @@ test('narrate stops before speaking when a downloaded asset is missing, naming i
   await assert.rejects(narrateChapter(dir, { run, venvPython: '/p', whisperAvailable: false, template: DUO, dataDir: tempDir(t) }),
     /template duo needs assets\/loop\.mp4 \(1 MB\) downloaded first: ask the user, then run oldguy templates duo --fetch/);
   assert.equal(calls.length, 0);
+});
+
+test('joinWavs takes one gap per join: gapMs[i] after part i', () => {
+  const { spans } = joinWavs([silence(1), silence(0.5), silence(2)], [200, 900]);
+  assert.deepEqual(spans, [{ start: 0, end: 1 }, { start: 1.2, end: 1.7 }, { start: 2.6, end: 4.6 }]);
+});
+
+// Scaffolds a narrator chapter in a video folder made with the shipped explainer (no video.json: the default).
+function explainerChapter(t) {
+  const slugDir = tempDir(t);
+  const sentences = [
+    { kind: 'framing', source_ids: [], text: 'You type buy milk and press Add.' },
+    { kind: 'claim', source_ids: ['s1'], text: 'So the todo goes to the server.' },
+    { kind: 'claim', source_ids: ['s1'], text: 'The server saves it.' },
+  ];
+  return scaffoldChapter({ root: slugDir, id: 'add', title: 'Add', sources: [{ id: 's1', file: 'a.js', lines: [3, 4], quote: 'x' }], sentences, scene: [{ piece: 'title', params: { heading: 'Add' }, beat: 0 }] });
+}
+
+test('narrate (explainer): each sentence spoken on its own at 0.9, a pause after each, twice after a So line, a held end', async (t) => {
+  const dir = explainerChapter(t);
+  const { run, calls } = fakeSpeak();
+  const r = await narrateChapter(dir, { run, venvPython: '/venv/bin/python', whisperAvailable: true });
+  assert.equal(r.timing, 'lines');
+  assert.equal(calls.length, 1, 'one speak.py run, no tts and no transcribe');
+  assert.deepEqual(calls[0].request.lines.map((l) => [l.voice, l.speed]), [['af_heart', 0.9], ['af_heart', 0.9], ['af_heart', 0.9]]);
+  // 0.04 lead; 7 words (0.7 s), then the 700 ms gap; 7 words, then 1400 ms after the So line; 4 words (0.4 s)
+  assert.deepEqual(r.beats.map((b) => [Number(b.start.toFixed(3)), Number(b.end.toFixed(3))]), [[0.04, 0.74], [1.44, 2.14], [3.54, 3.94]]);
+  // the end is held for twice the gap after the 120 ms tail: 3.94 + 0.12 + 1.4 = 5.46, rounded up to 5.5
+  assert.equal(r.durationS, 5.5);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(dir, 'build.json'), 'utf8')).template, undefined, 'the plain explainer records no template block');
 });

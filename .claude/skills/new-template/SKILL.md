@@ -7,7 +7,11 @@ description: Add a new oldguy video template to this repository (a folder under 
 
 A template is a folder `templates/<id>/`. It changes how a verified explanation is told, never what is checked. The
 engine (lib/stage.mts, lib/narrate.mts) does all timing; a template is data and layout only. Read
-`docs/superpowers/specs/2026-10-07-video-templates-design.md` section 3 first.
+`docs/superpowers/specs/2026-10-07-video-templates-design.md` section 3 first, then
+`skills/oldguy/references/teaching.md`: every template keeps those rules (one example followed through, a "So"
+line per chapter, labels on screen, a pause after every sentence). A template changes who tells it and how it
+looks, never whether it teaches. Its `template.md` must not contradict them, and its `pace.line_gap_ms` is at
+least 500.
 
 ## 1. Scaffold the folder
 
