@@ -1,6 +1,7 @@
 import { playable } from '@/lib/timeline';
 import type { Chapter, Shape } from '@/types';
 import { Captions } from './Captions';
+import { ChapterBreak } from './ChapterBreak';
 import type { Player } from './usePlayer';
 
 // The stage box for each shape. A tall or square video is capped in height so it fits beside the chat, and centred.
@@ -49,6 +50,7 @@ export function VideoStage({
       ) : (
         <Captions chapterId={player.position?.chapterId ?? null} offset={player.position?.offset ?? 0} on={captionsOn} />
       )}
+      <ChapterBreak player={player} chapters={chapters} />
       {showPlay && (
         <button
           type="button"

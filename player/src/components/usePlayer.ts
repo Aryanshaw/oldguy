@@ -21,12 +21,14 @@ export function usePlayer(chapters: Chapter[], create: CreateEngine = createEngi
   const [state, setState] = useState<EngineState>('idle');
   const [position, setPosition] = useState<Position | null>(null);
   const [broken, setBroken] = useState<string[]>([]);
+  // The chapter that just finished when playback stopped between chapters; cleared once anything plays or moves.
+  const [held, setHeld] = useState<string | null>(null);
 
   useEffect(() => {
     const a = refA.current;
     const b = refB.current;
     if (!a || !b) return;
-    const engine = createRef.current({ a, b, urlFor: videoUrl });
+    const engine = createRef.current({ a, b, urlFor: videoUrl, holdAtEnd: true });
     engineRef.current = engine;
     setBroken([]);
     const sync = () => {
@@ -37,7 +39,11 @@ export function usePlayer(chapters: Chapter[], create: CreateEngine = createEngi
     const offs = [
       engine.on('time', () => setPosition(engine.position())),
       engine.on('chapter', sync),
-      engine.on('state', () => setState(engine.state())),
+      engine.on('state', () => {
+        setState(engine.state());
+        if (engine.state() === 'playing') setHeld(null);
+      }),
+      engine.on('hold', (id) => setHeld(typeof id === 'string' ? id : null)),
       engine.on('error', (id) => {
         if (typeof id === 'string') setBroken((prev) => (prev.includes(id) ? prev : [...prev, id]));
       }),
@@ -68,7 +74,18 @@ export function usePlayer(chapters: Chapter[], create: CreateEngine = createEngi
     if (e.state() === 'playing') e.pause();
     else void e.play();
   }, []);
-  const seek = useCallback((p: Position) => engineRef.current?.seek(p), []);
+  const seek = useCallback((p: Position) => {
+    setHeld(null);
+    engineRef.current?.seek(p);
+  }, []);
+  /** Plays the chapter that just finished again, from its start. */
+  const replay = useCallback(() => {
+    const e = engineRef.current;
+    if (!e || !held) return;
+    setHeld(null);
+    e.seek({ chapterId: held, offset: 0 });
+    void e.play();
+  }, [held]);
 
   const step = useCallback((seconds: number) => {
     const e = engineRef.current;
@@ -76,6 +93,7 @@ export function usePlayer(chapters: Chapter[], create: CreateEngine = createEngi
     if (!e || !p) return;
     const list = chaptersRef.current;
     const dur = (id: string) => list.find((c) => c.id === id)?.duration_s ?? null;
+    setHeld(null);
     let id = p.chapterId;
     let offset = p.offset + seconds;
     if (seconds > 0) {
@@ -102,11 +120,12 @@ export function usePlayer(chapters: Chapter[], create: CreateEngine = createEngi
     const e = engineRef.current;
     const p = e?.position();
     if (!e || !p) return;
+    setHeld(null);
     const n = neighbour(chaptersRef.current, p.chapterId, dir);
     if (n) e.seek({ chapterId: n.id, offset: 0 });
   }, []);
 
-  return { refA, refB, visible, state, position, broken, play, pause, toggle, seek, step, jump };
+  return { refA, refB, visible, state, position, broken, held, play, pause, toggle, seek, replay, step, jump };
 }
 
 export type Player = ReturnType<typeof usePlayer>;

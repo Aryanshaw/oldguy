@@ -32,8 +32,9 @@ Pauses matter less than structure: C has no pause of a second or more either and
 added (explainer speaks at 0.9 with 700 ms after each sentence, 1.4 s after a "So" line and at the chapter end),
 because a finished thought needs a moment to land.
 
+The player stops at each chapter's end on its closing line, with replay and next.
+
 ## Still to build
 
-- The player stops at each chapter's end on its recap, with replay and next.
 - Clicking a step jumps to that moment and its code.
 - An explorable map after the video, not instead of it.
