@@ -62,9 +62,11 @@ const SHA256 = /^[0-9a-f]{64}$/;
 // The files every template folder must hold besides template.json.
 const REQUIRED_FILES = ['template.md', 'stage.html'];
 
-// The folder the shipped templates live in: templates/ at the plugin root.
+// The folder the templates live in: templates/ at the plugin root, or OLDGUY_TEMPLATES_DIR when set (a contributor
+// trying a template folder in progress, and the tests).
 function templatesRoot(): string {
-  return path.join(import.meta.dirname, '..', 'templates');
+  const override = process.env.OLDGUY_TEMPLATES_DIR;
+  return override && path.isAbsolute(override) ? override : path.join(import.meta.dirname, '..', 'templates');
 }
 
 // True when the value is a plain object (not null, not a list).

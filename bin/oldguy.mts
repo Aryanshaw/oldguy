@@ -12,6 +12,7 @@ import { runNarrate } from '../cli/narrate.mts';
 import { runRender } from '../cli/render.mts';
 import { runServe } from '../cli/server.mts';
 import { runListen } from '../cli/listen.mts';
+import { runTemplates, runVideo } from '../cli/templates.mts';
 import { runReply, runAddChapter, runSetStatus, runRemoveChapter, runOrder, runAck } from '../cli/client.mts';
 
 // A command: what `--help` says about it, and the function that runs it (it returns the exit code, or nothing for 0).
@@ -35,6 +36,8 @@ const COMMANDS: Record<string, Command> = {
   'add-chapter': { summary: 'add a chapter to the story (--id, --after, --title, --parent, --reason, --question)', run: runAddChapter },
   'set-status': { summary: 'set a chapter\'s status (--id, --status)', run: runSetStatus },
   'remove-chapter': { summary: 'take a chapter that will not be made out of the story (--id; delete its folder first)', run: runRemoveChapter },
+  templates: { summary: 'list templates; <id> [shape] sets the project default; <id> --show or --fetch', run: runTemplates },
+  video: { summary: 'record the template and shape a video folder is made in (--dir, --template, --shape)', run: runVideo },
   order: { summary: 'write the story order (and move chapters on a running page): oldguy order <id,id,...>', run: runOrder },
 };
 
