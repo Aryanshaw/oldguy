@@ -18,7 +18,7 @@ function good(id, extra = {}) {
       { text: 'The form sends the todo to the server.' },
       { text: 'So nothing is saved until the server answers.' },
     ],
-    scenes: ['<div class="og-kicker">Add a todo</div><div class="lane">Browser</div><div>buy milk</div>'],
+    scenes: ['<div class="og-kicker">Add a todo</div><div class="lane">Browser</div><div>todo: buy milk</div><pre>todos.push(todo);</pre>'],
     ...extra,
   };
 }
@@ -51,10 +51,13 @@ test('pointing at another chapter by position or a time is refused; naming the t
 
 test('the running example must be named in script.md and followed through most chapters', () => {
   assert.match(reasons(checkLesson({ example: null, chapters: [good('a')] }))[0], /names no running example/);
-  const off = { id: 'off', sentences: [{ text: 'So the server starts.' }], scenes: [] };
+  const off = { id: 'off', sentences: [{ text: 'So the server starts.' }], scenes: ['<pre>x</pre>'] };
   const r = reasons(checkLesson({ example: 'buy milk', chapters: [good('a'), off, { ...off, id: 'off2' }] }));
-  assert.ok(r.some((x) => /not mentioned in off, off2/.test(x)), r.join('\n'));
+  assert.ok(r.some((x) => /not named in full in off, off2/.test(x)), r.join('\n'));
+  assert.ok(r.some((x) => /not on screen in off, off2/.test(x)), r.join('\n'));
   assert.deepEqual(reasons(checkLesson({ example: 'buy milk', chapters: [good('a'), good('b'), good('c'), off] })), [], 'one chapter in four may leave it');
+  const half = good('half', { sentences: [{ text: 'You type milk.' }, { text: 'The form sends it.' }, { text: 'You typed buy milk.' }, { text: 'So nothing is saved yet.' }] });
+  assert.ok(reasons(checkLesson({ example: 'buy milk', chapters: [half] })).some((x) => /half: the example is named only after sentence 1/.test(x)), 'one word of it is not naming it');
   assert.deepEqual(exampleWords('the todo "Buy milk"'), ['todo', 'buy', 'milk']);
 });
 
@@ -62,8 +65,22 @@ test('a sentence on screen is refused, code and styles are not read, and the pla
   assert.deepEqual(sceneTexts('<style>.a{}</style><pre>const a = b + c + d + e + f + g + h + i;</pre><div>Label</div>'), ['Label']);
   const wordy = good('w', { scenes: ['<div class="caption">The form sends the todo to the server and waits for it.</div>'] });
   assert.match(reasons(checkLesson({ example: 'todo', chapters: [wordy] }))[0], /on-screen text "The form sends.*" is 12 words; show a label of at most 8/);
-  const planned = (id) => good(id, { scenes: ['<div class="og-planned">Planned</div><div>buy milk</div>'] });
+  const planned = (id) => good(id, { scenes: ['<div class="og-planned">Planned</div><div>buy milk</div><pre>x</pre>'] });
   assert.match(reasons(checkLesson({ example: 'milk', chapters: [planned('a'), planned('b')] }))[0], /planned badge is in 2 chapters \(a, b\); say it once/);
+});
+
+test('code on screen in half the chapters, and a short recap at the end', () => {
+  const bare = (id) => good(id, { scenes: ['<div>todo: buy milk</div>'] });
+  assert.match(reasons(checkLesson({ example: 'buy milk', chapters: [bare('a'), bare('b'), good('c')] }))[0], /real code is on screen in 1 of 3 chapters; show it in at least half/);
+  assert.deepEqual(reasons(checkLesson({ example: 'buy milk', chapters: [bare('a'), { ...bare('b'), code: true }] })), [], 'a code card counts');
+  const long = good('end', { sentences: [...good('x').sentences, { text: 'One form sends it, one server checks it, and one list keeps every todo.' }] });
+  assert.match(reasons(checkLesson({ example: 'buy milk', chapters: [long] }))[0], /closing line is 14 words; end on a recap of at most 12/);
+});
+
+test('ready pieces count as on screen: their labels are checked and can show the example', () => {
+  const flow = { id: 'f', sentences: good('x').sentences, scenes: [], code: true, labels: ['todo: buy milk', 'This label is far too long to read while the voice goes on'] };
+  const r = reasons(checkLesson({ example: 'buy milk', chapters: [flow] }));
+  assert.deepEqual(r, ['f: on-screen text "This label is far too long to read while the voice goes on" is 13 words; show a label of at most 8, the voice says the rest']);
 });
 
 test('oldguy lesson reads order.json, the specs and their scenes', (t) => {

@@ -12,18 +12,23 @@ second copy of the narration. Slowing the voice alone does not fix a video that 
 
 - **Open with the problem and the promise.** What hurts or what the viewer wants to know, then one sentence that
   says what the video follows: "We follow one todo from the Add button to the saved list."
-- **One running example.** Pick it in scope: a real request, job, row or value from the repository, or a plainly
-  generic one ("the todo buy milk"). Write it in `script.md` as `example: <it>`. Name it in at least 70% of the
-  chapters, so the viewer always knows where it is.
+- **One running example that travels.** Pick it in scope: a real request, job, row or value from the repository,
+  or a plainly generic one ("the todo buy milk"). Write it in `script.md` as `example: <it>`. Name it in full in at
+  least 70% of the chapters and show it on screen there. It moves from stop to stop along the map and changes form
+  at each one (a form, then a request, then a row), leaving a trail; parked in one box it teaches nothing.
+- **Real values.** Where the example becomes data, show the real value from the code or a real run (a status,
+  an id, a time), never a made-up one.
 - **Before and after**, when the code replaced something: show the old way next to the new one once, early.
+- **A quick check near the end:** ask one question the viewer can answer from the map ("Where does that time come
+  from?"), leave the pause, then answer it.
 - **End on a recap line** of at most twelve words that the viewer could repeat: "One spec per job. One planner.
   One runner."
 
 ## 2. The shape of one chapter
 
 - **One idea**, at most three new terms, at most eight sentences, within the template's length.
-- **First sentence: where the example is now.** A chapter may be watched alone, so it starts by placing the
-  example on the map. Never point at another chapter by position ("next chapter", "in part 2") or a time; name
+- **Open on where the example is now**, in the first or second sentence. A chapter may be watched alone, so it
+  starts by placing the example on the map. Never point at another chapter by position ("next chapter", "in part 2") or a time; name
   the thing instead ("The todo row from the form is still pending").
 - **At least one "So" sentence** saying what the step means for the viewer: "So a forgotten job fails loudly at
   boot, not quietly in production." It starts with "So" so the check can find it.
@@ -32,7 +37,7 @@ second copy of the narration. Slowing the voice alone does not fix a video that 
 
 ## 3. Sentences
 
-- One idea per sentence, about 14 words on average, never more than 25.
+- One idea per sentence, about 14 words on average (the check refuses an average over 18), never more than 25.
 - No sentence brings in more than three new names.
 - Say the plain-words part first, then the code name: "a list that remembers every job, the registry".
 
@@ -47,7 +52,10 @@ second copy of the narration. Slowing the voice alone does not fix a video that 
   new chapter is a new map the viewer already knows how to read. Reuse the same map when the flow allows.
 - **Labels, not sentences.** On-screen text is at most eight words per label. Never put the narration on screen as
   a caption band; viewers who want captions turn them on while watching.
-- **Code with its important lines lit.** Show the few real lines that matter, the rest dimmed or cut.
+- **Hand-offs are arrows.** When the example moves from one part to the next, draw the arrow it travels along.
+- **Never show a value before it is said.** A number or name appears on the sentence that says it.
+- **Code with its important lines lit**, in at least half the chapters: the few real lines that matter, each with
+  its file and line, the newest lit and the earlier ones dimmed.
 - **Planned work is said once.** A video about something not built yet says so in one chapter (the planned badge
   there), not on every frame.
 
@@ -65,8 +73,9 @@ After the specs are written and before the first scaffold:
 oldguy lesson --dir .oldguy/<slug>
 ```
 
-It checks the running example, a "So" sentence in every chapter, sentence and chapter length, pointing by
-position, on-screen text length and the planned badge. Fix the specs until it prints `lesson ok`. It cannot
+It checks the running example (named in full, early in each chapter, and on screen), a "So" sentence in every
+chapter, sentence and chapter length, pointing by position, on-screen text length (designed scenes and piece
+labels), code on screen in half the chapters, the recap length and the planned badge. Fix the specs until it prints `lesson ok`. It cannot
 check that the map is drawn empty first or that things pile up: look at the snapshots for that
 ([visuals.md](visuals.md) section 4).
 
