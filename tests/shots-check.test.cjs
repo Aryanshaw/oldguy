@@ -24,6 +24,13 @@ function hyperframesAvailable() {
   return r.status === 0 && r.stdout.trim() === HYPERFRAMES_VERSION;
 }
 
+// Why the check is skipped, or false to run it. It starts a browser, which slows the whole suite and makes its
+// timing tests flaky, so it runs only when asked (like the voice-list check), and only where Hyperframes runs.
+function skipReason() {
+  if (!process.env.OLDGUY_CHECK_HYPERFRAMES) return 'set OLDGUY_CHECK_HYPERFRAMES=1 (starts a browser)';
+  return !hyperframesAvailable() && `hyperframes@${HYPERFRAMES_VERSION} is not available`;
+}
+
 const CHAPTER = {
   id: 'the-bell',
   metaphor: 'a shop bell',
@@ -46,7 +53,7 @@ const CHAPTER = {
   ],
 };
 
-test('a compiled shot scene passes hyperframes check in a real chapter page', { skip: !hyperframesAvailable() && `hyperframes@${HYPERFRAMES_VERSION} is not available`, timeout: 600000 }, (t) => {
+test('a compiled shot scene passes hyperframes check in a real chapter page', { skip: skipReason(), timeout: 600000 }, (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'oldguy-shots-check-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   fs.mkdirSync(path.join(root, 'scenes'));

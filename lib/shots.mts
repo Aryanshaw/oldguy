@@ -5,9 +5,9 @@
 // and the chalk marks are all decided here.
 import fs from 'node:fs';
 import path from 'node:path';
-import { findItem, closest, colourway, recolour, recolourMap, ART_DIR } from './catalog.mts';
+import { findItem, closest, colourway, recolour, recolourMap, loadCatalog, ART_DIR } from './catalog.mts';
+import { COMPILED_MAX_BYTES } from '../scene-kit/design.mts';
 import { f, rng, burst, sight, strings, leader, underline, circle, chalkFilter, ground, motion } from './shots-runtime.mts';
-import { readOrder } from './chapter-scan.mts';
 import { renderPiece, GSAP_FILE, KIT_DIR } from './pieces.mts';
 import type { Catalog, Item, Layers } from './catalog.mts';
 
@@ -587,8 +587,6 @@ function layout(shot: Shot, cat: Catalog): ShotLayout {
 
 // ---- compile ------------------------------------------------------------------------------------------------------
 
-// A design scene may be at most this big (scene-kit/design.mts refuses a larger one).
-const MAX_SCENE_BYTES = 100 * 1024;
 // The title card is up for this long before the first shot's items come in.
 const TITLE_S = 1.8;
 // The hand-lettered font: the template's stage carries it as an @font-face (a scene may not load files), the scene
@@ -918,7 +916,7 @@ function compileChapter(ch: ChapterShots, cat: Catalog): string {
   const start = [`tl.set("#${world}", {x: 0, y: 0, scale: 1, transformOrigin: "0 0"}, startS);`];
   const scene = `<style>\n${sceneCss(sid, cat)}\n</style>\n${markup}\n<script data-oldguy-timeline>\n${[...start, ...lines].join('\n')}\n</script>\n`;
   const bytes = Buffer.byteLength(scene, 'utf8');
-  if (bytes > MAX_SCENE_BYTES) throw new Error(`chapter ${ch.id}: the scene is ${Math.ceil(bytes / 1024)} KB; a design scene holds at most ${MAX_SCENE_BYTES / 1024} KB (use fewer different drawings, or smaller ones)`);
+  if (bytes > COMPILED_MAX_BYTES) throw new Error(`chapter ${ch.id}: the scene is ${Math.ceil(bytes / 1024)} KB; a compiled scene holds at most ${COMPILED_MAX_BYTES / 1024} KB (use fewer different drawings, or smaller ones)`);
   return scene;
 }
 
@@ -928,52 +926,27 @@ function shotWarnings(ch: ChapterShots): string[] {
   return raw > MAX_RAW ? [`${raw} raw shots; more than ${MAX_RAW} means the library is missing something${rule('10')}`] : [];
 }
 
-// ---- a video folder ------------------------------------------------------------------------------------------------
-
-// One chapter's result: its problems and warnings, and its shots when they could be read.
-type ChapterResult = { id: string; errors: string[]; warnings: string[]; shots?: ChapterShots };
-
-// Reads a JSON file; null when it is missing or not JSON.
-function readJsonFile(file: string): unknown {
+// True when a design scene file is exactly what compileChapter makes now from the video's shots/<id>.json (the file
+// must be scenes/<id>.html, and the shots' id must be <id>), with the art library in use. Scaffold asks this before it
+// marks a scene as compiled, which gives it the larger size limit of scene-kit/design.mts. Compiling again is the
+// check, rather than a mark inside the file, because anything written in the file could be copied into a scene
+// written by hand; the same bytes can only come from the compiler.
+function isCompiledScene(root: string, file: string, html: string): boolean {
+  const m = /^scenes\/([a-z][a-z0-9-]*)\.html$/.exec(path.posix.normalize(file));
+  if (!m) return false;
+  let shots: unknown;
   try {
-    return JSON.parse(fs.readFileSync(file, 'utf8'));
+    shots = JSON.parse(fs.readFileSync(path.join(root, 'shots', `${m[1]}.json`), 'utf8'));
   } catch {
-    return null;
+    return false;
   }
-}
-
-// The cited ranges in a chapter spec's sources: [{file, lines: [from, to]}].
-function specSources(spec: Record<string, unknown>): SourceRange[] {
-  const list: unknown[] = Array.isArray(spec.sources) ? spec.sources : [];
-  return list.flatMap((s) => {
-    if (!isObject(s) || typeof s.file !== 'string' || !Array.isArray(s.lines) || s.lines.length !== 2) return [];
-    const [a, b] = s.lines;
-    return typeof a === 'number' && typeof b === 'number' ? [{ file: s.file, lines: [a, b] as [number, number] }] : [];
-  });
-}
-
-// Checks every chapter of a video folder, in order.json's order: shots/<id>.json against the library and the rules,
-// with its sentences and sources taken from specs/<id>.json. The first chapter's first shot sets the bookend the
-// last chapter's last shot must echo.
-function checkShotsFolder(slugDir: string, cat: Catalog): ChapterResult[] {
-  const { ids } = readOrder(slugDir);
-  if (!ids || ids.length === 0) throw new Error('no chapters in order.json: run oldguy order first');
-  const read = ids.map((id) => {
-    const raw = readJsonFile(path.join(slugDir, 'shots', `${id}.json`));
-    const spec = readJsonFile(path.join(slugDir, 'specs', `${id}.json`));
-    return { id, shots: isObject(raw) ? (raw as ChapterShots) : undefined, spec: isObject(spec) ? spec : undefined };
-  });
-  const first = read[0].shots;
-  return read.map(({ id, shots, spec }, i): ChapterResult => {
-    const errors: string[] = [];
-    if (!shots) errors.push(`shots/${id}.json is missing or not JSON`);
-    if (!spec) errors.push(`specs/${id}.json is missing or not JSON: write the spec (its sentences and sources) before the shots`);
-    if (!shots || !spec) return { id, errors, warnings: [] };
-    if (shots.id !== id) errors.push(`"id" must be "${id}", the chapter's id in order.json`);
-    const sentences = Array.isArray(spec.sentences) ? spec.sentences.length : 0;
-    errors.push(...shotErrors(shots, cat, { sentences, sources: specSources(spec), first, last: i === read.length - 1 }));
-    return { id, errors, warnings: shotWarnings(shots), shots };
-  });
+  if (!isObject(shots) || shots.id !== m[1]) return false;
+  try {
+    // a shot list the compiler refuses is not a compiled scene
+    return compileChapter(shots as ChapterShots, loadCatalog()) === html;
+  } catch {
+    return false;
+  }
 }
 
 // ---- the contact sheet -----------------------------------------------------------------------------------------------
@@ -1037,6 +1010,6 @@ function contactSheetHtml(scene: string, n: number, title: string): { html: stri
 
 export {
   RULES, PLACES, GROUND_IDS, shotErrors, shotWarnings, resolveShots, splitRef, layout, layoutChapter, anchorPoint, compileChapter, handFontCss,
-  checkShotsFolder, contactSheetHtml, stillPage, showTimes,
+  contactSheetHtml, stillPage, showTimes, isObject, isCompiledScene,
 };
-export type { Place, Ground, CastEntry, PropEntry, Card, Chalk, Camera, Shot, ChapterShots, SourceRange, ShotContext, Thing, ResolvedShot, Box, Pt, Placed, CardBox, ShotLayout, ChapterResult };
+export type { Place, Ground, CastEntry, PropEntry, Card, Chalk, Camera, Shot, ChapterShots, SourceRange, ShotContext, Thing, ResolvedShot, Box, Pt, Placed, CardBox, ShotLayout };

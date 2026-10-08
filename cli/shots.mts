@@ -6,7 +6,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { loadCatalog } from '../lib/catalog.mts';
-import { checkShotsFolder, compileChapter, contactSheetHtml } from '../lib/shots.mts';
+import { compileChapter, contactSheetHtml } from '../lib/shots.mts';
+import { checkShotsFolder } from '../lib/shots-folder.mts';
 import { parseFlags, guarded } from './args.mts';
 
 const USAGE = 'usage: oldguy shots --dir .oldguy/<slug> [--show <chapter id>]';
