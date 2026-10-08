@@ -2,14 +2,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { splitSentences } from './sentences.mts';
-import * as title from '../scene-kit/title.mts';
-import * as steps from '../scene-kit/steps.mts';
-import * as codeCard from '../scene-kit/code-card.mts';
-import * as callout from '../scene-kit/callout.mts';
-import * as flow from '../scene-kit/flow.mts';
-import * as design from '../scene-kit/design.mts';
+import { renderPiece, GSAP_NAME, GSAP_FILE } from './pieces.mts';
+import { buildStagePage } from './stage.mts';
+import { loadTemplate, DEFAULT_TEMPLATE } from './template.mts';
 import { checkAgainstTemplate } from './template-checks.mts';
-import type { Rendered } from '../scene-kit/shared.mts';
 import type { Template } from './template.mts';
 
 // One source a chapter cites: where it lives, which lines, and the exact text quoted from them.
@@ -31,22 +27,7 @@ type PieceWindow = { piece: string; params: unknown; startS: number; durationS: 
 // The timed sentences a chapter's pieces are laid against.
 type TimedBeat = { start: number };
 
-const KIT_DIR = path.join(import.meta.dirname, '..', 'scene-kit');
-// GSAP 3.14.2 from the npm package, kept in the repo (see scene-kit/vendor/README.md). Narrate copies it into the
-// chapter folder and the page loads it from there, so checking and rendering a chapter need no network.
-const GSAP_NAME = 'gsap.min.js';
-const GSAP_FILE = path.join(KIT_DIR, 'vendor', GSAP_NAME);
 const MAX_ID_LENGTH = 60;
-
-// The scene pieces a chapter may use, by the name written in chapter.json.
-const PIECES: Record<string, { render: (params: unknown, opts: unknown) => Rendered }> = {
-  title,
-  steps,
-  'code-card': codeCard,
-  callout,
-  flow,
-  design,
-};
 
 // Turns a free-text id into a folder name: lower-case a-z0-9 words joined by single hyphens, never starting with a digit.
 function slugChapterId(raw: unknown): string {
@@ -82,14 +63,6 @@ function checkNarrationText(narration: string, sentences: { text: string }[]): v
   if (normaliseText(narration) !== expected) {
     throw new Error('narration.txt no longer matches chapter.json: fix the spec, delete the chapter folder, then scaffold, audit and narrate again');
   }
-}
-
-// Renders one piece with the scene kit; an unknown piece name is an error that lists the ones that exist.
-function renderPiece({ piece, params }: { piece: string; params: unknown }, window: unknown): Rendered {
-  if (!Object.hasOwn(PIECES, piece)) {
-    throw new Error(`unknown piece "${piece}"; use one of ${Object.keys(PIECES).join('|')}`);
-  }
-  return PIECES[piece].render(params, window);
 }
 
 // Checks each scene entry: a known piece with params the kit accepts, on a whole beat index that moves forward.
@@ -208,53 +181,26 @@ function roundUpTenth(seconds: number): number {
 }
 
 // Gives each scene piece its time window: from its sentence's start to the next piece's start, the last to the end.
-function pieceWindows(scene: ChapterScene[], beats: TimedBeat[], durationS: number): PieceWindow[] {
+// `anchor(beat, word)` moves a piece that names a word to that word's time (the stage's keyword timing); without it
+// every piece starts on its sentence.
+function pieceWindows(scene: ChapterScene[], beats: TimedBeat[], durationS: number, anchor?: (beat: number, word?: string) => number): PieceWindow[] {
   const beatsS = beats.map((b) => b.start);
+  const starts = scene.map((entry) => (anchor && entry.word !== undefined ? anchor(entry.beat, entry.word) : beats[entry.beat].start));
   return scene.map((entry, i) => {
-    const startS = beats[entry.beat].start;
-    const endS = i + 1 < scene.length ? beats[scene[i + 1].beat].start : durationS;
+    const startS = starts[i];
+    const endS = i + 1 < scene.length ? starts[i + 1] : durationS;
     return { piece: entry.piece, params: entry.params, startS, durationS: Number((endS - startS).toFixed(3)), beatsS };
   });
 }
 
-// Builds the standalone chapter page: one 1920x1080 root, the theme, GSAP (from the copy beside index.html), and every piece
-// on one paused timeline.
+// Builds the standalone chapter page as oldguy always has: explainer at 16:9, one 1920x1080 root, the theme, GSAP (from
+// the copy beside index.html), and every piece on one paused timeline. The stage driver does the work; this stays as the
+// name older code and tests use.
 function buildRootComposition({ id, durationS, pieces }: { id: unknown; durationS: unknown; pieces: PieceWindow[] }): string {
-  // the id lands in an attribute and a script, so only an already-slugged id is accepted
+  // checked here as before, so a bad id or length gives the same message whoever calls
   if (typeof id !== 'string' || !/^[a-z][a-z0-9-]*$/.test(id)) throw new Error(`composition id "${id}" must be a slug (a-z, 0-9, hyphens)`);
   if (typeof durationS !== 'number' || !Number.isFinite(durationS) || durationS <= 0) throw new Error('composition duration must be a number of seconds above 0');
-  const theme = fs.readFileSync(path.join(KIT_DIR, 'theme.css'), 'utf8');
-  const rendered = pieces.map((p, i) => renderPiece(p, { startS: p.startS, durationS: p.durationS, idPrefix: `p${i}`, beatsS: p.beatsS }));
-  return [
-    '<!doctype html>',
-    '<html lang="en">',
-    '<head>',
-    '<meta charset="UTF-8" />',
-    '<meta name="viewport" content="width=1920, height=1080" />',
-    `<title>${id}</title>`,
-    `<script src="${GSAP_NAME}"></script>`,
-    // the stage is a fixed 1920x1080 box the pieces are laid over
-    '<style>',
-    'html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: var(--og-black); }',
-    '#root { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: var(--og-black); }',
-    theme,
-    '</style>',
-    '</head>',
-    '<body>',
-    `<div id="root" data-composition-id="${id}" data-start="0" data-width="1920" data-height="1080" data-duration="${durationS}">`,
-    ...rendered.map((r) => r.html),
-    // the narration sits beside index.html; Hyperframes plays it on its own track (an audio element needs an id or it is silent)
-    `<audio id="narration" src="narration.wav" data-start="0" data-duration="${durationS}" data-track-index="10" data-volume="1"></audio>`,
-    '</div>',
-    '<script>',
-    'const tl = gsap.timeline({ paused: true });',
-    ...rendered.map((r) => r.timeline).filter(Boolean),
-    `window.__timelines[${JSON.stringify(id)}] = tl;`,
-    '</script>',
-    '</body>',
-    '</html>',
-    '',
-  ].join('\n');
+  return buildStagePage({ id, template: loadTemplate(DEFAULT_TEMPLATE), shape: '16:9', timing: { durationS, lines: [], words: [] }, pieces });
 }
 
 export {

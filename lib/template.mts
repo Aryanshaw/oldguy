@@ -43,6 +43,7 @@ type Template = {
   pace: Pace;
   assets: Asset[];
   background?: string;
+  background_seconds?: number;
   slots?: Partial<Record<Shape, SlotBox>>;
   dir: string;
 };
@@ -191,6 +192,8 @@ function validateTemplate(raw: unknown, dir: string): string[] {
   errs.push(...paceErrors(raw.pace, ids));
   errs.push(...slotErrors(raw.slots, raw.shapes));
   if (raw.background !== undefined && (typeof raw.background !== 'string' || !assetPaths.has(raw.background))) errs.push('background must name a listed asset');
+  if (raw.background !== undefined && !numberIn(raw.background_seconds, 1, 36000)) errs.push('background_seconds must give the background loop\'s length in seconds');
+  if (raw.background === undefined && raw.background_seconds !== undefined) errs.push('background_seconds needs a background');
   for (const name of REQUIRED_FILES) if (!fs.existsSync(path.join(dir, name))) errs.push(`${name} is missing from the template folder`);
   return errs;
 }
