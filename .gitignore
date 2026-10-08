@@ -10,3 +10,4 @@ player/playwright-report/
 .yap
 # every template ships a short preview clip
 !templates/*/sample.mp4
+.claude/worktrees/
