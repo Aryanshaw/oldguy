@@ -14,8 +14,8 @@ vi.mock('@/api/client', async (orig) => ({
 const INFO: TemplatesInfo = {
   current: { template: 'explainer', shape: '16:9' },
   templates: [
-    { id: 'explainer', title: 'Explainer', description: 'A calm narrator.', shapes: ['16:9', '9:16', '1:1'] },
-    { id: 'tutor', title: 'Tutor', description: 'A professor builds it up.', shapes: ['16:9', '9:16'] },
+    { id: 'explainer', title: 'Explainer', description: 'A calm narrator.', shapes: ['16:9', '9:16', '1:1'], tags: [], voices: [{ id: 'narrator', voice: 'af_heart' }], captions: 'none', chapter_seconds: [20, 40], sample: false, poster: false },
+    { id: 'tutor', title: 'Tutor', description: 'A professor builds it up.', shapes: ['16:9', '9:16'], tags: [], voices: [{ id: 'narrator', voice: 'af_heart' }], captions: 'none', chapter_seconds: [20, 40], sample: false, poster: false },
   ],
 };
 
