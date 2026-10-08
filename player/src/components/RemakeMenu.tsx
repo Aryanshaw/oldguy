@@ -3,7 +3,7 @@ import { getTemplates, postMessage } from '@/api/client';
 import { Button } from '@/components/ui/button';
 import type { Shape, TemplatesInfo } from '@/types';
 
-const SHAPE_NAME: Record<Shape, string> = { '16:9': 'wide', '9:16': 'tall', '1:1': 'square' };
+const SHAPE_NAME: Record<Shape, string> = { '16:9': 'Wide', '9:16': 'Tall', '1:1': 'Square' };
 
 type Choice = { template: string; title: string; shape: Shape };
 
@@ -17,8 +17,9 @@ export function remakeChoices(info: TemplatesInfo): Choice[] {
 }
 
 /**
- * "Remake as…": lists the other templates and shapes and asks Claude (a remake event over the chat bridge) to make the
- * whole video again in the one picked. The old video stays playable; Claude replies in the chat with the new link.
+ * "Remake as…": one block per template (its name and what it is like) with a button for each shape it offers; the
+ * video's own template and shape is marked and cannot be picked. Picking one asks Claude (a remake event over the chat
+ * bridge) to make the whole video again in it. The old video stays playable; Claude replies in the chat with the link.
  */
 export function RemakeMenu() {
   const [open, setOpen] = useState(false);
@@ -64,7 +65,6 @@ export function RemakeMenu() {
     );
   }
 
-  const choices = info ? remakeChoices(info) : [];
   return (
     <div ref={box} className="relative">
       <Button variant="plain" aria-expanded={open} aria-haspopup="menu" onClick={() => setOpen((o) => !o)}>
@@ -73,21 +73,33 @@ export function RemakeMenu() {
       {open && (
         <div
           role="menu"
-          className="bd sh absolute right-0 top-full z-20 mt-2 flex w-64 flex-col gap-1 rounded-[10px] bg-og-white p-2"
+          className="bd sh absolute right-0 top-full z-20 mt-2 flex max-h-[70vh] w-80 flex-col gap-2 overflow-y-auto rounded-[10px] bg-og-white p-2"
         >
           {!info && !error && <p className="px-2 py-1 text-xs font-bold opacity-70">Loading templates…</p>}
-          {info && choices.length === 0 && <p className="px-2 py-1 text-xs font-bold opacity-70">No other template or shape.</p>}
-          {choices.map((c) => (
-            <button
-              key={`${c.template}:${c.shape}`}
-              role="menuitem"
-              type="button"
-              disabled={busy}
-              onClick={() => void pick(c)}
-              className="cursor-pointer rounded-[6px] px-2 py-1.5 text-left text-sm font-bold hover:bg-og-yellow disabled:opacity-50"
-            >
-              {c.title} · {c.shape} <span className="text-xs opacity-60">({SHAPE_NAME[c.shape]})</span>
-            </button>
+          {info?.templates.map((t) => (
+            <section key={t.id} data-template={t.id} className="flex flex-col gap-1.5 rounded-[8px] bg-og-cream px-3 py-2">
+              <p className="text-sm font-black text-og-black">{t.title}</p>
+              <p className="text-xs font-bold text-og-black/70">{t.description}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {t.shapes.map((shape) => {
+                  const current = t.id === info.current.template && shape === info.current.shape;
+                  return (
+                    <button
+                      key={shape}
+                      role="menuitem"
+                      type="button"
+                      disabled={busy || current}
+                      aria-label={`${t.title} · ${shape}${current ? ' (this video)' : ''}`}
+                      onClick={() => void pick({ template: t.id, title: t.title, shape })}
+                      className={`bd cursor-pointer rounded-full px-2.5 py-0.5 text-xs font-black text-og-black disabled:cursor-default ${current ? 'bg-og-yellow' : 'bg-og-white hover:bg-og-yellow'} disabled:opacity-100`}
+                    >
+                      {SHAPE_NAME[shape]} {shape}
+                      {current && ' · this video'}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
           ))}
           {error && (
             <p role="alert" className="min-w-0 rounded-[6px] bg-og-red px-2 py-1 text-xs font-bold text-og-black [overflow-wrap:anywhere]">

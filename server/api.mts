@@ -141,12 +141,12 @@ async function handleMessage({ req, res, state, sendJson, readJsonBody }: RouteC
 
 // What GET /api/templates answers: the template and shape this video is made in, and every template it could be
 // remade as (id, title, shapes), for the player's Remake menu.
-type TemplatesResponse = { current: { template: string; shape: string }; templates: { id: string; title: string; shapes: string[] }[] };
+type TemplatesResponse = { current: { template: string; shape: string }; templates: { id: string; title: string; description: string; shapes: string[] }[] };
 
 // GET /api/templates: the video's template and shape, and the templates the player may offer in Remake as.
 async function handleTemplates({ res, state, sendJson }: RouteContext): Promise<void> {
   const current = readVideoChoice(state.slugDir);
-  const templates = listTemplates().map((t) => ({ id: t.id, title: t.title, shapes: [...t.shapes] }));
+  const templates = listTemplates().map((t) => ({ id: t.id, title: t.title, description: t.description, shapes: [...t.shapes] }));
   const body: TemplatesResponse = { current, templates };
   sendJson(res, 200, body);
 }

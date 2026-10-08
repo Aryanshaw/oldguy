@@ -14,8 +14,8 @@ vi.mock('@/api/client', async (orig) => ({
 const INFO: TemplatesInfo = {
   current: { template: 'explainer', shape: '16:9' },
   templates: [
-    { id: 'explainer', title: 'Explainer', shapes: ['16:9', '9:16', '1:1'] },
-    { id: 'tutor', title: 'Tutor', shapes: ['16:9', '9:16'] },
+    { id: 'explainer', title: 'Explainer', description: 'A calm narrator.', shapes: ['16:9', '9:16', '1:1'] },
+    { id: 'tutor', title: 'Tutor', description: 'A professor builds it up.', shapes: ['16:9', '9:16'] },
   ],
 };
 
@@ -40,17 +40,26 @@ describe('remakeChoices', () => {
 });
 
 describe('RemakeMenu', () => {
-  it('opens the list from the server and posts a remake event for the one picked', async () => {
+  it('shows one block per template, with its description and a button per shape; the current one is marked and off', async () => {
     render(<RemakeMenu />);
     await userEvent.click(screen.getByRole('button', { name: 'Remake as…' }));
-    const items = await screen.findAllByRole('menuitem');
-    expect(items.map((i) => i.textContent)).toEqual([
-      'Explainer · 9:16 (tall)',
-      'Explainer · 1:1 (square)',
-      'Tutor · 16:9 (wide)',
-      'Tutor · 9:16 (tall)',
+    await screen.findAllByRole('menuitem');
+    expect(screen.getByText('Explainer')).toBeInTheDocument();
+    expect(screen.getByText('A professor builds it up.')).toBeInTheDocument();
+    expect(screen.getAllByRole('menuitem').map((i) => i.getAttribute('aria-label'))).toEqual([
+      'Explainer · 16:9 (this video)',
+      'Explainer · 9:16',
+      'Explainer · 1:1',
+      'Tutor · 16:9',
+      'Tutor · 9:16',
     ]);
-    await userEvent.click(screen.getByRole('menuitem', { name: /Tutor · 9:16/ }));
+    expect(screen.getByRole('menuitem', { name: 'Explainer · 16:9 (this video)' })).toBeDisabled();
+  });
+
+  it('posts a remake event for the shape picked, then shows the progress note', async () => {
+    render(<RemakeMenu />);
+    await userEvent.click(screen.getByRole('button', { name: 'Remake as…' }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Tutor · 9:16' }));
     expect(postMessage).toHaveBeenCalledWith({ type: 'remake', template: 'tutor', shape: '9:16' });
     expect(await screen.findByRole('status')).toHaveTextContent('Remaking as Tutor · 9:16…');
     expect(screen.queryByRole('button', { name: 'Remake as…' })).toBeNull();
@@ -60,7 +69,7 @@ describe('RemakeMenu', () => {
     vi.mocked(postMessage).mockRejectedValue(new Error('unknown template "tutor"'));
     render(<RemakeMenu />);
     await userEvent.click(screen.getByRole('button', { name: 'Remake as…' }));
-    await userEvent.click(await screen.findByRole('menuitem', { name: /Tutor · 16:9/ }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Tutor · 16:9' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('unknown template "tutor"');
     expect(screen.getByRole('menu')).toBeInTheDocument();
   });

@@ -26,7 +26,7 @@ export interface Manifest {
 /** GET /api/templates: the video's own template and shape, and every template it could be remade as. */
 export interface TemplatesInfo {
   current: { template: string; shape: Shape };
-  templates: { id: string; title: string; shapes: Shape[] }[];
+  templates: { id: string; title: string; description: string; shapes: Shape[] }[];
 }
 
 /** "12" or "12-20", as sent in replies. */

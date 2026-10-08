@@ -92,7 +92,7 @@ test('GET /api/templates gives the video\'s template and shape and every templat
   assert.equal(r.status, 200);
   assert.deepEqual(r.body.current, { template: 'explainer', shape: '9:16' });
   assert.deepEqual(r.body.templates.map((x) => x.id), ['explainer', 'duo']);
-  assert.deepEqual(r.body.templates[1], { id: 'duo', title: 'Duo', shapes: ['16:9', '9:16'] });
+  assert.deepEqual(r.body.templates[1], { id: 'duo', title: 'Duo', description: 'A test template: one asks, one explains.', shapes: ['16:9', '9:16'] });
 });
 
 test('oldguy remake makes a new folder with the checked sources, script and order, and the new template', (t) => {
