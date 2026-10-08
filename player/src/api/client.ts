@@ -70,6 +70,9 @@ export function getTemplates(): Promise<TemplatesInfo> {
   return json<TemplatesInfo>('/api/templates');
 }
 
+export const templateSampleUrl = (id: string): string => `/api/templates/${encodeURIComponent(id)}/sample`;
+export const templatePosterUrl = (id: string): string => `/api/templates/${encodeURIComponent(id)}/poster`;
+
 export function postExport(
   dest: string,
   mode: 'full' | 'drafts',

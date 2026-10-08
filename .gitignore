@@ -8,3 +8,5 @@ player/test-results/
 player/playwright-report/
 .oldguy
 .yap
+# every template ships a short preview clip
+!templates/*/sample.mp4

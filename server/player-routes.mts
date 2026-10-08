@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { loadManifest } from '../lib/manifest.mts';
 import { slugChapterId } from '../lib/chapter.mts';
 import { serveFile, safeChapterFile } from '../lib/range.mts';
+import { loadTemplate, templateIds, SAMPLE_VIDEO, SAMPLE_POSTER } from '../lib/template.mts';
 import type { Route, RouteContext, ServerState } from './types.mts';
 
 // One source entry as the player receives it.
@@ -72,7 +73,22 @@ function handleSources({ res, params, state, sendJson }: RouteContext): void {
   sendJson(res, 200, { sources });
 }
 
+// GET /api/templates/:id/sample and /poster: a template's preview clip (with range requests, so it can seek) and its
+// poster frame. Only a shipped template's own two files are ever served.
+function templateMedia(kind: 'sample' | 'poster') {
+  const name = kind === 'sample' ? SAMPLE_VIDEO : SAMPLE_POSTER;
+  const contentType = kind === 'sample' ? 'video/mp4' : 'image/jpeg';
+  return async ({ req, res, params, state, sendJson }: RouteContext): Promise<void> => {
+    if (!templateIds().includes(params.id)) return sendJson(res, 404, { error: 'not found' });
+    const real = safeChapterFile(loadTemplate(params.id).dir, name);
+    if (!real) return sendJson(res, 404, { error: 'not found' });
+    await serveFile(req, res, real.path, { contentType, identity: real, createReadStream: state.deps.createReadStream });
+  };
+}
+
 const PLAYER_ROUTES: Route[] = [
+  { method: 'GET', pattern: '/api/templates/:id/sample', handler: templateMedia('sample') },
+  { method: 'GET', pattern: '/api/templates/:id/poster', handler: templateMedia('poster') },
   { method: 'GET', pattern: '/assets/:file', handler: handleAsset },
   { method: 'GET', pattern: '/chapters/:id/sources', handler: handleSources },
 ];

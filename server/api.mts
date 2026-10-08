@@ -4,7 +4,7 @@ import path from 'node:path';
 import { appendEvent, readEventsAfter, appendReply, readThread, appendAck } from '../lib/events.mts';
 import { loadManifest, insertChapter, reorderChapters, removeChapter, setChapterFields } from '../lib/manifest.mts';
 import { scanChapter } from '../lib/chapter-scan.mts';
-import { listTemplates, templateIds } from '../lib/template.mts';
+import { listTemplates, templateIds, sampleFiles } from '../lib/template.mts';
 import { readVideoChoice } from '../lib/settings.mts';
 import { handleExport } from './export-route.mts';
 import type { Ack, EventContext, EventType, Reply, SourceRef, ThreadEntry, ViewerEvent } from '../lib/events.mts';
@@ -139,14 +139,28 @@ async function handleMessage({ req, res, state, sendJson, readJsonBody }: RouteC
   sendJson(res, 200, { event });
 }
 
+// One template as the player's gallery shows it: what it is, who speaks, its rhythm, and whether it has a preview
+// (served at /api/templates/<id>/sample and /api/templates/<id>/poster).
+type TemplateCard = {
+  id: string; title: string; description: string; shapes: string[]; tags: string[];
+  voices: { id: string; voice: string }[]; captions: string; chapter_seconds: [number, number];
+  sample: boolean; poster: boolean;
+};
 // What GET /api/templates answers: the template and shape this video is made in, and every template it could be
-// remade as (id, title, shapes), for the player's Remake menu.
-type TemplatesResponse = { current: { template: string; shape: string }; templates: { id: string; title: string; description: string; shapes: string[] }[] };
+// remade as, for the player's template gallery.
+type TemplatesResponse = { current: { template: string; shape: string }; templates: TemplateCard[] };
 
 // GET /api/templates: the video's template and shape, and the templates the player may offer in Remake as.
 async function handleTemplates({ res, state, sendJson }: RouteContext): Promise<void> {
   const current = readVideoChoice(state.slugDir);
-  const templates = listTemplates().map((t) => ({ id: t.id, title: t.title, description: t.description, shapes: [...t.shapes] }));
+  const templates = listTemplates().map((t): TemplateCard => {
+    const files = sampleFiles(t);
+    const voices = t.speakers.length ? t.speakers.map((s) => ({ id: s.id, voice: s.voice })) : [{ id: 'narrator', voice: t.narrator_voice }];
+    return {
+      id: t.id, title: t.title, description: t.description, shapes: [...t.shapes], tags: [...(t.tags ?? [])], voices,
+      captions: t.pace.captions, chapter_seconds: t.pace.chapter_seconds, sample: files.video !== null, poster: files.poster !== null,
+    };
+  });
   const body: TemplatesResponse = { current, templates };
   sendJson(res, 200, body);
 }
@@ -317,5 +331,5 @@ const API_ROUTES: Route[] = [
 export { API_ROUTES, clearHeartbeatTimer };
 export type { AckBody, AckResponse,
   MessageBody, ReplyBody, ChaptersBody, ExportBody, SettableFields, StateResponse, MessageResponse, ReplyResponse,
-  ChaptersResponse, ExportResponse, TemplatesResponse,
+  ChaptersResponse, ExportResponse, TemplatesResponse, TemplateCard,
 };

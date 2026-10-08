@@ -3,7 +3,16 @@
   "version": 1,
   "title": "Explainer",
   "description": "A calm narrator walks through the flow while the scene builds up on screen.",
-  "shapes": ["16:9", "9:16", "1:1"],
+  "tags": [
+    "narrator",
+    "calm",
+    "diagrams"
+  ],
+  "shapes": [
+    "16:9",
+    "9:16",
+    "1:1"
+  ],
   "default_shape": "16:9",
   "speakers": [],
   "narrator_voice": "af_heart",
@@ -12,7 +21,10 @@
     "line_gap_ms": 0,
     "captions": "none",
     "visual_beat": "sentence",
-    "chapter_seconds": [20, 40]
+    "chapter_seconds": [
+      20,
+      40
+    ]
   },
   "assets": []
 }

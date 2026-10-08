@@ -23,10 +23,25 @@ export interface Manifest {
   chapters: Chapter[];
 }
 
+/** One template in the gallery: what it is, who speaks, its rhythm, and whether it ships a preview. */
+export interface TemplateCard {
+  id: string;
+  title: string;
+  description: string;
+  shapes: Shape[];
+  tags: string[];
+  voices: { id: string; voice: string }[];
+  captions: 'none' | 'line' | 'word';
+  chapter_seconds: [number, number];
+  /** true when /api/templates/<id>/sample serves a preview clip, and /poster its first frame. */
+  sample: boolean;
+  poster: boolean;
+}
+
 /** GET /api/templates: the video's own template and shape, and every template it could be remade as. */
 export interface TemplatesInfo {
   current: { template: string; shape: Shape };
-  templates: { id: string; title: string; description: string; shapes: Shape[] }[];
+  templates: TemplateCard[];
 }
 
 /** "12" or "12-20", as sent in replies. */

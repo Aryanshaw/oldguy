@@ -57,7 +57,7 @@ function call(srv, method, url, body) {
       headers: { host: `127.0.0.1:${srv.port}`, 'x-oldguy-key': srv.key, ...(data ? { 'content-type': 'application/json' } : {}) } }, (res) => {
       let d = '';
       res.on('data', (c) => { d += c; });
-      res.on('end', () => resolve({ status: res.statusCode, body: d ? JSON.parse(d) : null }));
+      res.on('end', () => resolve({ status: res.statusCode, type: res.headers['content-type'], body: d && /json/.test(res.headers['content-type'] || '') ? JSON.parse(d) : d }));
     });
     r.on('error', reject);
     r.end(data);
@@ -92,7 +92,12 @@ test('GET /api/templates gives the video\'s template and shape and every templat
   assert.equal(r.status, 200);
   assert.deepEqual(r.body.current, { template: 'explainer', shape: '9:16' });
   assert.deepEqual(r.body.templates.map((x) => x.id), ['explainer', 'duo']);
-  assert.deepEqual(r.body.templates[1], { id: 'duo', title: 'Duo', description: 'A test template: one asks, one explains.', shapes: ['16:9', '9:16'] });
+  assert.deepEqual(r.body.templates[1], {
+    id: 'duo', title: 'Duo', description: 'A test template: one asks, one explains.', shapes: ['16:9', '9:16'],
+    tags: ['two-voices', 'reel', 'word-captions'], voices: [{ id: 'kid', voice: 'bm_george' }, { id: 'dad', voice: 'am_adam' }],
+    captions: 'word', chapter_seconds: [30, 60], sample: false, poster: false,
+  });
+  assert.deepEqual(r.body.templates[0].voices, [{ id: 'narrator', voice: 'af_heart' }], 'a narrator template lists its one voice');
 });
 
 test('oldguy remake makes a new folder with the checked sources, script and order, and the new template', (t) => {
@@ -104,6 +109,16 @@ test('oldguy remake makes a new folder with the checked sources, script and orde
   assert.deepEqual(fs.readdirSync(dir).sort(), ['order.json', 'script.md', 'sources.json', 'video.json']);
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir, 'video.json'), 'utf8')), { template: 'duo', shape: '9:16' });
   assert.ok(fs.existsSync(path.join(from, 'chapters', 'intro', 'chapter.json')), 'the old video is untouched');
+});
+
+test('a template\'s sample and poster are served; a template or file that does not exist is 404', async (t) => {
+  const srv = await serve(t, video(t));
+  const poster = await call(srv, 'GET', '/api/templates/explainer/poster');
+  assert.equal(poster.status, 200);
+  assert.equal(poster.type, 'image/jpeg');
+  assert.equal((await call(srv, 'GET', '/api/templates/explainer/sample')).status, 404, 'the fixture explainer ships no clip');
+  assert.equal((await call(srv, 'GET', '/api/templates/duo/sample')).status, 404);
+  assert.equal((await call(srv, 'GET', '/api/templates/nope/poster')).status, 404);
 });
 
 test('a second remake to the same template refuses; a remake of a remake keeps the base name', (t) => {

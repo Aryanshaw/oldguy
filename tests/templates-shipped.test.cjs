@@ -51,6 +51,13 @@ for (const t of listTemplates(ROOT)) {
     }
   });
 
+  test(`${t.id}: ships a preview (sample.mp4, at most 3 MB, and its poster sample.jpg)`, () => {
+    const video = path.join(t.dir, 'sample.mp4');
+    assert.ok(fs.existsSync(video), 'sample.mp4 is missing: every template shows viewers what they will get');
+    assert.ok(fs.statSync(video).size <= 3 * 1024 * 1024, 'sample.mp4 is over 3 MB; cut it shorter or smaller');
+    assert.ok(fs.existsSync(path.join(t.dir, 'sample.jpg')), 'sample.jpg (the poster frame) is missing');
+  });
+
   test(`${t.id}: the stage driver builds a page in every shape it lists`, () => {
     for (const shape of t.shapes) {
       const page = buildStagePage({ id: 'sample', template: t, shape, timing: sampleTiming(t), pieces: [

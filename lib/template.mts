@@ -44,6 +44,7 @@ type Template = {
   assets: Asset[];
   background?: string;
   background_seconds?: number;
+  tags?: string[];
   slots?: Partial<Record<Shape, SlotBox>>;
   dir: string;
 };
@@ -61,6 +62,10 @@ const SLUG = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 const SHA256 = /^[0-9a-f]{64}$/;
 // The files every template folder must hold besides template.json.
 const REQUIRED_FILES = ['template.md', 'stage.html'];
+// The preview every template ships so a viewer sees what they will get: a short clip and its poster frame.
+const SAMPLE_VIDEO = 'sample.mp4';
+const SAMPLE_POSTER = 'sample.jpg';
+const MAX_TAGS = 6;
 
 // The folder the templates live in: templates/ at the plugin root, or OLDGUY_TEMPLATES_DIR when set (a contributor
 // trying a template folder in progress, and the tests).
@@ -193,6 +198,11 @@ function validateTemplate(raw: unknown, dir: string): string[] {
   const ids = Array.isArray(raw.speakers) ? raw.speakers.filter(isObject).map((s) => s.id).filter((id): id is string => typeof id === 'string') : [];
   errs.push(...paceErrors(raw.pace, ids));
   errs.push(...slotErrors(raw.slots, raw.shapes));
+  if (raw.tags !== undefined) {
+    const tags = raw.tags;
+    const ok = Array.isArray(tags) && tags.length <= MAX_TAGS && tags.every((x) => typeof x === 'string' && SLUG.test(x)) && new Set(tags).size === tags.length;
+    if (!ok) errs.push(`tags must be at most ${MAX_TAGS} distinct slugs (a-z, 0-9, hyphens)`);
+  }
   if (raw.background !== undefined && (typeof raw.background !== 'string' || !assetPaths.has(raw.background))) errs.push('background must name a listed asset');
   if (raw.background !== undefined && !numberIn(raw.background_seconds, 1, 36000)) errs.push('background_seconds must give the background loop\'s length in seconds');
   if (raw.background === undefined && raw.background_seconds !== undefined) errs.push('background_seconds needs a background');
@@ -249,6 +259,12 @@ function slotBox(t: Template, shape: Shape): SlotBox {
   return t.slots?.[shape] ?? [0, 0, width, height];
 }
 
+// Which preview files a template folder holds: the sample clip and its poster frame.
+function sampleFiles(t: Template): { video: string | null; poster: string | null } {
+  const at = (name: string) => (fs.existsSync(path.join(t.dir, name)) ? path.join(t.dir, name) : null);
+  return { video: at(SAMPLE_VIDEO), poster: at(SAMPLE_POSTER) };
+}
+
 // True when the value is a shape name.
 function isShape(v: unknown): v is Shape {
   return oneOf(SHAPE_LIST, v);
@@ -256,6 +272,6 @@ function isShape(v: unknown): v is Shape {
 
 export {
   SHAPES, SHAPE_LIST, DEFAULT_TEMPLATE, DEFAULT_SHAPE, templatesRoot, templateIds, loadTemplate, listTemplates, validateTemplate,
-  voiceFor, isShape, slotBox,
+  voiceFor, isShape, slotBox, sampleFiles, SAMPLE_VIDEO, SAMPLE_POSTER,
 };
 export type { Shape, Speaker, Pace, Asset, Template, CaptionMode, VisualBeat, SlotBox };
