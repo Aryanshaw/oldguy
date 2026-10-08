@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { audit } from './audit.mts';
-import { templateOfVideo } from './settings.mts';
+import { templateOfVideo, readVideoChoice } from './settings.mts';
 import type { Template } from './template.mts';
 import { runRenders } from './render-schedule.mts';
 import { checkNarrationText } from './chapter.mts';
@@ -47,7 +47,7 @@ function chapterFolders(chaptersDir: string): Folder[] {
 // Says why a chapter may not be rendered, or null when it may. Checks run in order: readable chapter.json,
 // narration text, claim audit, narrated at all, then the build record (nothing changed since narrate).
 // `template` is the video's template, or the reason it could not be loaded (then nothing can be rendered).
-function blockReason({ dir }: Folder, root: string, template: Template | string): string | null {
+function blockReason({ dir }: Folder, root: string, template: Template | string, shape: string): string | null {
   if (typeof template === 'string') return template;
   let chapter: { sources: unknown; sentences: unknown; scene: unknown };
   try {
@@ -67,7 +67,7 @@ function blockReason({ dir }: Folder, root: string, template: Template | string)
   const checked = audit({ root, sources: chapter.sources, sentences: chapter.sentences, scene: chapter.scene, template });
   if (!checked.ok) return `audit: ${checked.failures.map((f) => `${f.id}: ${f.reason}`).join('; ')}`;
   if (!fs.existsSync(path.join(dir, 'index.html'))) return 'not narrated yet (no index.html); run oldguy narrate first';
-  return buildChangedReason(dir, chapter);
+  return buildChangedReason(dir, chapter, { id: template.id, version: template.version, shape });
 }
 
 // Runs the layout check on one chapter folder; returns why it failed (its first line of output) or null when it passed.
@@ -121,6 +121,7 @@ function selectChapters(folders: Folder[], only: string[] | undefined): Chosen[]
 async function renderChapters(chaptersDir: string, { root, cap, render, check, only, force = false, dryRun = false }: RenderOptions): Promise<ChapterOutcome[]> {
   const chosen = selectChapters(chapterFolders(chaptersDir), only);
   // the video folder holds chapters/; its template's rules join the audit of every chapter
+  const shape = readVideoChoice(path.dirname(path.resolve(chaptersDir))).shape;
   let template: Template | string;
   try {
     template = templateOfVideo(path.dirname(path.resolve(chaptersDir)));
@@ -129,7 +130,7 @@ async function renderChapters(chaptersDir: string, { root, cap, render, check, o
   }
   const blocked = new Map<string, string>(
     chosen.flatMap((c): [string, string][] => {
-      const why = c.missing ? 'no such chapter' : blockReason(c, root, template);
+      const why = c.missing ? 'no such chapter' : blockReason(c, root, template, shape);
       return why ? [[c.id, why]] : [];
     }),
   );
