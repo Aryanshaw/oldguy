@@ -7,15 +7,15 @@ export function Header({
   connected,
   onExport,
   label,
-  remake,
+  templates,
 }: {
   title: string;
   connected: boolean;
   onExport: () => void;
   /** "<template> · <shape>", shown under the title when the video records them. */
   label?: string;
-  /** The Remake as… control, placed beside Export. */
-  remake?: ReactNode;
+  /** The Templates control (and its "Remaking as…" note), placed beside Export. */
+  templates?: ReactNode;
 }) {
   return (
     <header className="flex flex-wrap items-center gap-x-5 gap-y-2">
@@ -34,7 +34,7 @@ export function Header({
       >
         {connected ? 'Claude connected' : 'Claude not connected'}
       </span>
-      {remake}
+      {templates}
       <Button variant="accent" onClick={onExport}>
         Export
       </Button>

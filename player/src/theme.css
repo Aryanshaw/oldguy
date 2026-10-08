@@ -61,3 +61,8 @@ body {
   border-radius: 999px;
   border: 2px solid var(--color-og-cream);
 }
+
+/* the dark striped tile shown where a template has no preview yet */
+.og-stripes-static {
+  background: repeating-linear-gradient(135deg, #2a2417 0 12px, var(--color-og-black) 12px 24px);
+}

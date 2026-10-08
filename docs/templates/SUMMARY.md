@@ -18,7 +18,7 @@ A template is a folder `templates/<id>/`; the engine does all timing, so a new t
 | Assets | `lib/assets.mts`, `lib/build-record.mts` | download on first use with consent, size and sha256; assets fingerprinted in `build.json` |
 | Commands | `cli/templates.mts`, `cli/remake.mts` | `oldguy templates`, `oldguy video`, `oldguy remake` |
 | Server | `server/api.mts`, `server/server.mts` | `remake` events, `GET /api/templates`, the manifest records the template |
-| Player | `player/src/components/{Header,VideoStage,RemakeMenu}.tsx` | label, 9:16 and 1:1 stages, Remake as… |
+| Player | `player/src/components/{Header,VideoStage,TemplateGallery}.tsx`, `player/src/lib/templateFilter.ts` | label, 9:16 and 1:1 stages, the Templates gallery: search, a fixed filter rail (shape, voices, captions, style), sample previews, remake |
 | Skills | `skills/templates/`, `skills/oldguy/references/templates.md`, `.claude/skills/new-template/` | users, the main skill, contributors |
 
 Shipped template: `explainer` only (today's look). `tests/fixtures/templates/duo/` is a two-speaker test template.

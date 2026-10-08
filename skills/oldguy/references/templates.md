@@ -57,7 +57,7 @@ own audio). Render refuses a chapter built in another template or shape than the
 
 ## 6. Remake
 
-A `remake` event (the viewer chose Remake as… in the page) carries `template` and `shape`:
+A `remake` event (the viewer picked a template in the page's Templates gallery) carries `template` and `shape`:
 
 1. `oldguy ack <id>`.
 2. `oldguy remake --from .oldguy/<slug> --template <id> --shape <shape>`. It prints the new folder; it carries the

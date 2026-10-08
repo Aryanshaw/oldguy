@@ -4,7 +4,7 @@ import { Controls } from '@/components/Controls';
 import { ExportDialog } from '@/components/ExportDialog';
 import { Header } from '@/components/Header';
 import { Notice } from '@/components/Notice';
-import { RemakeMenu } from '@/components/RemakeMenu';
+import { TemplatesButton } from '@/components/TemplateGallery';
 import { SourcesTab } from '@/components/SourcesTab';
 import { Timeline } from '@/components/Timeline';
 import { useCaptionsPref, usePlayer } from '@/components/usePlayer';
@@ -31,7 +31,7 @@ function Page({ store, manifest, onExport }: { store: Store; manifest: Manifest;
         connected={claudeConnected}
         onExport={onExport}
         label={manifest.template ? `${manifest.template} · ${manifest.shape ?? '16:9'}` : undefined}
-        remake={<RemakeMenu />}
+        templates={<TemplatesButton />}
       />
       <div
         data-layout

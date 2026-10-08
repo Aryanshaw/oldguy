@@ -14,7 +14,7 @@ Renamed from Yap to oldguy on 2026-10-07; older docs use the old name. See
 | 2. Chapters and server | Several chapters in a manifest, served locally with an API and a live stream | `docs/phase-2/SUMMARY.md` |
 | 3. Player | The browser player: video, timeline, captions, Chat and Sources tabs, export | `docs/phase-3/SUMMARY.md` |
 | 4. Chat bridge | Questions typed in the page reach the live Claude Code session; answers and new chapters come back | `docs/phase-4/SUMMARY.md` |
-| Templates, Phase A | The template engine: templates as folders, `oldguy templates`, `video.json`, many voices in one Kokoro process, the stage driver (speakers, captions, chips, background, any shape), remake, the player label and Remake menu; `explainer` is today's look | `docs/templates/SUMMARY.md` |
+| Templates, Phase A | The template engine: templates as folders, `oldguy templates`, `video.json`, many voices in one Kokoro process, the stage driver (speakers, captions, chips, background, any shape), remake, the player label and the Templates gallery (search, filters, sample previews); `explainer` is today's look | `docs/templates/SUMMARY.md` |
 | Polish | `oldguy setup` (installs only what the user agrees to), install from the plugin marketplace, README, MIT license, the old guy mascot (traced from the concept art) | this file, `README.md` |
 
 The design and every amendment: `docs/superpowers/specs/2026-10-02-yap-design.md`. Code layout and rules:

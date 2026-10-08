@@ -94,7 +94,7 @@ test('GET /api/templates gives the video\'s template and shape and every templat
   assert.deepEqual(r.body.templates.map((x) => x.id), ['explainer', 'duo']);
   assert.deepEqual(r.body.templates[1], {
     id: 'duo', title: 'Duo', description: 'A test template: one asks, one explains.', shapes: ['16:9', '9:16'],
-    tags: ['two-voices', 'reel', 'word-captions'], voices: [{ id: 'kid', voice: 'bm_george' }, { id: 'dad', voice: 'am_adam' }],
+    tags: ['reel', 'gameplay', 'playful'], voices: [{ id: 'kid', voice: 'bm_george' }, { id: 'dad', voice: 'am_adam' }],
     captions: 'word', chapter_seconds: [30, 60], sample: false, poster: false,
   });
   assert.deepEqual(r.body.templates[0].voices, [{ id: 'narrator', voice: 'af_heart' }], 'a narrator template lists its one voice');
