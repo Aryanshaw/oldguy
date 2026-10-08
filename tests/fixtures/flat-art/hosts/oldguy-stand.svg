@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 620">
+<rect x="70" y="350" width="36" height="240" rx="12" fill="#2D2668"/>
+<rect x="114" y="350" width="36" height="240" rx="12" fill="#2D2668"/>
+<rect x="58" y="582" width="52" height="38" rx="14" fill="#14110A"/>
+<rect x="112" y="582" width="56" height="38" rx="14" fill="#14110A"/>
+<path d="M52 190 Q110 156 168 190 L176 372 L44 372 Z" fill="#9A8FE6"/>
+<rect x="30" y="198" width="28" height="160" rx="14" fill="#9A8FE6"/>
+<rect x="162" y="198" width="28" height="160" rx="14" fill="#9A8FE6"/>
+<circle cx="44" cy="364" r="16" fill="#F9D3B4"/>
+<circle cx="176" cy="364" r="16" fill="#F9D3B4"/>
+<ellipse cx="110" cy="104" rx="52" ry="62" fill="#F9D3B4"/>
+<path d="M60 112 Q110 214 160 112 Q150 150 110 152 Q70 150 60 112 Z" fill="#D9502F"/>
+<path d="M54 74 Q58 22 112 22 Q166 22 168 74 Z" fill="#FF6B57"/>
+<rect x="110" y="64" width="80" height="14" rx="7" fill="#D9493A"/>
+<g id="eyes"><circle cx="126" cy="100" r="6" fill="#14110A"/><circle cx="150" cy="100" r="6" fill="#14110A"/></g>
+<g id="eyes-shut" opacity="0"><rect x="118" y="98" width="16" height="4" rx="2" fill="#14110A"/><rect x="142" y="98" width="16" height="4" rx="2" fill="#14110A"/></g>
+<g id="mouth"><rect x="124" y="132" width="24" height="5" rx="2.5" fill="#14110A"/></g>
+<g id="mouth-open" opacity="0"><ellipse cx="136" cy="134" rx="11" ry="9" fill="#14110A"/></g>
+</svg>
