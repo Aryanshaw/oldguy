@@ -205,6 +205,8 @@ async function narratedChapter(t) {
     scene: [{ piece: 'title', params: { heading: 'Jobs' }, beat: 0 }],
   });
   const run = async (cmd, args) => {
+    // only a tts call has -o; anything else must never be written over (args[0] could be a source file)
+    if (!args.includes('-o')) throw new Error(`unexpected program call: ${cmd} ${args.join(' ')}`);
     fs.copyFileSync(path.join(__dirname, 'fixtures', 'narration.wav'), args[args.indexOf('-o') + 1]);
     return { code: 0, stdout: '{}', stderr: '' };
   };

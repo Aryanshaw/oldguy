@@ -183,3 +183,7 @@ test('narrate (explainer): each sentence spoken on its own at 0.9, a pause after
   assert.equal(r.durationS, 5.5);
   assert.equal(JSON.parse(fs.readFileSync(path.join(dir, 'build.json'), 'utf8')).template, undefined, 'the plain explainer records no template block');
 });
+
+test('speak.py is the Python script, never a file a test fake wrote over', () => {
+  assert.match(fs.readFileSync(SPEAK_PY, 'utf8').split('\n')[0], /^# Speaks many lines in one process/);
+});
