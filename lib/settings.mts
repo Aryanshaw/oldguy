@@ -6,7 +6,7 @@
 // A missing or unreadable file means explainer at 16:9, which is how every video before templates was made.
 import fs from 'node:fs';
 import path from 'node:path';
-import { DEFAULT_TEMPLATE, DEFAULT_SHAPE, isShape } from './template.mts';
+import { DEFAULT_TEMPLATE, DEFAULT_SHAPE, isShape, loadTemplate, templatesRoot } from './template.mts';
 import type { Shape, Template } from './template.mts';
 
 // A template id and a shape: what one video, or the project by default, is made in.
@@ -95,13 +95,23 @@ function writeVideoChoice(slugDir: string, choice: VideoChoice): void {
   writeChoiceFile(videoFile(slugDir), choice);
 }
 
+// Loads the template a video folder is made in. A template that no longer ships is an error naming it.
+function templateOfVideo(slugDir: string, root: string = templatesRoot()): Template {
+  const { template } = readVideoChoice(slugDir);
+  try {
+    return loadTemplate(template, root);
+  } catch (err) {
+    throw new Error(`this video is made as ${template}: ${(err as Error).message}`);
+  }
+}
+
 // The video folder a chapter folder belongs to: chapters/<id>/ sits two levels under it.
 function slugDirOfChapter(chapterDir: string): string {
   return path.dirname(path.dirname(path.resolve(chapterDir)));
 }
 
 export {
-  DEFAULT_CHOICE, readSettings, writeSettings, chooseForVideo, readVideoChoice, writeVideoChoice, hasVideoChoice, slugDirOfChapter,
+  DEFAULT_CHOICE, templateOfVideo, readSettings, writeSettings, chooseForVideo, readVideoChoice, writeVideoChoice, hasVideoChoice, slugDirOfChapter,
   settingsFile, videoFile,
 };
 export type { VideoChoice, Chosen };

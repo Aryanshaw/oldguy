@@ -8,18 +8,23 @@ import * as codeCard from '../scene-kit/code-card.mts';
 import * as callout from '../scene-kit/callout.mts';
 import * as flow from '../scene-kit/flow.mts';
 import * as design from '../scene-kit/design.mts';
+import { checkAgainstTemplate } from './template-checks.mts';
 import type { Rendered } from '../scene-kit/shared.mts';
+import type { Template } from './template.mts';
 
 // One source a chapter cites: where it lives, which lines, and the exact text quoted from them.
 type ChapterSource = { id: string; file: string; lines: [number, number]; quote: string };
-// One narrated sentence: a claim must cite sources, a framing sentence carries no claim.
-type ChapterSentence = { text: string; kind: 'claim' | 'framing'; source_ids: string[] };
+// One narrated sentence: a claim must cite sources, a framing sentence carries no claim. `speaker` names the template
+// character who says it; it is absent for the narrator.
+type ChapterSentence = { text: string; kind: 'claim' | 'framing'; source_ids: string[]; speaker?: string };
 // One scene piece shown while a sentence is spoken: the piece name, its params and the sentence index it starts on.
-type ChapterScene = { piece: string; params: unknown; beat: number };
+// `word`, when given, starts the piece on that word of its sentence instead of the sentence's start.
+type ChapterScene = { piece: string; params: unknown; beat: number; word?: string };
 // The chapter.json that `oldguy scaffold` writes.
 type ChapterSpec = { id: string; title: string; sources: ChapterSource[]; sentences: ChapterSentence[]; scene: ChapterScene[] };
-// What `oldguy scaffold` is handed: a spec that has not been checked yet.
-type ScaffoldInput = { root: string; id: unknown; title: unknown; sources: unknown; sentences: unknown; scene: unknown };
+// What `oldguy scaffold` is handed: a spec that has not been checked yet, and the video's template (its rules are checked
+// too when given).
+type ScaffoldInput = { root: string; id: unknown; title: unknown; sources: unknown; sentences: unknown; scene: unknown; template?: Template };
 // A scene piece placed in time: which piece, its params, when it starts and how long it lasts, and when every sentence
 // of the chapter starts (seconds; the flow piece shows its steps on later sentences).
 type PieceWindow = { piece: string; params: unknown; startS: number; durationS: number; beatsS: number[] };
@@ -166,7 +171,7 @@ function inlineSceneFiles(scene: unknown, root: string): unknown {
 }
 
 // Creates chapters/<slug>/ with chapter.json and narration.txt; checks everything first and never overwrites.
-function scaffoldChapter({ root, id, title, sources, sentences, scene: given }: ScaffoldInput): string {
+function scaffoldChapter({ root, id, title, sources, sentences, scene: given, template }: ScaffoldInput): string {
   const slug = slugChapterId(id);
   if (typeof title !== 'string' || !title.trim()) throw new Error('"title" must be non-empty text');
   if (!Array.isArray(sources)) throw new Error('"sources" must be a list');
@@ -174,6 +179,11 @@ function scaffoldChapter({ root, id, title, sources, sentences, scene: given }: 
   const scene = inlineSceneFiles(given, root);
   // checkSentences just proved this is a non-empty list
   checkScene(scene, (sentences as unknown[]).length);
+  if (template) {
+    // checkSentences proved a list of objects with text; the template's own rules come last, all at once
+    const broken = checkAgainstTemplate(sentences as ChapterSentence[], scene, template);
+    if (broken.length) throw new Error(broken.map((f) => `${f.id}: ${f.reason}`).join('; '));
+  }
 
   const chaptersDir = path.join(root, 'chapters');
   const dir = path.join(chaptersDir, slug);

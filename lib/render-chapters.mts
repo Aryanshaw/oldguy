@@ -3,6 +3,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { audit } from './audit.mts';
+import { templateOfVideo } from './settings.mts';
+import type { Template } from './template.mts';
 import { runRenders } from './render-schedule.mts';
 import { checkNarrationText } from './chapter.mts';
 import { hyperframesArgs } from './hyperframes.mts';
@@ -44,7 +46,9 @@ function chapterFolders(chaptersDir: string): Folder[] {
 
 // Says why a chapter may not be rendered, or null when it may. Checks run in order: readable chapter.json,
 // narration text, claim audit, narrated at all, then the build record (nothing changed since narrate).
-function blockReason({ dir }: Folder, root: string): string | null {
+// `template` is the video's template, or the reason it could not be loaded (then nothing can be rendered).
+function blockReason({ dir }: Folder, root: string, template: Template | string): string | null {
+  if (typeof template === 'string') return template;
   let chapter: { sources: unknown; sentences: unknown; scene: unknown };
   try {
     // read as it is (a field may be absent); every field is checked below before it is relied on
@@ -60,7 +64,7 @@ function blockReason({ dir }: Folder, root: string): string | null {
     // a missing file throws a system error with a code; checkNarrationText throws an Error with a message
     return (err as NodeJS.ErrnoException).code === 'ENOENT' ? 'no narration.txt in the chapter folder' : (err as Error).message;
   }
-  const checked = audit({ root, sources: chapter.sources, sentences: chapter.sentences, scene: chapter.scene });
+  const checked = audit({ root, sources: chapter.sources, sentences: chapter.sentences, scene: chapter.scene, template });
   if (!checked.ok) return `audit: ${checked.failures.map((f) => `${f.id}: ${f.reason}`).join('; ')}`;
   if (!fs.existsSync(path.join(dir, 'index.html'))) return 'not narrated yet (no index.html); run oldguy narrate first';
   return buildChangedReason(dir, chapter);
@@ -116,9 +120,16 @@ function selectChapters(folders: Folder[], only: string[] | undefined): Chosen[]
 // `only` is a list of chapter ids to render in that order; `force` renders even an up-to-date chapter again.
 async function renderChapters(chaptersDir: string, { root, cap, render, check, only, force = false, dryRun = false }: RenderOptions): Promise<ChapterOutcome[]> {
   const chosen = selectChapters(chapterFolders(chaptersDir), only);
+  // the video folder holds chapters/; its template's rules join the audit of every chapter
+  let template: Template | string;
+  try {
+    template = templateOfVideo(path.dirname(path.resolve(chaptersDir)));
+  } catch (err) {
+    template = (err as Error).message;
+  }
   const blocked = new Map<string, string>(
     chosen.flatMap((c): [string, string][] => {
-      const why = c.missing ? 'no such chapter' : blockReason(c, root);
+      const why = c.missing ? 'no such chapter' : blockReason(c, root, template);
       return why ? [[c.id, why]] : [];
     }),
   );

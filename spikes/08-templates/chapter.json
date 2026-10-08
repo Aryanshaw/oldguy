@@ -4,7 +4,7 @@
   "sources": [
     { "id": "s1", "file": "cli/client.mts", "lines": [141, 141], "quote": "const problem = checkCitation(root, file, lines);" },
     { "id": "s2", "file": "cli/client.mts", "lines": [142, 142], "quote": "if (problem) throw new Error(`--source ${text}: ${problem}`);" },
-    { "id": "s3", "file": "lib/audit.mts", "lines": [97, 97], "quote": "if (end > lineCount) return `lines ${start}-${end} past end of file (${lineCount} lines)`;" }
+    { "id": "s3", "file": "lib/audit.mts", "lines": [100, 100], "quote": "if (end > lineCount) return `lines ${start}-${end} past end of file (${lineCount} lines)`;" }
   ],
   "sentences": [
     { "speaker": "stewie", "kind": "framing", "source_ids": [], "text": "So when Claude answers in the chat, does it just make up line numbers?" },
