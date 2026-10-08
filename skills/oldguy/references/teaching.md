@@ -19,8 +19,11 @@ second copy of the narration. Slowing the voice alone does not fix a video that 
 - **Real values.** Where the example becomes data, show the real value from the code or a real run (a status,
   an id, a time), never a made-up one.
 - **Before and after**, when the code replaced something: show the old way next to the new one once, early.
-- **A quick check near the end:** ask one question the viewer can answer from the map ("Where does that time come
-  from?") as its own sentence ending in "?"; narrate holds at least three seconds after it, then answer it.
+- **Show a setting by changing it.** When the topic is something configurable (a template, a flag, a policy), run
+  the same example through two settings, side by side, so the viewer sees what changes and what stays.
+- **A quick check near the end** that tests understanding, not memory: a what-if the viewer can work out from the
+  map ("If the pause were 1000 ms, when would our line start?"), as its own sentence ending in "?". Narrate holds
+  at least three seconds after it; then answer it with the reason.
 - **End on a recap line** of at most twelve words that the viewer could repeat: "One spec per job. One planner.
   One runner."
 
