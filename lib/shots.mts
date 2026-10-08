@@ -3,8 +3,11 @@
 // numbered rules, lays every shot out on the 1920x1080 stage, and compiles the chapter into a design scene
 // (scenes/<id>.html) that the existing design piece plays with beat(n). Claude never draws: placement, depth, motion
 // and the chalk marks are all decided here.
-import { findItem, closest, colourway } from './catalog.mts';
-import type { Catalog, Item } from './catalog.mts';
+import fs from 'node:fs';
+import path from 'node:path';
+import { findItem, closest, colourway, recolour, recolourMap, ART_DIR } from './catalog.mts';
+import { f, rng, burst, sight, strings, leader, underline, circle, chalkFilter, ground, motion } from './shots-runtime.mts';
+import type { Catalog, Item, Layers } from './catalog.mts';
 
 const PLACES = ['left', 'center', 'right', 'left-third', 'right-third'] as const;
 const GROUND_IDS = ['plain', 'room-corner', 'sky', 'starfield', 'floor'] as const;
@@ -382,7 +385,8 @@ const SIZE_PX: Record<Item['size'], number> = { tiny: 70, small: 140, medium: 26
 // Where each place puts an item's centre (its floor anchor) across the stage.
 const PLACE_X: Record<Place, number> = { left: 480, 'left-third': 640, center: 960, 'right-third': 1280, right: 1440 };
 // The paper card: its width, padding and line heights (title in the hand font, code in monospace, the src line).
-const CARD_W = 520;
+const CARD_MIN_W = 300;
+const CARD_MAX_W = 900;
 const CARD_PAD = 26;
 const CARD_TITLE_H = 58;
 const CARD_CODE_H = 42;
@@ -431,6 +435,15 @@ function overlap(a: Box, b: Box): boolean {
   return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 }
 
+// The card's width for its longest line, within a minimum and a maximum.
+function cardWidth(card: Card): number {
+  // about 26 px a letter for the hand-lettered title, 18.2 for code and 13.5 for the src line
+  const title = (hasText(card.title) ? card.title.length : 0) * 26;
+  const code = (hasText(card.code) ? card.code.length : 0) * 18.2;
+  const src = (hasText(card.src) ? card.src.length : 0) * 13.5;
+  return Math.round(clamp(Math.max(title, code, src) + CARD_PAD * 2, CARD_MIN_W, CARD_MAX_W));
+}
+
 // The card's height for its content.
 function cardHeight(card: Card): number {
   const title = hasText(card.title) ? CARD_TITLE_H : 0;
@@ -446,7 +459,7 @@ function clamp(v: number, lo: number, hi: number): number {
 // Places the card: above its hang point (strings down to it) or at its place near the top, inside the safe frame,
 // moved aside when it would cover the focus item. Returns nothing (and reports) when no place clears the focus item.
 function placeCard(card: Card, placed: Placed[], focus: Placed | undefined, bad: (msg: string) => void): CardBox | undefined {
-  const w = CARD_W;
+  const w = cardWidth(card);
   const h = cardHeight(card);
   let hangPt: Pt | undefined;
   let x: number;
@@ -567,11 +580,348 @@ function layout(shot: Shot, cat: Catalog): ShotLayout {
   return { ...l, errors };
 }
 
+// ---- compile ------------------------------------------------------------------------------------------------------
+
+// A design scene may be at most this big (scene-kit/design.mts refuses a larger one).
+const MAX_SCENE_BYTES = 100 * 1024;
+// The title card is up for this long before the first shot's items come in.
+const TITLE_S = 1.8;
+// The hand-lettered font: the template's stage carries it as an @font-face (a scene may not load files), the scene
+// names it with fallbacks.
+const HAND_FONT = 'Oldguy Hand';
+const HAND_STACK = `'${HAND_FONT}', 'Patrick Hand', 'Comic Sans MS', cursive`;
+
+// A moment in the chapter: a sentence's start (or the piece's end) plus or minus seconds.
+type When = { beat: number | 'end'; off: number };
+
+// The timeline expression for a moment, e.g. "beat(2) + 0.15".
+function at(w: When): string {
+  const base = w.beat === 'end' ? 'endS' : `beat(${w.beat})`;
+  const off = Math.round(w.off * 1000) / 1000;
+  return off === 0 ? base : `${base} ${off > 0 ? '+' : '-'} ${Math.abs(off)}`;
+}
+
+// The same moment moved by n seconds.
+function plus(w: When, n: number): When {
+  return { beat: w.beat, off: w.off + n };
+}
+
+// Escapes text for HTML.
+function esc(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// The inside of an SVG file, ready to sit in the scene: no XML header, comments, titles or metadata, and every id
+// (and every url(#id) pointing at one) prefixed so two drawings never share an id.
+function innerSvg(text: string, prefix: string): { inner: string; viewBox?: string } {
+  const s = text.replace(/<\?xml[\s\S]*?\?>/g, '').replace(/<!--[\s\S]*?-->/g, '').replace(/<(title|desc|metadata)\b[\s\S]*?<\/\1>/gi, '');
+  const open = /<svg\b[^>]*>/i.exec(s);
+  const close = s.lastIndexOf('</svg>');
+  if (!open || close < open.index) throw new Error('not an <svg> drawing');
+  const viewBox = /\bviewBox="([^"]+)"/.exec(open[0])?.[1];
+  const inner = s.slice(open.index + open[0].length, close).trim()
+    .replace(/\bid="([^"]+)"/g, (_, id: string) => `id="${prefix}-${id}"`)
+    .replace(/url\(#([^)]+)\)/g, (_, id: string) => `url(#${prefix}-${id})`);
+  return { inner, viewBox };
+}
+
+// The @font-face rule for the hand-lettered font (Patrick Hand, SIL OFL 1.1, art/flat/fonts/OFL.txt), as a data URL.
+// A template that uses shots puts it in its stage.html; a scene itself may not load anything.
+function handFontCss(): string {
+  const font = fs.readFileSync(path.join(ART_DIR, 'fonts', 'patrick-hand.woff2')).toString('base64');
+  return `@font-face { font-family: '${HAND_FONT}'; font-style: normal; font-weight: 400; src: url(data:font/woff2;base64,${font}) format('woff2'); }`;
+}
+
+// The scene's styles, all under the scene's own id.
+function sceneCss(sid: string, cat: Catalog): string {
+  const t = cat.palette.tokens;
+  const c = (name: string, fallback: string) => t[name] ?? fallback;
+  return [
+    `#${sid} { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; --fa-hand: ${HAND_STACK}; }`,
+    `#${sid} .fa-layer { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; }`,
+    `#${sid} .fa-ground, #${sid} .fa-svg { position: absolute; left: 0; top: 0; overflow: visible; }`,
+    `#${sid} .fa-card { position: absolute; box-sizing: border-box; padding: ${CARD_PAD}px; background: ${c('paper', '#FFF8E7')}; color: ${c('ink', '#14110A')}; border-radius: 6px; }`,
+    `#${sid} .fa-card-title { font: 400 44px/${CARD_TITLE_H}px var(--fa-hand); text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }`,
+    `#${sid} .fa-card-code { margin: 8px 0 0; font: 600 30px/${CARD_CODE_H}px var(--og-font-mono, ui-monospace, monospace); font-variant-ligatures: none; white-space: pre; }`,
+    `#${sid} .fa-lit { background: ${c('yellow', '#F6C945')}; border-radius: 6px; padding: 0 4px; margin: 0 -4px; }`,
+    `#${sid} .fa-card-src { font: 400 28px/${CARD_SRC_H}px var(--fa-hand); letter-spacing: 0.03em; white-space: nowrap; color: ${c('coralDark', '#D9493A')}; }`,
+    `#${sid} .fa-label { position: absolute; font: 400 46px/56px var(--fa-hand); color: ${c('chalk', '#FFFFFF')}; white-space: nowrap; }`,
+    `#${sid} .fa-title-wrap { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; display: flex; align-items: center; justify-content: center; }`,
+    `#${sid} .fa-title { padding: 40px 72px; background: ${c('paper', '#FFF8E7')}; color: ${c('ink', '#14110A')}; border-radius: 8px; font: 400 104px/1.1 var(--fa-hand); text-transform: uppercase; letter-spacing: 0.05em; transform: rotate(-6deg); max-width: 1400px; text-align: center; }`,
+  ].join('\n');
+}
+
+// One pose of an item at one place: a nested <svg> in the instance's group.
+type Variant = { id: string; key: string; p: Placed };
+// One stay of an item on screen: from the shot it comes in to the last shot it is on screen, with each pose it takes.
+type Instance = { id: string; ref: string; first: number; last: number; z: number; variants: Variant[]; shown: Map<number, Variant> };
+
+// Where a chalk reference points: an anchor, or the middle of an item or of the card.
+function refPoint(ref: string, placed: Placed[], card: CardBox | undefined): Pt {
+  const { name, anchor } = splitRef(ref);
+  if (name === 'card' && card) return { x: card.box.x + card.box.w / 2, y: card.box.y + card.box.h / 2 };
+  const p = placed.find((x) => x.ref === name)!;
+  return anchor ? anchorPoint(p, anchor) : { x: p.box.x + p.box.w / 2, y: p.box.y + p.box.h / 2 };
+}
+
+// The box a reference names: an item's, or the card's.
+function refBox(ref: string, placed: Placed[], card: CardBox | undefined): Box {
+  const { name } = splitRef(ref);
+  if (name === 'card' && card) return card.box;
+  return placed.find((x) => x.ref === name)!.box;
+}
+
+// Moves point a towards b by d pixels (or stops at b).
+function towards(a: Pt, b: Pt, d: number): Pt {
+  const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+  const t = Math.min(1, d / len);
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+}
+
+// The card's HTML: a hand-lettered title, the code line with its lit word, and the src line.
+function cardHtml(id: string, card: Card, box: Box, rot: number): string {
+  const title = hasText(card.title) ? `<div class="fa-card-title">${esc(card.title)}</div>` : '';
+  let code = '';
+  if (hasText(card.code)) {
+    // the lit word is marked where it first appears in the line
+    const i = card.lit ? card.code.indexOf(card.lit) : -1;
+    const text = card.lit && i !== -1
+      ? `${esc(card.code.slice(0, i))}<span class="fa-lit">${esc(card.lit)}</span>${esc(card.code.slice(i + card.lit.length))}`
+      : esc(card.code);
+    code = `<pre class="fa-card-code">${text}</pre>`;
+  }
+  return `<div id="${id}" class="fa-card" style="left: ${f(box.x)}px; top: ${f(box.y)}px; width: ${f(box.w)}px; height: ${f(box.h)}px; transform: rotate(${rot}deg);">${title}${code}<div class="fa-card-src">${esc(card.src)}</div></div>`;
+}
+
+// Compiles a checked chapter into its design scene (scenes/<id>.html): the grounds, every item drawn once per stay,
+// the cards, chalk and title card, and a timeline of tween calls timed with beat(n). Throws on a layout problem or a
+// scene over the design piece's size limit.
+function compileChapter(ch: ChapterShots, cat: Catalog): string {
+  const sid = `fa-${ch.id}`;
+  const layouts = layoutChapter(ch, cat);
+  const problems = layouts.flatMap((l) => l.errors);
+  if (problems.length) throw new Error(`chapter ${ch.id}: ${problems.join('; ')}`);
+  const resolved = resolveShots(ch, cat, []);
+  const n = ch.shots.length;
+  // shot k starts on its sentence (the first one after the title card) and ends where the next sentence starts
+  const S = (k: number): When => (k === 0 ? { beat: 0, off: TITLE_S } : { beat: k, off: 0 });
+  const E = (k: number): When => (k + 1 < n ? { beat: k + 1, off: 0 } : { beat: 'end', off: 0 });
+  const R = rng(ch.id);
+  const files = new Map<string, string>();
+  const read = (item: Item) => {
+    if (!files.has(item.file)) files.set(item.file, fs.readFileSync(path.join(cat.dir, item.file), 'utf8'));
+    return files.get(item.file)!;
+  };
+
+  // ---- who is on screen when: one instance per stay, one variant per pose and place ----
+  const instances: Instance[] = [];
+  const open = new Map<string, Instance>();
+  layouts.forEach((l, k) => {
+    const still = new Map<string, Instance>();
+    for (const p of l.placed) {
+      let inst = open.get(p.ref);
+      if (!inst) {
+        inst = { id: `${sid}-${p.ref}-${k}`, ref: p.ref, first: k, last: k, z: p.z, variants: [], shown: new Map() };
+        instances.push(inst);
+      }
+      inst.last = k;
+      const key = `${p.item.id}|${p.colourway ?? ''}|${f(p.box.x)},${f(p.box.y)},${f(p.box.w)}|${p.flip}`;
+      let v = inst.variants.find((x) => x.key === key);
+      if (!v) {
+        v = { id: `${inst.id}-v${inst.variants.length}`, key, p };
+        inst.variants.push(v);
+      }
+      inst.shown.set(k, v);
+      still.set(p.ref, inst);
+    }
+    open.clear();
+    for (const [ref, inst] of still) open.set(ref, inst);
+  });
+  instances.sort((a, b) => a.z - b.z || a.first - b.first);
+
+  // ---- markup ----
+  const svgItems: string[] = [];
+  const chalkSvg: string[] = [];
+  const html: string[] = [];
+  const lines: string[] = [];
+  const hosts: Variant[] = [];
+  for (const inst of instances) {
+    const parts = inst.variants.map((v, m) => {
+      const it = v.p.item;
+      let text = read(it);
+      if (it.kind === 'cast' && v.p.colourway) text = recolour(text, recolourMap(it, v.p.colourway, cat.palette));
+      const { inner } = innerSvg(text, v.id);
+      const [vx, vy, vw, vh] = it.viewBox;
+      const body = v.p.flip ? `<g transform="translate(${f(2 * vx + vw)} 0) scale(-1 1)">${inner}</g>` : inner;
+      if (it.kind === 'host') hosts.push(v);
+      const hidden = m === 0 ? '' : ' style="opacity: 0"';
+      return `<svg id="${v.id}" data-item="${it.id}" x="${f(v.p.box.x)}" y="${f(v.p.box.y)}" width="${f(v.p.box.w)}" height="${f(v.p.box.h)}" viewBox="${vx} ${vy} ${vw} ${vh}" overflow="visible"${hidden}>${body}</svg>`;
+    });
+    svgItems.push(`<g id="${inst.id}" class="fa-item">${parts.join('')}</g>`);
+  }
+
+  // ---- grounds: one group per run of shots on the same ground ----
+  const grounds: { id: string; key: string; g: Ground; first: number }[] = [];
+  resolved.forEach((r, k) => {
+    const key = `${r.ground.id}|${r.ground.color}`;
+    if (grounds.length && grounds[grounds.length - 1].key === key) return;
+    grounds.push({ id: `${sid}-ground-${grounds.length}`, key, g: r.ground, first: k });
+  });
+  const groundSvg = grounds.map((g, i) => `<g id="${g.id}"${i ? ' style="opacity: 0"' : ''}>${ground(g.g.id, cat.palette.tokens[g.g.color], `${sid}-${i}`, FLOOR_Y)}</g>`).join('');
+
+  // ---- the title card, up first ----
+  const title = `${sid}-title`;
+  lines.push(...motion.fadeIn(`#${title}`, 'startS'), motion.fadeOut(`#${title}`, at({ beat: 0, off: TITLE_S - 0.3 })));
+
+  // ---- each shot on its beat ----
+  const world = `${sid}-world`;
+  let moved = false;
+  // the hosts' closed-eye and open-mouth layers start hidden
+  const hostLayer = (v: Variant, layer: keyof Layers) => `#${v.id}-${v.p.item.layers![layer]}`;
+  if (hosts.length) lines.push(motion.hide(hosts.flatMap((v) => [hostLayer(v, 'eyesShut'), hostLayer(v, 'mouthOpen')])));
+  layouts.forEach((l, k) => {
+    const shot = ch.shots[k];
+    const s = S(k);
+    const leaving: string[] = [];
+    // a new ground snaps in on the beat
+    const g = grounds.findIndex((x) => x.first === k);
+    if (g > 0) lines.push(...motion.snap(`#${grounds[g - 1].id}`, `#${grounds[g].id}`, at({ beat: k, off: 0 })));
+    // items: new ones pop in, a pose change snaps, the ones that leave fade before the next beat
+    let entering = 0;
+    for (const inst of instances) {
+      const v = inst.shown.get(k);
+      if (!v) continue;
+      if (inst.first === k) lines.push(...motion.popIn(`#${inst.id}`, at(plus(s, 0.15 + 0.12 * entering++))));
+      const before = inst.shown.get(k - 1);
+      if (before && before !== v) lines.push(...motion.snap(`#${before.id}`, `#${v.id}`, at({ beat: k, off: 0 })));
+      if (inst.last === k && k + 1 < n) leaving.push(`#${inst.id}`);
+    }
+    // a raw shot: its own drawing over the whole stage
+    if (typeof shot.raw === 'string') {
+      const id = `${sid}-raw-${k}`;
+      const { inner, viewBox } = innerSvg(shot.raw, id);
+      svgItems.push(`<g id="${id}" class="fa-raw"><svg x="0" y="0" width="1920" height="1080" viewBox="${viewBox ?? '0 0 1920 1080'}">${inner}</svg></g>`);
+      lines.push(...motion.popIn(`#${id}`, at(plus(s, 0.15))));
+      if (k + 1 < n) leaving.push(`#${id}`);
+    }
+    // the shot's card, strings, chalk and labels all leave with it
+    const shotLeaving: string[] = [];
+    const labels: string[] = [];
+    // the card, and the strings it hangs by
+    if (l.card && shot.card) {
+      const id = `${sid}-card-${k}`;
+      html.push(cardHtml(id, shot.card, l.card.box, Math.round((R() - 0.5) * 30) / 10));
+      lines.push(...motion.rise(`#${id}`, at(plus(s, 0.45))));
+      shotLeaving.push(`#${id}`);
+      if (l.card.strings.length) {
+        const sidStr = `${sid}-str-${k}`;
+        chalkSvg.push(`<g id="${sidStr}">${strings(sidStr, l.card.strings)}</g>`);
+        lines.push(motion.drawOn(`#${sidStr}`, at(plus(s, 0.75))), ...motion.dots(`#${sidStr}`, at(plus(s, 1.05))));
+        shotLeaving.push(`#${sidStr}`);
+      }
+    }
+    // chalk marks, one after another
+    (shot.chalk ?? []).forEach((mark, j) => {
+      const id = `${sid}-chalk-${k}-${j}`;
+      const when = plus(s, 0.85 + 0.3 * j);
+      let marks = '';
+      if ('burst' in mark) {
+        const b = refBox(mark.burst, l.placed, l.card);
+        marks = burst(id, { x: b.x + b.w / 2, y: b.y + b.h / 2 }, Math.max(b.w, b.h) / 2 + 16);
+      } else if ('sight' in mark) {
+        const a = refPoint(mark.sight[0], l.placed, l.card);
+        const b = refPoint(mark.sight[1], l.placed, l.card);
+        // a line to an item's middle stops at its edge (where a burst would be), one to an anchor just short of it
+        const tb = refBox(mark.sight[1], l.placed, l.card);
+        const stop = splitRef(mark.sight[1]).anchor ? 30 : Math.max(tb.w, tb.h) / 2 + 40;
+        marks = sight(id, towards(a, b, 24), towards(b, a, stop));
+      } else if ('label' in mark) {
+        const b = refBox(mark.to, l.placed, l.card);
+        const w = mark.label.length * 22;
+        const h = 56;
+        // beside the thing, level with its middle and clear of a burst round it: on the right when it fits
+        const gap = Math.max(b.w, b.h) / 2 - b.w / 2 + 130;
+        const right = b.x + b.w + gap + w <= STAGE_W - SAFE;
+        const lx = clamp(right ? b.x + b.w + gap : b.x - gap - w, SAFE, STAGE_W - SAFE - w);
+        let ly = clamp(b.y + b.h / 2 - h / 2, SAFE, STAGE_H - SAFE - h);
+        // a label never sits on the card: it goes below the thing instead
+        if (l.card && overlap({ x: lx, y: ly, w, h }, l.card.box)) ly = Math.min(STAGE_H - SAFE - h, b.y + b.h + 30);
+        const labelId = `${sid}-label-${k}-${j}`;
+        html.push(`<div id="${labelId}" class="fa-label" style="left: ${f(lx)}px; top: ${f(ly)}px;">${esc(mark.label)}</div>`);
+        const from = { x: right ? lx - 14 : lx + w + 14, y: ly + h / 2 + 4 };
+        const to = { x: right ? b.x + b.w : b.x, y: b.y + b.h / 2 };
+        marks = leader(id, from, towards(to, from, 20));
+        lines.push(...motion.fadeIn(`#${labelId}`, at(when)));
+        labels.push(`#${labelId}`);
+      } else if ('underline' in mark) {
+        const b = refBox(mark.underline, l.placed, l.card);
+        marks = underline(b.x, b.y + b.h + 16, b.w);
+      } else {
+        const b = refBox(mark.circle, l.placed, l.card);
+        marks = circle(id, { x: b.x + b.w / 2, y: b.y + b.h / 2 }, b.w / 2 + 30, b.h / 2 + 30);
+      }
+      chalkSvg.push(`<g id="${id}">${marks}</g>`);
+      lines.push(motion.drawOn(`#${id}`, at(when)));
+      shotLeaving.push(`#${id}`);
+    });
+    // the camera: back to the whole frame if the shot before moved it, then this shot's move across the sentence
+    const cam = shot.camera;
+    let camAt = plus(s, 0.2);
+    if (moved) {
+      lines.push(motion.cameraReset(`#${world}`, at(s)));
+      camAt = plus(s, 0.45);
+      moved = false;
+    }
+    if (cam && cam.move !== 'hold') {
+      const target = cam.to ? refPoint(cam.to, l.placed, l.card) : l.focus ? refPoint(l.focus, l.placed, l.card) : { x: 960, y: 540 };
+      const zoom = cam.crop === 'close' ? 1.35 : cam.crop === 'mid' ? 1.15 : cam.crop === 'wide' ? 1.04 : 1.08;
+      const end = E(k);
+      const dur = `Math.max(0.6, ${at(end)} - (${at(camAt)}) - 0.35)`;
+      if (cam.move === 'pan') lines.push(motion.cameraSet(`#${world}`, { x: 1920 - target.x, y: target.y }, zoom, at(camAt)));
+      lines.push(motion.camera(`#${world}`, target, zoom, at(camAt), dur));
+      moved = true;
+    }
+    // hosts: one blink a sentence, and the mouth flaps on their line
+    const shown = hosts.filter((v) => instances.some((inst) => inst.shown.get(k) === v));
+    if (shown.length) {
+      const blinkAt = plus(s, 1 + Math.round(R() * 12) / 10);
+      lines.push(...motion.blink(shown.map((v) => hostLayer(v, 'eyes')), shown.map((v) => hostLayer(v, 'eyesShut')), at(blinkAt), at(plus(blinkAt, 0.12))));
+    }
+    for (const v of shown.filter((x) => l.placed.some((p) => p.ref === x.p.ref && p.talk))) {
+      lines.push(...motion.flap(hostLayer(v, 'mouth'), hostLayer(v, 'mouthOpen'), at(plus(s, 0.1)), at(E(k))));
+    }
+    // everything that leaves goes just before the next sentence
+    if (k + 1 < n) {
+      const out = plus(E(k), -0.3);
+      for (const sel of leaving) lines.push(motion.fadeOut(sel, at(out)));
+      if (shotLeaving.length || labels.length) lines.push(motion.fadeOut([...shotLeaving, ...labels], at(out)));
+    }
+  });
+
+  const markup = [
+    `<div id="${sid}" class="fa-scene">`,
+    `<svg class="fa-ground" width="1920" height="1080" viewBox="0 0 1920 1080">${groundSvg}</svg>`,
+    // the camera moves this layer past the frame on purpose
+    `<div id="${world}" class="fa-layer" data-layout-allow-overflow>`,
+    `<svg class="fa-svg" width="1920" height="1080" viewBox="0 0 1920 1080"><defs>${chalkFilter(`${sid}-wobble`)}</defs>${svgItems.join('')}<g filter="url(#${sid}-wobble)">${chalkSvg.join('')}</g></svg>`,
+    ...html,
+    '</div>',
+    `<div id="${title}" class="fa-title-wrap"><div class="fa-title">${esc(ch.title)}</div></div>`,
+    '</div>',
+  ].join('\n');
+  // the camera's world layer starts at the whole frame (every item hides itself until it pops in)
+  const start = [`tl.set("#${world}", {x: 0, y: 0, scale: 1, transformOrigin: "0 0"}, startS);`];
+  const scene = `<style>\n${sceneCss(sid, cat)}\n</style>\n${markup}\n<script data-oldguy-timeline>\n${[...start, ...lines].join('\n')}\n</script>\n`;
+  const bytes = Buffer.byteLength(scene, 'utf8');
+  if (bytes > MAX_SCENE_BYTES) throw new Error(`chapter ${ch.id}: the scene is ${Math.ceil(bytes / 1024)} KB; a design scene holds at most ${MAX_SCENE_BYTES / 1024} KB (use fewer different drawings, or smaller ones)`);
+  return scene;
+}
+
 // The warnings for a chapter that still compiles: too many raw shots (rule 10).
 function shotWarnings(ch: ChapterShots): string[] {
   const raw = Array.isArray(ch.shots) ? ch.shots.filter((s) => isObject(s) && s.raw !== undefined).length : 0;
   return raw > MAX_RAW ? [`${raw} raw shots; more than ${MAX_RAW} means the library is missing something${rule('10')}`] : [];
 }
 
-export { RULES, PLACES, GROUND_IDS, shotErrors, shotWarnings, resolveShots, splitRef, layout, layoutChapter, anchorPoint };
+export { RULES, PLACES, GROUND_IDS, shotErrors, shotWarnings, resolveShots, splitRef, layout, layoutChapter, anchorPoint, compileChapter, handFontCss };
 export type { Place, Ground, CastEntry, PropEntry, Card, Chalk, Camera, Shot, ChapterShots, SourceRange, ShotContext, Thing, ResolvedShot, Box, Pt, Placed, CardBox, ShotLayout };

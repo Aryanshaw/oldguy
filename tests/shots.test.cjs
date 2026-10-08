@@ -185,7 +185,7 @@ test('the card hangs clear of the focus item, or the layout says it cannot', () 
   const full = layout({
     beat: 0,
     props: [{ id: 'shop-counter', at: 'center', scale: 2, focus: true }],
-    card: { title: 'THE ORDER', src: 'shop.js:12', hang: 'shop-counter.card' },
+    card: { title: 'THE ORDER IS PLACED', src: 'shop.js:12', hang: 'shop-counter.card' },
   }, CAT);
   assert.deepEqual(full.errors, ['shot 0: the card cannot sit clear of the focus item (shop-counter); make it smaller or hang the card elsewhere']);
 });
@@ -223,4 +223,84 @@ test('a carried item keeps its place in the next shot, and layout problems count
   assert.deepEqual(placed(shots[1], 'shop-counter').box, placed(shots[0], 'shop-counter').box);
   assert.deepEqual(shots[3].placed.map((p) => p.ref).sort(), ['bell', 'body-a', 'oldguy', 'shop-counter']);
   assert.ok(errorsAfter((ch) => { ch.shots[0].props[0].scale = 2; ch.shots[0].props[0].at = 'right'; }).includes('shot 0: shop-counter leaves the frame'));
+});
+
+// ---- compile ----
+const { compileChapter, handFontCss } = require('../lib/shots.mts');
+const design = require('../scene-kit/design.mts');
+
+// The timeline block of a compiled scene, one call per line.
+function timelineOf(html) {
+  return /<script data-oldguy-timeline>\n([\s\S]*?)<\/script>/.exec(html)[1].trim().split('\n');
+}
+
+test('compiling is deterministic, and the scene passes the design piece checks', () => {
+  const a = compileChapter(good(), CAT);
+  assert.equal(compileChapter(good(), CAT), a);
+  assert.ok(Buffer.byteLength(a) < 100 * 1024);
+  const r = design.render({ html: a }, { startS: 0, durationS: 20, idPrefix: 'p0', beatsS: [0, 5, 10, 15] });
+  assert.match(r.html, /class="og-piece og-design"/);
+  // the words a viewer reads are only on the title card, the card and the label
+  assert.match(a, /class="fa-title">The order</);
+  assert.match(a, /<pre class="fa-card-code">cart\.<span class="fa-lit">checkout<\/span>\(\)<\/pre>/);
+  assert.match(a, /class="fa-label"[^>]*>the bell = checkout</);
+});
+
+test('every item is drawn once for each stay on screen, and unused items not at all', () => {
+  const html = compileChapter(good(), CAT);
+  const count = (re) => (html.match(re) || []).length;
+  assert.equal(count(/class="fa-item"/g), 4, 'counter, person, bell, host');
+  // one drawing per pose: the person stands, then points
+  for (const id of ['shop-counter', 'bell', 'body-a-stand', 'body-a-point', 'oldguy-shock']) assert.equal(count(new RegExp(`data-item="${id}"`, 'g')), 1, id);
+  for (const id of ['oven', 'kettle', 'oldguy-stand']) assert.equal(count(new RegExp(`data-item="${id}"`, 'g')), 0, id);
+  // the cast colourway is applied to the drawing
+  const ch = good();
+  ch.shots[1].cast[0].who = 'body-a/yellow';
+  ch.shots[2].cast[0].who = 'body-a/yellow';
+  assert.match(compileChapter(ch, CAT), /fill="#F6C945"/);
+  // a pose change snaps on the beat
+  assert.ok(timelineOf(html).includes('tl.set("#fa-the-bell-body-a-1-v1", {opacity: 1}, beat(2));'));
+});
+
+test('the timeline is timed by beat(0) to beat(n-1), in order, and nothing else', () => {
+  const lines = timelineOf(compileChapter(good(), CAT));
+  const firsts = [];
+  for (const line of lines) {
+    assert.match(line, /^tl\.(set|to|fromTo)\("#/, line);
+    // the position (last argument) is the piece start, or a beat plus or minus a little, or the end for the last shot
+    const pos = /, ([^,{}]+)\);$/.exec(line)[1];
+    assert.match(pos, /^(startS|beat\(\d\)( [+-] [\d.]+)?)$/, line);
+    for (const m of line.matchAll(/beat\((\d+)\)/g)) if (!firsts.includes(Number(m[1]))) firsts.push(Number(m[1]));
+  }
+  assert.deepEqual(firsts, [0, 1, 2, 3]);
+});
+
+test('items that are not kept fade out just before the next beat', () => {
+  const ch = good();
+  ch.shots[2].keep = ['shop-counter', 'body-a'];
+  const lines = timelineOf(compileChapter(ch, CAT));
+  assert.ok(lines.includes('tl.to("#fa-the-bell-bell-2", {opacity: 0, duration: 0.3}, beat(3) - 0.3);'), lines.join('\n'));
+  assert.ok(!lines.some((l) => l.startsWith('tl.to("#fa-the-bell-shop-counter-0", {opacity: 0')), 'a kept item stays');
+  // the card and the chalk of a shot leave with it
+  assert.ok(lines.includes('tl.to("#fa-the-bell-card-2, #fa-the-bell-str-2, #fa-the-bell-chalk-2-0, #fa-the-bell-chalk-2-1, #fa-the-bell-chalk-2-2, #fa-the-bell-label-2-2", {opacity: 0, duration: 0.3}, beat(3) - 0.3);'), lines.join('\n'));
+});
+
+test('hosts blink and flap their mouth on their line; cast does neither', () => {
+  const lines = timelineOf(compileChapter(good(), CAT));
+  const host = '#fa-the-bell-oldguy-3-v0';
+  assert.ok(lines.some((l) => l.startsWith(`tl.set("${host}-eyes", {opacity: 0}, beat(3) + `)), 'blink');
+  assert.ok(lines.some((l) => l.startsWith(`tl.to("${host}-mouth-open", {opacity: 1, duration: 0.11, ease: "steps(1)", yoyo: true, repeat: Math.max(1, Math.floor((endS - (beat(3) + 0.1) - 0.3) / 0.22)) * 2 - 1}, beat(3) + 0.1);`)), 'flap');
+  assert.ok(!lines.some((l) => /body-a[^"]*-(eyes|mouth)/.test(l)), 'cast neither blinks nor flaps');
+});
+
+test('a raw shot is wrapped as its own drawing and pops in', () => {
+  const ch = good();
+  ch.shots[3] = { beat: 3, raw: '<svg viewBox="0 0 100 100"><rect id="box" width="50" height="50" fill="#FF6B57"/></svg>' };
+  const html = compileChapter(ch, CAT);
+  assert.match(html, /<g id="fa-the-bell-raw-3" class="fa-raw"><svg x="0" y="0" width="1920" height="1080" viewBox="0 0 100 100"><rect id="fa-the-bell-raw-3-box"/);
+  assert.ok(timelineOf(html).includes('tl.to("#fa-the-bell-raw-3", {opacity: 1, scale: 1, duration: 0.5, ease: "back.out(1.7)"}, beat(3) + 0.15);'));
+});
+
+test('the hand-lettered font is offered as an @font-face for the template stage', () => {
+  assert.match(handFontCss(), /^@font-face \{ font-family: 'Oldguy Hand'; .*src: url\(data:font\/woff2;base64,[A-Za-z0-9+/=]{1000,}\) format\('woff2'\); \}$/);
 });
