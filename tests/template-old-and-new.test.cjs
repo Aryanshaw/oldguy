@@ -100,6 +100,25 @@ test('old-and-new: template.md keeps the rules a first-time viewer needs', () =>
   // one clock per chapter, and chapter breaks longer than any pause
   assert.match(md, /\*\*One clock per chapter\.\*\*/);
   assert.match(md, /\*\*Chapter breaks are longer than any pause\.\*\*/);
-  // big enough to read on a phone after the 0.54 scale
+  // big enough to read on a phone after the 0.54 scale: code at 72 px (about 14 px on a phone), wrapped, never shrunk
   assert.match(md, /labels 48 px or more/);
+  assert.match(md, /\*\*code 72 px or more\*\* \(about 14 px on a phone\)/);
+  assert.match(md, /Never shrink the code to fit\./);
+  // a formula shown with this video's own numbers, and only numbers that feed the running example
+  assert.match(md, /\*\*A formula gets its real numbers plugged in\.\*\*/);
+  assert.match(md, /\*\*Every number on screen feeds the running example\.\*\*/);
+  // a short first chapter, a what-if answered with every consequence, recap boxes with numbers
+  assert.match(md, /\*\*The first chapter is short: one line, four stops\.\*\*/);
+  assert.match(md, /\*\*The answer names every consequence\*\*/);
+  assert.match(md, /\*\*each stage box filled with its number\*\*/);
+  // the frame held at a chapter break is the full board before its fade, never a blank one
+  assert.match(md, /hold the frame from\s+just before that fade/);
+});
+
+test('old-and-new: at 9:16 the board is the frame\'s width, so code at 72 px reads at 14 px on a phone', () => {
+  const [, , w, h] = t.slots['9:16'];
+  assert.ok(w / 1080 >= 0.7, `the 9:16 board is ${w} of 1080 px wide`);
+  // the 1920x1080 scene's scale inside the slot, then a 1080 px frame on a 390 px phone
+  const scale = Math.min(w / 1920, h / 1080);
+  assert.ok(72 * scale * (390 / 1080) >= 14, `72 px code is ${(72 * scale * (390 / 1080)).toFixed(1)} px on a phone`);
 });

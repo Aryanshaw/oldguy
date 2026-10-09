@@ -52,6 +52,10 @@ A chapter opens on where the running example is now, in the first or second sent
 names every stop the video follows ("We follow it through four stops: script, voice, timing and page."), and each
 stop lights on the board's map at the word that names it.
 
+**The first chapter is short: one line, four stops.** It names the running example, promises the stops and corrects
+one guess; anything else (what a template is, which settings exist) gets at most one line there, because a first-time
+viewer has nothing to hang it on yet.
+
 **Before and after, early.** When the video is about a setting (a template, a flag, a policy), the first chapter
 plays the running example under two settings: the old guy's line, then his replay under the other setting, with the
 board showing the two columns side by side: the same words on top, the settings that differ below.
@@ -73,18 +77,33 @@ word is the spoken word**: say "frames" when the code says `frames`, "used, out 
 `used / total`; never light `frames` while saying "samples". A line nobody explains stays off the board, even when
 it is the real source.
 
+**Every number on screen feeds the running example.** A viewer keeps the numbers that build one timeline (when the
+line starts, how long it lasts, where each word falls) and loses the rest. A side rule with its own number (the
+longer pause after a "So" line, a regex) is cut, or said in one aside without a number on the board. A setting's
+value stays only when it is tied to the example ("speed 0.95, a touch slow, so the clip runs longer"), and never in a
+chapter about time where the viewer would try to add it up.
+
+**A formula gets its real numbers plugged in.** When a step computes something ("each start is the frames so far,
+divided by the sample rate"), show it once with this video's own values, read from its narration wav or its timing
+record and cited: "68,030 ÷ 24,000 = 2.835 s". Define each term of it in half a sentence ("frames, tiny slices of
+sound, 24,000 every second"). A formula with no numbers in it teaches the names, not the step.
+
 **One clock per chapter.** A chapter's times all come from one timeline, drawn once. Never quote a pause from this
-chapter's own audio ("your So line just got 1040 ms") while the board shows another chapter's clock: the viewer
+chapter's own audio ("your line just got 520 ms") while the board shows another chapter's clock: the viewer
 cannot place it.
 
 **Derive every number.** A derived value is worked out on the board as a sum on the sentence that says it
-("3.05 + 520 ms = 3.57", "2 × 520 = 1040 ms"). A rule ("a So line waits twice as long") is drawn with its real value,
-not only named.
+("2.84 + 520 ms = 3.36", "5.17 − 3.36 = 1.81 s"). A rule ("each word gets its share of the letters") is drawn with
+its real values, not only named: the letter counts as they add up ("4+4+2+6 = 16"), one word worked out ("3.36 + ¼ ×
+1.81 = 3.81"), and every slice's real start and end on the bar. Shown sums must add up as shown, to two decimals:
+compute in whole milliseconds and check the board's arithmetic before narrating.
 
 **Questions and the pause.** Narrate holds three seconds after any sentence ending in "?", the viewer's quick check.
 So the new guy's everyday questions and guesses end in a full stop ("Wait, so how does it know when to start."). The
 one real question mark in a chapter, if any, is the old guy's what-if near the end, then the new guy's guess and the
-old guy's answer with the reason.
+old guy's answer with the reason. **The answer names every consequence** the board can show, not only the first: if
+the pause grows, the line starts later, its end moves with it, and every word slice slides by the same amount ("So it
+starts at 3.84, ends at 5.65, and every word slides 0.48 later"), each appearing on the board as it is said.
 
 ## The voices
 
@@ -118,16 +137,22 @@ words and never a copy of the line being spoken.
 ## The slot
 
 The board above the characters: a 1920x1080 scene scaled to about 0.74 (16:9), 0.73 (1:1) or 0.54 (9:16), on
-near-black. At 9:16 that halves every size, so draw big: labels 48 px or more, numbers 56 px, and code as big as
-fits the card (48 to 54 px, so about 26 px on a phone): when a long line would shrink it, drop the line-number column
-and name the line in the card's label instead. No small kicker line: the title and the map are the header.
+near-black; at 9:16 it spans the frame's width (at least 70% of it, always). A 1080 px frame shows on a phone about
+390 px wide, so one stage pixel is about 0.2 phone pixels at 9:16. Draw big: labels 48 px or more, numbers 64 px,
+and **code 72 px or more** (about 14 px on a phone) on a card nearly the stage's width. At 72 px a card row holds
+about 41 characters: when a line with its number would not fit, drop the line-number column and name the line in the
+card's label; when the line alone would not fit, wrap it onto a second, indented row at a space (whole lines, never
+cut short). Never shrink the code to fit. No small kicker line: the title and the map are the header.
 
 - **One designed scene per chapter** (`design` piece), the same parts in every chapter, so the viewer learns them once:
   the header (the chapter title, and the four stops of the flow joined by arrows: the one we are at lit, the ones
   passed ticked), the running example on its yellow card, and a code card along the bottom labelled with a short
   file name and its line numbers.
-- **Hand-offs are arrows, and the end is the whole flow.** The last sentence of the video draws every stage in one row
-  joined by arrows, the running example travelling through them, the recap's words as the stages' labels.
+- **Hand-offs are arrows, and the end is the whole flow.** A chapter ends on its hand-off to the next stop, drawn on
+  the board ("TIMING → PAGE 3.36 – 5.17"), so the frame held at the chapter break is full, never a blank board. The
+  last sentence of the video draws every stage in one row joined by arrows, the running example travelling through
+  them, **each stage box filled with its number** (16 letters, a 1.81 s clip, a 3.36 s start, 4 slices) as the recap
+  says it: a recap box with only a word in it repeats the voice.
 - **The new guy's guess is a card in his colours** (blue, a lime "NEW GUY'S GUESS" tag). When the old guy corrects
   it, it is struck through and stamped NOPE, and it stays crossed out until the board needs the space.
 - **No props on the board.** The track already shows every time; a stopwatch or a mug that repeats a value is one
@@ -159,7 +184,8 @@ remove them only when the next step needs the space. The template draws the spea
 big word; never draw them in the slot. The board is opaque: never make the slot's background transparent.
 
 **Chapter breaks are longer than any pause.** Narrate ends each chapter on a 1.16 s tail, about the same as the
-pause after a "So" line, so a full video that joins chapters holds each chapter's last frame (its title and map
-still up) for one more second: a break of over two seconds the ear can tell from an ordinary point.
+pause after a "So" line, so a full video that joins chapters holds each chapter's last full frame (its title, map
+and hand-off still up) for one more second. The board fades out over a chapter's last 0.4 s, so hold the frame from
+just before that fade, never the faded one (a held blank board reads as a broken video): a break of over two seconds the ear can tell from an ordinary point.
 
 **Gate:** every sentence has a `speaker`, every claim is the old guy's, a setting is shown by changing it, each new-guy guess is a real misconception corrected in the next old-guy line or two with a cited fact, `oldguy lesson` prints `lesson ok`, and each chapter aims for 25 to 50 seconds.
