@@ -115,6 +115,38 @@ test('old-and-new: template.md keeps the rules a first-time viewer needs', () =>
   assert.match(md, /hold the frame from\s+just before that fade/);
 });
 
+test('old-and-new: template.md keeps the lessons from the second review', () => {
+  const md = fs.readFileSync(path.join(t.dir, 'template.md'), 'utf8');
+  // jargon in plain words: frames are audio samples, not video frames
+  assert.match(md, /\*\*Plain words for a word that means something else\.\*\*/);
+  assert.match(md, /not video\s+frames/);
+  // settings introduced as settings, drawn as dials, their whole block of lines with no gap
+  assert.match(md, /\*\*A setting is introduced as a setting\.\*\*/);
+  assert.match(md, /SETTING tag/);
+  // the measuring step: the number on the bar, large, held for the whole sentence
+  assert.match(md, /\*\*Put the number on the thing\s+it measures\*\*/);
+  assert.match(md, /\*\*held for the whole sentence\*\*/);
+  // a record drawn as a row, the rounding said once, a rule worked out on two items
+  assert.match(md, /\*\*A record is a row\.\*\*/);
+  assert.match(md, /\*\*Round once, aloud\*\*/);
+  assert.match(md, /\*\*Work a rule out on two items, so its variable reads\*\*/);
+  // the what-if: each step its own sum, what stays said, a second row for the other setting, its own picture
+  assert.match(md, /\*\*Every step of the answer is its own sum\*\*/);
+  assert.match(md, /\*\*Say what stays the same\*\*/);
+  assert.match(md, /\*\*give the other\s+setting its own what-if row\*\*/);
+  assert.match(md, /\*\*The quick check hides its answer, but has its own picture\.\*\*/);
+  // the recap files each number under the stop that makes it
+  assert.match(md, /\*\*File each number under the stop that makes it\*\*/);
+});
+
+test('old-and-new: the sample\'s settings block is whole lines with nothing skipped', () => {
+  const lines = fs.readFileSync(path.join(t.dir, 'template.json'), 'utf8').split('\n');
+  const from = lines.findIndex((l) => l.includes('"voice_speed": {'));
+  const to = lines.findIndex((l) => l.includes('"line_gap_ms"'));
+  // the sample shows this block on one card; six lines fit beside the dials at 72 px
+  assert.ok(from >= 0 && to - from === 5, `voice_speed to line_gap_ms is ${to - from + 1} lines`);
+});
+
 test('old-and-new: at 9:16 the board is the frame\'s width, so code at 72 px reads at 14 px on a phone', () => {
   const [, , w, h] = t.slots['9:16'];
   assert.ok(w / 1080 >= 0.7, `the 9:16 board is ${w} of 1080 px wide`);

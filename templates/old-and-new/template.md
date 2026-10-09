@@ -71,6 +71,19 @@ with what it means ("speed 0.95, a touch slower than normal") or left out; a set
 terms a chapter and one a sentence; move a value the next chapter needs into an earlier chapter's before-and-after
 when a chapter would bring in more.
 
+**Plain words for a word that means something else.** When the code's name for a thing is an everyday word with
+another meaning (`frames`, which a viewer hears as video frames), say the plain words with it and tell them apart
+once: "it counts frames, audio samples, 24,000 every second, not video frames". The board shows the definition
+("frame = one sample per channel"), the rate as a label as well as aloud ("24,000 every second"), and "not video
+frames" once.
+
+**A setting is introduced as a setting.** The first time the template's own numbers come up, one sentence says what
+they are ("these two numbers are template settings: speed and gap"), each wears a SETTING tag, and each is drawn as
+a dial with its value and what turning it does to the running example ("speed 0.95 → a longer clip", "gap 520 ms →
+a later start"). Say once what the value means on its scale ("0.95 is below 1, so slower"). Show the settings' whole
+block of lines from the file, nothing skipped: a "⋮" in the middle of the lines being explained hides how they sit
+together.
+
 **Code the voice explains.** A code line goes on the board only when a sentence says what it does in plain words
 ("each start is the frames so far, divided by the sample rate"), and its key words are lit on that sentence. **The lit
 word is the spoken word**: say "frames" when the code says `frames`, "used, out of the total" when it says
@@ -85,17 +98,28 @@ chapter about time where the viewer would try to add it up.
 
 **A formula gets its real numbers plugged in.** When a step computes something ("each start is the frames so far,
 divided by the sample rate"), show it once with this video's own values, read from its narration wav or its timing
-record and cited: "68,030 ÷ 24,000 = 2.835 s". Define each term of it in half a sentence ("frames, tiny slices of
-sound, 24,000 every second"). A formula with no numbers in it teaches the names, not the step.
+record and cited: "68,030 ÷ 24,000 = 2.835 s". Define each term of it in half a sentence ("frames, audio samples,
+24,000 every second"). A formula with no numbers in it teaches the names, not the step. **Put the number on the thing
+it measures** (the new guy's bar reads "his clip = 68,030 samples"), and work the sum out in large type (92 px) in
+the board's empty space, at 9:16 the lower half under the track, one term a row ("68,030 samples", "÷ 24,000 per
+second", "= 2.835 s"), each row at the word that says it and **held for the whole sentence**; fold it into one small
+row when the next step needs the space.
+
+**A record is a row.** When the step hands over a record, draw it as one row of a table with its columns named
+("LINE · START · END": "Your todo is saved." · 3.355 · 5.168), the values as the record keeps them, captioned with the
+file and its lines. **Round once, aloud**: when the board shows fewer places than the record, one sentence says it
+("rounded, 3.355 is 3.36") and the cell shows it ("3.355 → 3.36"); every later sum uses the rounded values.
 
 **One clock per chapter.** A chapter's times all come from one timeline, drawn once. Never quote a pause from this
 chapter's own audio ("your line just got 520 ms") while the board shows another chapter's clock: the viewer
 cannot place it.
 
 **Derive every number.** A derived value is worked out on the board as a sum on the sentence that says it
-("2.84 + 520 ms = 3.36", "5.17 − 3.36 = 1.81 s"). A rule ("each word gets its share of the letters") is drawn with
-its real values, not only named: the letter counts as they add up ("4+4+2+6 = 16"), one word worked out ("3.36 + ¼ ×
-1.81 = 3.81"), and every slice's real start and end on the bar. Shown sums must add up as shown, to two decimals:
+("2.835 s + 520 ms = 3.355 s", "5.17 − 3.36 = 1.81 s"). A rule ("each word gets its share of the letters") is drawn
+with its real values, not only named: the letter counts as they add up ("4+4+2+6 = 16"), and every slice's real start
+and end on the bar. **Work a rule out on two items, so its variable reads**: one item alone makes `used` look like a
+constant; "Your: 3.36 + 0/16 × 1.81 = 3.36" next to "todo: 3.36 + 4/16 × 1.81 = 3.81", with "used 0" and "used 4"
+under the slices and the label "used = letters before this word", shows what it counts. Shown sums must add up as shown, to two decimals:
 compute in whole milliseconds and check the board's arithmetic before narrating.
 
 **Questions and the pause.** Narrate holds three seconds after any sentence ending in "?", the viewer's quick check.
@@ -104,6 +128,14 @@ one real question mark in a chapter, if any, is the old guy's what-if near the e
 old guy's answer with the reason. **The answer names every consequence** the board can show, not only the first: if
 the pause grows, the line starts later, its end moves with it, and every word slice slides by the same amount ("So it
 starts at 3.84, ends at 5.65, and every word slides 0.48 later"), each appearing on the board as it is said.
+**Every step of the answer is its own sum**: the change itself first ("1000 − 520 = 480 ms"), then what it moves
+("3.36 + 0.48 = 3.84", "5.17 + 0.48 = 5.65"). **Say what stays the same**, aloud and on the board ("the clip stays
+1.81 seconds, and each word keeps its share of the letters"). When two settings shape the example, **give the other
+setting its own what-if row**: the bar redrawn under the first one (a slower speed: the clip longer, its end and
+slices stretched, the start still 3.36), with the reason said ("the start depends only on the line before it, and
+the pause"). A what-if row's value nobody computed is drawn, not numbered ("end later →", "was 5.17").
+**The quick check gets its own chapter** when the words chapter would pass eight sentences: the question, the guess,
+the steps, what stays, the second row, the recap.
 
 ## The voices
 
@@ -151,8 +183,10 @@ cut short). Never shrink the code to fit. No small kicker line: the title and th
 - **Hand-offs are arrows, and the end is the whole flow.** A chapter ends on its hand-off to the next stop, drawn on
   the board ("TIMING → PAGE 3.36 – 5.17"), so the frame held at the chapter break is full, never a blank board. The
   last sentence of the video draws every stage in one row joined by arrows, the running example travelling through
-  them, **each stage box filled with its number** (16 letters, a 1.81 s clip, a 3.36 s start, 4 slices) as the recap
-  says it: a recap box with only a word in it repeats the voice.
+  them, **each stage box filled with its number** as the recap says it: a recap box with only a word in it repeats
+  the voice. **File each number under the stop that makes it**: Script 16 letters; Voice the settings, speed 0.95 and
+  gap 520 ms; Timing the 3.36 s start, the 1.81 s length and the 5.17 s end; Page the 4 word slices. A number under
+  the wrong stop teaches the wrong map.
 - **The new guy's guess is a card in his colours** (blue, a lime "NEW GUY'S GUESS" tag). When the old guy corrects
   it, it is struck through and stamped NOPE, and it stays crossed out until the board needs the space.
 - **No props on the board.** The track already shows every time; a stopwatch or a mug that repeats a value is one
@@ -161,8 +195,10 @@ cut short). Never shrink the code to fit. No small kicker line: the title and th
   at its real start and end and the pause shaded between them, keep it for the whole chapter, and move things on it
   for the what-if (stretch the gap, slide the clip). Point at the template's own parts when they prove a point: the
   speakers below ("↓ new guy, old guy ↓"), a value in the big word ("like the 3.57 below").
-- **The quick check hides its answer.** While the question's pause runs, the board shows the change (the gap
-  stretched, "→ ?") but never the result; the result slides in on the sentence that says it, worked out as a sum.
+- **The quick check hides its answer, but has its own picture.** While the question's three-second pause runs, the
+  board shows the change (the gap stretched to its new length, labelled "1000 ms", and our line as a dashed "?" after
+  it), never an empty board and never the result; the result slides in on the sentence that says it, worked out as a
+  sum.
 - **A highlight follows what is heard, word by word.** A value, a cell, a lit code word or a quick-check answer
   appears at the spoken word that names it, not at the start of its sentence: place it at the engine's own estimate
   of when that word is said (`beat(n) + share × (line end − beat(n))`, the share being the letters before the word,
@@ -170,7 +206,9 @@ cut short). Never shrink the code to fit. No small kicker line: the title and th
   light each word the same way. Show the numbers the rule uses (each word's letter count under its slice) so the rule
   can be checked from the board.
 - **Code is a card, never a cut-away.** At most three real lines, with their line numbers, and a "⋮" row where lines
-  are skipped, each one explained by the voice; lines from two files get a short name each ("explainer",
+  are skipped, each one explained by the voice, or one whole block of up to six lines when the lines explained sit in
+  it (a settings block); keep the block's own indentation, and narrow the card to the block so a dial or a sum can
+  sit beside it; lines from two files get a short name each ("explainer",
   "old-and-new"). Reveal a line when the voice reaches it. The board never disappears behind code, and the card stays
   up while the step it proves is on the board.
 - **No floating labels that repeat.** A label that says what the code card or the voice already says (a voice name
