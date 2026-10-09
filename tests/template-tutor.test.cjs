@@ -201,3 +201,86 @@ test('tutor: template.md keeps the lessons from the first-time viewer', () => {
   assert.match(md, /End on a held recap frame/);
   assert.match(md, /Fill both\s+columns on the same sentence/);
 });
+
+test('tutor map: a code zoom draws the key characters big over the whole, dimmed line, as the voice says them', async () => {
+  const { mapScene, lineAt } = await mapModule();
+  const tpl = fs.readFileSync(path.join(REPO, 'lib', 'template.mts'), 'utf8').split('\n');
+  const no = tpl.findIndex((l) => l.includes('return { voice: s.voice, speed:')) + 1;
+  const line = lineAt(REPO, 'lib/template.mts', no, ['s.voice', 'speed[speaker]']);
+  assert.deepEqual(line.key, ['s.voice', 'speed[speaker]']);
+  assert.throws(() => lineAt(REPO, 'lib/template.mts', no, ['s.voice', 'not here']), /does not hold not here/);
+  const map = sampleMap(lineAt);
+  map.panels = [{ id: 'z', lane: 'voice', at: 1, title: 'zoom', size: 30, code: [line], lit: [{ no, at: 1, after: 1.2 }] }];
+  const html = mapScene(map);
+  // the zoom row holds each key in its own big box, kept out of the code the lesson check reads
+  assert.match(html, new RegExp(`<span id="tm-z-k${no}" class="kb"><code>s\\.voice</code><i>·</i><code>speed\\[speaker\\]</code></span>`));
+  // the whole line is still there, with both keys bright inside it
+  assert.match(html, /<b>s\.voice<\/b>[^<]*<b>speed\[speaker\]<\/b>/);
+  // the big keys start hidden and come up when the voice says them
+  assert.match(html, new RegExp(`#tm-z-k${no}[,"]`));
+  assert.ok(html.includes(`tl.to("#tm-z-k${no}", {opacity: 1, duration: 0.3}, beat(1) + 1.20);`));
+  assert.ok(!sceneTexts(html).some((t) => t.includes('speed[speaker]')));
+});
+
+test('tutor map: a number shown with its origin, and a what-if redrawn with transforms only', async () => {
+  const { mapScene, lineAt } = await mapModule();
+  const map = sampleMap(lineAt);
+  map.panels = [{ id: 'bar', lane: 'timing', at: 1, title: 'timing record',
+    bar: { span: [0, 8], blocks: [
+      { id: 'q', label: 'a line', from: 0.04, to: 3.219, tone: 'page', at: 1,
+        replay: { who: 'new guy · the very start', text: '“Okay, dumb question…”', at: 2, after: 0.8 },
+        row: '"start": 0.04, "end": 3.219', rowAt: 2 },
+      { id: 'was', label: '', from: 3.769, to: 5.561, tone: 'ghost', at: 3 },
+      { id: 'line', label: 'our line', from: 3.769, to: 5.561, tone: 'timing', at: 1, slide: { at: 3, after: 1, to: 6.961 } },
+      { id: 'next', label: 'next line', from: 6.111, to: 7.5, tone: 'voice', at: 1, slide: { at: 3, after: 1, from: 7.511, to: 8.9 } },
+    ], marks: [
+      { id: 'end', t: 3.219, label: 'ends 3.22 s', tag: 'stored · why-templates/beats.json:8', side: 'before', at: 2 },
+      { id: 'start', t: 4.219, label: 'starts ?', side: 'after', at: 2, then: { label: 'starts 4.22 s', at: 3 } },
+      { id: 'mine', t: 5.561, label: 'my end: later', low: true, at: 3, slide: { at: 3, after: 1, t: 6.961 } },
+    ] } }];
+  const html = mapScene(map);
+  designPiece.render({ html }, { startS: 0, durationS: 12, idPrefix: 'p0', beatsS: [0.04, 2, 4, 6] });
+  // the replayed line sits on its block and takes the label's place; the record's row comes in under the block
+  assert.match(html, /<div id="tm-bar-b-q-r" class="replay"><span class="rwho">new guy · the very start<\/span><span class="rtext">“Okay, dumb question…”<\/span><\/div>/);
+  assert.ok(html.includes('tl.to("#tm-bar-b-q-r", {opacity: 1, duration: 0.35}, beat(2) + 0.80);'));
+  assert.ok(html.includes('tl.to("#tm-bar-b-q-l", {opacity: 0, duration: 0.2}, beat(2) + 0.80);'));
+  assert.match(html, /<code id="tm-bar-b-q-w" class="brow"[^>]*>&quot;start&quot;: 0\.04, &quot;end&quot;: 3\.219<\/code>/);
+  // the stored value carries its source tag, as code so the lesson check does not read the line number as a value
+  assert.match(html, /<code class="mtag">stored · why-templates\/beats\.json:8<\/code>/);
+  assert.ok(html.includes('tl.to("#tm-bar-m-start-b", {opacity: 1, duration: 0.3}, beat(3) + 0.50);'));
+  // the what-if: our block's fill stretches from its left edge, the next line and the end mark move; no layout motion
+  assert.match(html, /id="tm-bar-b-line" class="blk grow"/);
+  assert.match(html, /tl\.to\("#tm-bar-b-line-f", \{scaleX: 1\.781, /);
+  assert.match(html, /tl\.to\("#tm-bar-b-next", \{x: 301, /);
+  assert.match(html, /tl\.to\("#tm-bar-m-mine", \{x: 301, /);
+  assert.match(html, /class="blk ghost"/);
+  assert.doesNotMatch(html.split('<script')[1], /\{left:|width:/);
+});
+
+test('tutor map: lanes fill as their words are said, and a chain draws what goes in and comes out', async () => {
+  const { mapScene, lineAt } = await mapModule();
+  const map = sampleMap(lineAt);
+  map.cards.push({ id: 'p', lane: 'page', label: 'where we stand', at: 2, after: 2.4 });
+  map.tour = 0;
+  map.tourAfter = [0.5, 1.1, 1.7, 2.3];
+  map.panels = [{ id: 'ch', at: 1, title: 'what the engine does', colour: 'var(--og-orange)', chain: [
+    { id: 'in', label: 'a written script', tone: 'script', at: 1, after: 0.4 },
+    { id: 'out', label: 'a narrated video', tone: 'page', at: 1, after: 2.1 },
+  ] }];
+  const html = mapScene(map);
+  assert.ok(html.includes('tl.to("#tm-p", {opacity: 1, duration: 0.35}, beat(2) + 2.40);'));
+  assert.ok(html.includes('tl.to("#tm-lane-timing-t", {opacity: 1, duration: 0.3}, beat(0) + 1.70);'));
+  assert.match(html, /#tm-ch-c-in, #tm-ch-c-out, #tm-ch-c-out-a/);
+  assert.ok(html.includes('tl.to("#tm-ch-c-out-a", {opacity: 1, duration: 0.25}, beat(1) + 2.10);'));
+  assert.match(html, /<div class="clab">a narrated video<\/div>/);
+});
+
+test('tutor: template.md keeps the lessons from the second first-time viewer', () => {
+  const md = fs.readFileSync(path.join(tutor.dir, 'template.md'), 'utf8');
+  assert.match(md, /Every key number's origin is on screen when it is used/);
+  assert.match(md, /Every what-if is a redrawn picture, with the reason said/);
+  assert.match(md, /Lanes fill in order/);
+  assert.match(md, /Code zooms show the meaningful characters large/);
+  assert.match(md, /No near-identical frame is held for more than about 6 seconds/);
+  assert.match(md, /One line, four stops/);
+});

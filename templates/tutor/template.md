@@ -32,7 +32,9 @@ A chapter opens on where the running example is now, in the first or second sent
 **The first chapter says the promise.** Within its first three sentences the old guy says what the thing being taught
 makes and what one thing the video follows through it ("The engine turns a written script into a narrated video; we
 follow that one line."), so the example never sounds like a random sentence. The map's kicker says the same from the
-first frame (`Template engine · script → narrated video`).
+first frame (`Template engine · script → narrated video`), and the first chapter's title promises the chain, not the
+topic ("One line, four stops", not "Why templates"). Anything that is not the chain (another template, a comparison)
+waits until the stops are placed, and takes one sentence.
 
 **Each chapter adds one new step.** Never say again what an earlier chapter already claimed (who stands where, that
 the page lights the speaker); a chapter that only repeats is folded into its neighbour. The last stop gets its own
@@ -94,31 +96,41 @@ in 1:1), drawn on near-black. Draw every chapter with the map scene, `examples/m
 
 - **The map never goes away.** Four lanes on top, the same in every chapter and in the order the example travels
   (the arrows are the hand-offs), drawn empty first. Each sentence adds one card and nothing is replaced: the newest
-  card glows, older ones dim. Every card takes its lane's colour. Early in the first chapter the old guy says once
-  what the empty lanes are ("These four empty lanes are our map: the video fills them as the line travels."), while
-  each lane glows in turn (`tour`). Keep every value in the lane where it lives (a speed
+  card glows, older ones dim. Every card takes its lane's colour. Early in the first chapter the old guy names the
+  stops once ("It makes four stops on the way: script, voice, timing, page."), while each lane glows as its name is
+  said (`tour`, `tourAfter`).
+- **Lanes fill in order.** Cards come in strictly left to right, the way the example travels: never a page card
+  before the voice card it depends on. When one sentence names several stops, each card comes in as its word is
+  said (`after`, seconds into the sentence), left to right.
+- **Every sentence changes the picture.** No near-identical frame is held for more than about 6 seconds: each
+  sentence adds or changes something visible on the board (a card, a block, a key, an answer), even the new guy's
+  question (draw where the example is and what he is asking about, `chain`). The speakers swapping does not count. Keep every value in the lane where it lives (a speed
   is part of the voice, not the timing). A chapter reopens the map with the stops already passed as one dimmed card
   each, and those cards keep the numbers a later question needs (`starts 3.77 s` over `3.22 s + 550 ms`).
 - **The band zooms into one lane.** Under the lanes, a band points up at the lane it is about and shows one thing at
   a time: real code, a record's rows, a folder card, a worked example on a timeline, two settings side by side, or
   the what-if. Code never covers the map.
+- **Code zooms show the meaningful characters large.** Give each code line its `key`: the 10 to 15 characters the
+  sentence is about (`speed[speaker]`, `{opacity: 1}`, `"oldguy": 0.97`, or a list of two). The band draws them big
+  and bright in a zoom row, as the voice says them, and the whole line under them small and dimmed with the key
+  still bright inside it, so the eye lands on the few characters that matter and the line stays whole and real.
 - **Code in the band:** one or two whole, neighbouring lines, read from the file (`lineAt`), never typed: only the
   lines the sentence talks about. Give each code sentence its own panel and hold it for the whole sentence (`at` that
   sentence, `until` the next), then say what the lines do in plain words, aloud and under the code (`plain`: "time =
   frames so far ÷ 24,000"). A name on a shown line is either said in plain words ("the speaker's card" for `me`) or
   drawn faint (`lineAt(..., key, mute)`, the line stays whole); never skip a line between two shown ones. When the
   code changes what the viewer sees, draw that beside it (`pic`: two speaker cards, one lit, one dark). A line too
-  long for the band is wrapped under itself (panel `size` 30 to 34), never cut.
+  long for the band is wrapped under itself (panel `size` 26 to 34: the zoom row above carries the key large), never cut.
 - **No value before its sentence, in the code too:** a panel shows only lines whose values are already said. When the
   next value sits a few lines down, give it its own panel on its own sentence (the speed panel, then the pause panel),
   instead of showing the whole block early.
 - **The chip and the band agree:** on a claim, the band shows the file its source chip names (or a record drawn from
   it). When the voice moves to another file, the band moves too; a "So" line that only says what it means is a
   `framing` line with no chip.
-- **Show a setting by changing it:** early on, put the two settings side by side in the band (another template, then
-  this one), one row per choice, and end on what stays the same (a row where both columns say our line). Fill both
-  columns on the same sentence, so the viewer compares across a row instead of waiting for the second column; that
-  one sentence may cite one source per column.
+- **Show a setting by changing it:** once the stops are placed, put the two settings side by side in the band
+  (another template, then this one), one row per choice, and end on what stays the same (a row where both columns say
+  our line). Fill both columns on the same sentence, so the viewer compares across a row instead of waiting for the
+  second column; keep it to that one sentence.
 - **Say what a thing physically is** the first time: a template is a folder, one `template.json` of choices plus a
   stage page, drawn as a folder card (`folder`), not "a folder of choices" in the air.
 - **Plain name first, then the code name:** "a voice called George", and `bm_george` only where the code shows it.
@@ -128,19 +140,30 @@ in 1:1), drawn on near-black. Draw every chapter with the map scene, `examples/m
   frames", never "frames, tiny slices of silence" when the next sentence counts every frame. Rename a term that clashes
   with something the viewer already knows (audio frames are not video frames), or say which one it is.
 - **Derive numbers from the video itself** when you can (a time from its own opening), say where they come from
-  ("this video's timing record"), and name a record in plain words the first time it appears ("a list oldguy writes
-  once per chapter: when each line starts and ends").
+  ("this video's timing record"), and name a record in plain words the first time it appears ("a timing record: each
+  line, its start, its end"). Say who makes it: when the tool shares a name with a character, say which one ("the
+  oldguy build tool, not me, writes a timing record").
+- **Every key number's origin is on screen when it is used.** A number that comes from earlier in the video is
+  shown with its anchor in the same picture, never left to memory: the question's end (3.22 s) sits on a bar whose
+  block replays the question itself (`replay`: "new guy · the very start", "Okay, dumb question…"), with the record's
+  own row under the block (`row`: `"start": 0.04, "end": 3.219`), and the voice says where it is from ("the question
+  you asked at the very start"). Show a value as what it is: the record stores seconds, so 3.22 s is shown as the
+  stored value with its tag (`stored · why-templates/beats.json:8`); how it was measured (77,256 frames ÷ 24,000) is a
+  second, smaller mark with its own honest source (`frames counted in narration.wav`), never the value's origin.
 - **One worked example, with real numbers, in one picture:** before quoting a derived number, show its whole sum once
-  with the real values (`bar`: the question block ending at 3.22 s, the 550 ms pause, our line starting at 3.77 s) and
-  the real counts under it, read from this video's own files and cited (77,256 frames ÷ 24,000 frames a second =
-  3.22 s, from the narration's sample rate and its timing record). A formula with no example, then numbers from a
-  file the viewer never met, loses them.
+  with the real values (`bar`: the question block ending at 3.22 s, the 550 ms pause, our line starting at 3.77 s),
+  each value with its record row and its source tag, read from this video's own files and cited. A formula with no
+  example, then numbers from a file the viewer never met, loses them.
 - **The quick check is answerable from the screen:** during the question and its three-second hold, every number the
   answer needs is on the map (light that card again) and in the band, with a `?` where the answer goes; the answer
-  takes the `?`'s place on the sentence that says it.
-- **The what-if covers two settings:** after the answer, one more row changes a second setting and says what moves
-  and what stays ("speed slower?": the start stays at 3.77, the end moves past 5.56, and later lines shift), so the
-  viewer sees which setting drives which number.
+  takes the `?`'s place on the sentence that says it (a mark's `then`).
+- **Every what-if is a redrawn picture, with the reason said.** Never tell a what-if in words or a table alone: redraw
+  the timing bar the viewer already knows with the setting changed (the pause block 1000 ms wide, a `?` at our start),
+  and say why the picture moves the way it does.
+- **The what-if covers two settings:** after the answer, a second what-if changes another setting on the same bar:
+  our line's block grows (`slide`) from the same start marker to a later end marker, the old length left as a dashed
+  ghost, and the next line slides right, while the old guy says the reason in one sentence ("a line's start depends
+  only on the lines before it, so my speed moves my end"), so the viewer sees which setting drives which number.
 - **End on a held recap frame:** the closing line names every stop and lands on the example's real value ("Script,
   voice, timing, page: our line lights up at 3.77 seconds."). Light one card per stop as its word is said (from the
   chapter's own timing record), show the stops in one row in the band, and pass `hold: true` to the last scene, so
