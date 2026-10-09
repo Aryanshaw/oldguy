@@ -1,0 +1,101 @@
+{
+  "id": "tutor",
+  "version": 1,
+  "title": "Old Guy Tutor",
+  "description": "The new guy asks the dumb questions; the old guy, who has seen every bug since 1987, explains it like you are ten.",
+  "tags": [
+    "characters",
+    "funny",
+    "beginner",
+    "dialogue"
+  ],
+  "shapes": [
+    "16:9",
+    "9:16",
+    "1:1"
+  ],
+  "default_shape": "16:9",
+  "speakers": [
+    {
+      "id": "newguy",
+      "voice": "am_adam",
+      "side": "left",
+      "image": "assets/newguy-idle.webp",
+      "talking": "assets/newguy-talk.webp"
+    },
+    {
+      "id": "oldguy",
+      "voice": "bm_george",
+      "side": "right",
+      "image": "assets/oldguy-idle.webp",
+      "talking": "assets/oldguy-talk.webp"
+    },
+    {
+      "id": "oldguy-laughs",
+      "voice": "bm_george",
+      "side": "right",
+      "image": "assets/oldguy-laugh.webp"
+    }
+  ],
+  "pace": {
+    "voice_speed": {
+      "newguy": 1.05,
+      "oldguy": 0.97,
+      "oldguy-laughs": 0.97
+    },
+    "line_gap_ms": 550,
+    "max_words_per_line": 20,
+    "captions": "none",
+    "visual_beat": "sentence",
+    "chapter_seconds": [
+      30,
+      60
+    ]
+  },
+  "slots": {
+    "16:9": [
+      240,
+      32,
+      1380,
+      776
+    ],
+    "9:16": [
+      24,
+      170,
+      1032,
+      580
+    ],
+    "1:1": [
+      40,
+      40,
+      1360,
+      765
+    ]
+  },
+  "assets": [
+    {
+      "path": "assets/newguy-idle.webp"
+    },
+    {
+      "path": "assets/newguy-talk.webp"
+    },
+    {
+      "path": "assets/oldguy-idle.webp"
+    },
+    {
+      "path": "assets/oldguy-talk.webp"
+    },
+    {
+      "path": "assets/oldguy-laugh.webp"
+    },
+    {
+      "path": "assets/props/mug.webp"
+    },
+    {
+      "path": "assets/props/cap.webp"
+    },
+    {
+      "path": "assets/props/pencil.webp"
+    }
+  ]
+}

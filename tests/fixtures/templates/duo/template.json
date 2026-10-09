@@ -1,0 +1,78 @@
+{
+  "id": "duo",
+  "version": 2,
+  "title": "Duo",
+  "description": "A test template: one asks, one explains.",
+  "tags": [
+    "reel",
+    "gameplay",
+    "playful"
+  ],
+  "shapes": [
+    "16:9",
+    "9:16"
+  ],
+  "default_shape": "16:9",
+  "speakers": [
+    {
+      "id": "kid",
+      "voice": "bm_george",
+      "side": "left",
+      "image": "assets/kid.svg"
+    },
+    {
+      "id": "dad",
+      "voice": "am_adam",
+      "side": "right",
+      "image": "assets/dad.svg",
+      "talking": "assets/dad-talk.svg"
+    }
+  ],
+  "pace": {
+    "voice_speed": {
+      "kid": 1.15,
+      "dad": 1.1
+    },
+    "line_gap_ms": 120,
+    "max_words_per_line": 12,
+    "captions": "word",
+    "visual_beat": "keyword",
+    "chapter_seconds": [
+      30,
+      60
+    ]
+  },
+  "slots": {
+    "16:9": [
+      480,
+      200,
+      960,
+      540
+    ],
+    "9:16": [
+      90,
+      560,
+      900,
+      506.25
+    ]
+  },
+  "assets": [
+    {
+      "path": "assets/kid.svg"
+    },
+    {
+      "path": "assets/dad.svg"
+    },
+    {
+      "path": "assets/dad-talk.svg"
+    },
+    {
+      "path": "assets/loop.mp4",
+      "url": "https://example.com/loop.mp4",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "bytes": 1234
+    }
+  ],
+  "background": "assets/loop.mp4",
+  "background_seconds": 20
+}

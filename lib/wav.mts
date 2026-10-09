@@ -77,5 +77,56 @@ function padWav(buf: Buffer, { leadMs = 0, tailMs = 0 }: PadOptions = {}): Buffe
   return out;
 }
 
-export { parseWav, padWav };
+// Builds a plain 44-byte-header PCM WAV around the given audio bytes.
+function writeWav(format: WavFormat, pcm: Buffer): Buffer {
+  const head = Buffer.alloc(44);
+  const frameBytes = format.channels * BYTES_PER_SAMPLE;
+  head.write('RIFF', 0, 'latin1');
+  head.writeUInt32LE(36 + pcm.length, 4);
+  head.write('WAVE', 8, 'latin1');
+  head.write('fmt ', 12, 'latin1');
+  head.writeUInt32LE(16, 16);
+  head.writeUInt16LE(1, 20);
+  head.writeUInt16LE(format.channels, 22);
+  head.writeUInt32LE(format.sampleRate, 24);
+  head.writeUInt32LE(format.sampleRate * frameBytes, 28);
+  head.writeUInt16LE(frameBytes, 32);
+  head.writeUInt16LE(16, 34);
+  head.write('data', 36, 'latin1');
+  head.writeUInt32LE(pcm.length, 40);
+  return Buffer.concat([head, pcm]);
+}
+
+// Joins WAVs of the same format into one, with gapMs of silence between each pair. Returns the joined file and where
+// each part starts and ends in it (seconds), so the caller knows when each line is spoken.
+function joinWavs(parts: Buffer[], gapMs: number | number[]): { wav: Buffer; spans: { start: number; end: number }[] } {
+  if (parts.length === 0) throw new Error('wav: nothing to join');
+  const infos = parts.map((p) => parseWav(p));
+  const format = infos[0].format;
+  infos.forEach((info, i) => {
+    if (info.format.channels !== format.channels || info.format.sampleRate !== format.sampleRate) {
+      throw new Error(`wav: part ${i} is ${info.format.channels} channel(s) at ${info.format.sampleRate} Hz, part 0 is ${format.channels} at ${format.sampleRate}`);
+    }
+  });
+  const frameBytes = format.channels * BYTES_PER_SAMPLE;
+  // one gap for every join, or gapMs[i] after part i
+  const gapAfter = (i: number) => Buffer.alloc(Math.round((format.sampleRate * (Array.isArray(gapMs) ? gapMs[i] ?? 0 : gapMs)) / 1000) * frameBytes);
+  const chunks: Buffer[] = [];
+  const spans: { start: number; end: number }[] = [];
+  let frames = 0;
+  infos.forEach((info, i) => {
+    if (i > 0) {
+      const gap = gapAfter(i - 1);
+      chunks.push(gap);
+      frames += gap.length / frameBytes;
+    }
+    const start = frames / format.sampleRate;
+    chunks.push(parts[i].subarray(info.dataOffset, info.dataOffset + info.dataLength));
+    frames += info.dataLength / frameBytes;
+    spans.push({ start, end: frames / format.sampleRate });
+  });
+  return { wav: writeWav(format, Buffer.concat(chunks)), spans };
+}
+
+export { parseWav, padWav, joinWavs, writeWav };
 export type { WavFormat, WavInfo, PadOptions };

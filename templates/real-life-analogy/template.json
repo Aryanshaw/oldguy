@@ -1,0 +1,35 @@
+{
+  "id": "real-life-analogy",
+  "version": 1,
+  "title": "Real-Life Analogy",
+  "description": "A calm narrator tells the code through one everyday analogy, in flat illustrated scenes; paper cards hang the real code on each object.",
+  "tags": [
+    "analogy",
+    "illustrated",
+    "calm",
+    "beginner"
+  ],
+  "shapes": [
+    "16:9",
+    "9:16",
+    "1:1"
+  ],
+  "default_shape": "16:9",
+  "speakers": [],
+  "narrator_voice": "af_heart",
+  "pace": {
+    "voice_speed": 0.95,
+    "line_gap_ms": 650,
+    "captions": "none",
+    "visual_beat": "sentence",
+    "chapter_seconds": [
+      25,
+      45
+    ]
+  },
+  "assets": [
+    {
+      "path": "kit/fonts/patrick-hand.woff2"
+    }
+  ]
+}

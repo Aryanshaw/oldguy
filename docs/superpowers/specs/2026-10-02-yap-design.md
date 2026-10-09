@@ -606,3 +606,19 @@ From `2026-10-07-phase-4-chat-bridge-design.md` section 9, word for word.
   installed plugin as a terminal checklist and installs only the ticked items (`--yes` takes all). It is plain
   JavaScript because Node does not run TypeScript from `node_modules`. `yap setup` stays the route from inside
   Claude Code.
+
+## 18. Amendments of 2026-10-08 (video templates, Phase A)
+
+From `2026-10-07-video-templates-design.md`, built in Phase A (`docs/templates/SUMMARY.md`).
+
+- **A25 (5, step 2 and the chapter rules):** chapter length is guidance taken from the template's `chapter_seconds`
+  (explainer: 20 to 40 s); there is no limit on total video length. Going over is never an error.
+- **A26 (3 and 12):** "podcast or reel formats" and "named characters" move from out of scope to templates.
+  Voice cloning stays out of scope.
+- **A27 (4.7):** the player shows the template and shape, offers Remake as…, and plays 9:16 and 1:1 video.
+- **A28 (4.3):** new viewer event `remake` with `template` and `shape`, and a read-only `GET /api/templates`.
+- **A29 (4.2, new):** a video folder records its template and shape in `video.json` from the first step
+  (`oldguy video`), because the manifest only exists once the server starts; narrate, audit and render read it, and
+  the server copies it into the manifest. `build.json` records the template block for anything but explainer at 16:9
+  and fingerprints copied template assets; render treats a chapter built in another template, version or shape as out
+  of date.

@@ -8,3 +8,10 @@ player/test-results/
 player/playwright-report/
 .oldguy
 .yap
+# every template ships a short preview clip
+!templates/*/sample.mp4
+# and a template may ship its own small background loop
+!templates/*/assets/*.mp4
+.claude/worktrees/
+tools/art/.venv/
+tools/art/__pycache__/

@@ -32,9 +32,9 @@ lists every command; each command prints its own usage when called wrongly.
 6. **Never say what making an oldguy video uses up or charges.** No amounts, estimates, totals or budgets about oldguy
    itself, in narration, chat or any file. Explaining the repository's own payment or checkout code is fine: it is
    just another flow, so narrate what it really does.
-7. **Every sentence is one sentence**, every claim sentence has a source, every chapter runs 20 to 40 seconds and
-   stands alone. The CLI checks enforce the sentence and source rules; narrating prints each chapter's seconds
-   so you can check the length. Do not work around either.
+7. **Every sentence is one sentence**, every claim sentence has a source, every chapter aims for its template's
+   length (`chapter_seconds`; explainer's is 20 to 40 seconds), and the video teaches: one example followed through,
+   a "So" sentence per chapter, labels on screen. `oldguy audit` and `oldguy lesson` enforce these. Do not work around them.
 8. **Never edit `chapter.json` or `narration.txt` after narrating.** Redo the chapter instead (see "Redoing a
    chapter" below).
 9. **Never end your turn while a render is running.** Run every `oldguy render` in the foreground, as a normal
@@ -77,12 +77,12 @@ Run `oldguy doctor` on first use, when the user asks `/oldguy doctor`, and again
 
 ## Step 1: Scope
 
-**Read:** [references/scope.md](references/scope.md)
+**Read:** [references/scope.md](references/scope.md) and [references/templates.md](references/templates.md)
 
-Turn the request into one flow with a clear start and end, for a beginner, about 2 to 3 minutes long. Confirm the
-flow exists in the code. If it does not, apply hard rule 3.
+Turn the request into one flow with a clear start and end, for a beginner, as long as the flow needs. Confirm the
+flow exists in the code. If it does not, apply hard rule 3. Record the video's template and shape with `oldguy video`.
 
-**Gate:** One flow named, with the file where it starts and a planned chapter count of 4 to 8. Or: stopped with one question and no files written.
+**Gate:** One flow named, with the file where it starts, a planned chapter count, and `oldguy video` printed the template and shape. Or: stopped with one question and no files written.
 
 ---
 
@@ -98,16 +98,16 @@ Read the code along the flow. Write `script.md` and `sources.json`. Every claim 
 
 ## Step 3: Storyboard
 
-**Read:** [references/storyboard.md](references/storyboard.md)
+**Read:** [references/teaching.md](references/teaching.md) and [references/storyboard.md](references/storyboard.md)
 
-Split the script into chapters of 20 to 40 seconds (about 50 to 100 words). Each chapter has an id, a title, a list
-of sentences (each marked `claim` or `framing`) and the picture it shows.
+Split the script into chapters that aim for the template's length (explainer: 20 to 40 seconds, about 50 to 100
+words). Each chapter has an id, a title, a list of sentences (each marked `claim` or `framing`) and the picture it shows.
 
 Once the storyboard is settled, and before the first `oldguy scaffold`, run
 `oldguy order <id1>,<id2>,<id3> --dir .oldguy/<slug>` with the chapter ids (lower-case words joined by hyphens, never
 starting with a digit) in story order. If a chapter is later added, removed or moved, run it again with the full list.
 
-**Gate:** Every chapter in `script.md` is within the word range, every sentence is exactly one sentence, no sentence refers to another chapter, and the story order was written (`order written: <n> chapters`).
+**Gate:** Every chapter in `script.md` is within the word range, every sentence is exactly one sentence, each has a "So" sentence and follows the example, and the story order was written (`order written: <n> chapters`).
 
 ---
 
@@ -115,9 +115,9 @@ starting with a digit) in story order. If a chapter is later added, removed or m
 
 **Read:** [references/visuals.md](references/visuals.md)
 
-For each chapter, decide what the viewer must see to understand its idea (how it works, not how its code reads), then show it: a ready piece when one fits, or a scene you design, in `specs/<id>.json`.
+For each chapter, decide what the viewer must see to understand its idea (how it works, not how its code reads), then show it: a ready piece when one fits, or a scene you design, in `specs/<id>.json`. If the template's `--show` says `pictures: shot lists`, write `shots/<id>.json` instead and run `oldguy shots --dir .oldguy/<slug>` ([templates.md](references/templates.md) section 4). Then run `oldguy lesson --dir .oldguy/<slug>` and fix the specs until it prints `lesson ok`.
 
-**Gate:** a spec file for every chapter in the storyboard, its picture chosen for that chapter's idea.
+**Gate:** a spec file for every chapter in the storyboard, its picture chosen for that chapter's idea, and `lesson ok`.
 
 ---
 
@@ -131,7 +131,7 @@ playable long before the last one is written. For each chapter:
 1. `oldguy scaffold .oldguy/<slug>/specs/<id>.json --root .oldguy/<slug>` (it prints the chapter folder).
 2. Run `oldguy audit` on the chapter's `chapter.json` with `--root <repo>`; it must exit 0. Then run `oldguy narrate`
    on the chapter folder, also with `--root <repo>` so it records the commit the chapter was verified against
-   (narrate and render wait for a free slot on their own), and check the printed seconds are 20 to 40. Then look at its snapshots
+   (narrate and render wait for a free slot on their own), and check the printed seconds are near the template's length. Then look at its snapshots
    ([visuals.md](references/visuals.md) section 4) and redo the chapter if the picture is wrong.
 3. Run `oldguy render .oldguy/<slug>/chapters --root <repo> --only <id>` for that chapter in the foreground and wait
    for it to finish (hard rule 9). Only then move on to the next chapter. One render at a time.
@@ -196,4 +196,4 @@ runs too long). The CLI's own failure messages say the same thing:
 ## Voice
 
 Polite, cheery, efficient. A friendly helper explaining hard ideas in short, clear steps to someone who has never
-seen this code. Plain words, short sentences, no jargon that the screen does not show.
+seen this code: one example followed through, a reason after each step. Plain words, short sentences.

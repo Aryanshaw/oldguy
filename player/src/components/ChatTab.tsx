@@ -7,7 +7,10 @@ import type { Chapter, ThreadEntry } from '@/types';
 
 const LIMIT = 4000;
 const COUNTER_FROM = 3500;
-const WRAP = 'break-words [overflow-wrap:anywhere]';
+// Long unbroken text (a URL, a path) must wrap anywhere: overflow-wrap:anywhere also shrinks the element's minimum
+// width, so a flex child cannot grow past its box. Never pair it with break-words, whose rule comes later in the CSS
+// and wins, which let a long URL push a chat bubble off the left edge.
+const WRAP = 'min-w-0 [overflow-wrap:anywhere]';
 
 interface Props {
   store: ReturnType<typeof createStore>;

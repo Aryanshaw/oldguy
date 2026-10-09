@@ -1,6 +1,7 @@
 <style>
-/* A worked example of a designed scene: one thing travelling through four stations, a panel under the track that
-   changes with each sentence, a failure on sentence 4, and a planned station. Every rule is scoped under #ex. */
+/* A worked example of a designed scene: the empty map first, then one thing travelling through four stations, notes
+   under the track that pile up (the newest bright, older ones dimmed), a failure on sentence 4, and a planned
+   station. Every rule is scoped under #ex. */
 #ex .track { position: absolute; left: 240px; top: 352px; width: 1440px; height: 6px; background: var(--og-line); }
 #ex .fill { position: absolute; left: 240px; top: 352px; width: 1440px; height: 6px; background: var(--og-yellow); transform-origin: left center; transform: scaleX(0); }
 #ex .station { position: absolute; top: 300px; width: 300px; margin-left: -150px; text-align: center; }
@@ -10,9 +11,9 @@
 #ex .label { margin-top: 16px; font: 800 34px var(--og-font); color: var(--og-text); }
 #ex .sub { margin-top: 4px; font: 400 26px var(--og-font); color: var(--og-dim); }
 #ex .mover { position: absolute; left: 240px; top: 284px; width: 40px; height: 40px; margin-left: -20px; border-radius: 50%; background: var(--og-orange); }
-#ex .panel { position: absolute; left: 240px; top: 600px; width: 1440px; padding: 30px 40px; box-sizing: border-box; background: var(--og-panel); border: 3px solid var(--og-line); }
-#ex .panel .big { font: 800 44px var(--og-font); color: var(--og-text); }
-#ex .panel .dim { margin-top: 8px; font: 400 30px var(--og-font); color: var(--og-dim); }
+#ex .panel { position: absolute; left: 240px; width: 1440px; padding: 18px 40px; box-sizing: border-box; background: var(--og-panel); border: 3px solid var(--og-line); }
+#ex .panel .big { font: 800 40px var(--og-font); color: var(--og-text); }
+#ex .panel .dim { margin-top: 4px; font: 400 28px var(--og-font); color: var(--og-dim); }
 #ex .bad { border-color: var(--og-red); }
 #ex .bad .big { color: var(--og-red); }
 </style>
@@ -27,9 +28,9 @@
   <div class="station" style="left:1200px"><div class="ring"></div><div id="ex-lit-2" class="lit"></div><div class="label">The list</div><div class="sub">saved to a file</div></div>
   <div class="station" style="left:1680px"><div class="ring planned-ring"></div><div class="label">Sync</div><div class="sub">planned</div></div>
   <div id="ex-mover" class="mover"></div>
-  <div id="ex-p1" class="panel"><div class="big">“buy milk”</div><div class="dim">the title travels to the server</div></div>
-  <div id="ex-p2" class="panel"><div class="big">todos.push(todo);</div><div class="dim">add.js, line 12: the new todo joins the list</div></div>
-  <div id="ex-p3" class="panel bad"><div class="big">An empty title is refused</div><div class="dim">nothing is saved</div></div>
+  <div id="ex-p1" class="panel" style="top:560px"><div class="big">“buy milk”</div><div class="dim">the title travels to the server</div></div>
+  <div id="ex-p2" class="panel" style="top:715px"><div class="big">todos.push(todo);</div><div class="dim">add.js, line 12: the todo joins the list</div></div>
+  <div id="ex-p3" class="panel bad" style="top:870px"><div class="big">An empty title is refused</div><div class="dim">nothing is saved</div></div>
 </div>
 <script data-oldguy-timeline>
 // hold back: everything that appears later starts hidden, so nothing shows before its sentence
@@ -43,8 +44,8 @@ tl.from("#ex .station", {opacity: 0, y: 30, duration: 0.4, stagger: 0.12}, start
 tl.to("#ex-lit-0", {opacity: 1, duration: 0.3}, beat(1));
 tl.to("#ex-p1", {opacity: 1, duration: 0.4}, beat(1) + 0.3);
 
-// sentence 2: it reaches the check; move with x, never with left
-tl.to("#ex-p1", {opacity: 0, duration: 0.3}, beat(2));
+// sentence 2: it reaches the check; move with x, never with left. Earlier notes dim, they never go away
+tl.to("#ex-p1", {opacity: 0.5, duration: 0.3}, beat(2));
 tl.to("#ex-mover", {x: 480, duration: 0.8, ease: "power2.inOut"}, beat(2));
 tl.to("#ex-fill", {scaleX: 0.33, duration: 0.8, ease: "power2.inOut"}, beat(2));
 tl.to("#ex-lit-1", {opacity: 1, duration: 0.3}, beat(2) + 0.6);
@@ -56,10 +57,10 @@ tl.to("#ex-lit-2", {opacity: 1, duration: 0.3}, beat(3) + 0.6);
 tl.to("#ex-p2", {opacity: 1, duration: 0.4}, beat(3) + 0.3);
 
 // sentence 4: what goes wrong, beside the normal path
-tl.to("#ex-p2", {opacity: 0, duration: 0.3}, beat(4));
+tl.to("#ex-p2", {opacity: 0.5, duration: 0.3}, beat(4));
 tl.to("#ex-p3", {opacity: 1, duration: 0.4}, beat(4) + 0.3);
 
-// sentence 5: a planned part keeps its dashed outline and gets the badge, never the lit ring of a built one
-tl.to("#ex-p3", {opacity: 0, duration: 0.3}, beat(5));
+// sentence 5: a planned part keeps its dashed outline and gets the badge (said once), never the lit ring of a built one
+tl.to("#ex-p3", {opacity: 0.5, duration: 0.3}, beat(5));
 tl.to("#ex-planned", {opacity: 1, duration: 0.4}, beat(5) + 0.2);
 </script>

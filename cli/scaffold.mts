@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import { parseFlags } from './args.mts';
 import { scaffoldChapter } from '../lib/chapter.mts';
+import { templateOfVideo } from '../lib/settings.mts';
 import type { ScaffoldInput } from '../lib/chapter.mts';
 
 const HELP = `usage: oldguy scaffold <spec.json> --root <dir>
@@ -52,7 +53,8 @@ function runScaffold(args: string[]): number {
   try {
     // read as it is; scaffoldChapter checks every field
     const spec = JSON.parse(fs.readFileSync(positional[0], 'utf8')) as Omit<ScaffoldInput, 'root'>;
-    const dir = scaffoldChapter({ ...spec, root: flags['--root'] });
+    // the --root folder is the video folder; its template's rules are checked with everything else
+    const dir = scaffoldChapter({ ...spec, root: flags['--root'], template: templateOfVideo(flags['--root']) });
     process.stdout.write(`${dir}\n`);
     return 0;
   } catch (err) {

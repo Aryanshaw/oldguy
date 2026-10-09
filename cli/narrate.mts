@@ -53,7 +53,7 @@ async function runNarrate(args: string[]): Promise<number> {
     const root = flags['--root'];
     // speech is heavy: wait for one of the machine's slots, so parallel chapter subagents cannot overload it
     const r = await withSlot({ cap: renderCap(freeRamGb(os)), onWait: slotWaitLine },
-      () => narrateChapter(positional[0], { run: realRun, venvPython: venvPython(dataDir), whisperAvailable, root }));
+      () => narrateChapter(positional[0], { run: realRun, venvPython: venvPython(dataDir), whisperAvailable, root, dataDir }));
     process.stdout.write(`${narratedLine(path.basename(path.resolve(positional[0])), r, Boolean(root))}\n`);
     return 0;
   } catch (err) {
