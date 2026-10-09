@@ -32,7 +32,7 @@ Two threads ran together.
 | explainer | (earlier work) | — | Default. 0.9 speed, 700 ms pauses. |
 | tutor | brand-sheet poses made with the sg image model | 6/10 (~65% of flow stuck) | Map of four lanes stays up; code in a band under its lane; worked timing example. The sample generator lives in the repo: `templates/tutor/examples/sample-make.mjs` and `map.mjs`. |
 | old-and-new | the same character kit, plus the parkour loop | 6/10 (~60%) | Default shape 9:16. Toned-down parkour behind an opaque board. "NOPE" stamps on wrong guesses. Sources in `templates/old-and-new/ASSETS.md`. |
-| real-life-analogy **v1** | a code-drawn SVG kit (`templates/real-life-analogy/kit/`) | 7/10 (first critic only) | **Stopgap.** To be rebuilt on the flat art engine (plan Task 12). |
+| real-life-analogy **v1** | a code-drawn SVG kit (`templates/real-life-analogy/kit/`) | 6/10 (~65%), fresh critic on the final version | **The owner's favourite of the three.** To be rebuilt on the flat art engine (plan Task 12), keeping what works (see 4.11). |
 
 The scores come from two fix rounds on tutor and old-and-new, after a third round run as a workflow. Each round:
 critique, then fix, then a fresh critic re-scores.
