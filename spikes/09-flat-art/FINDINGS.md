@@ -71,7 +71,7 @@ so rounding never drifts. `check.mjs` fails anything over 20 KB.
 | --- | --- | --- |
 | cast person (`body-a-point`) | defaults, Bria cut | 7.1 KB |
 | prop (`shop-counter`) | defaults, Bria cut | 2.9 KB |
-| scene frame (person + counter + bell) | `--ground ground-indigo --key-tol 10 --holes 150 --erode 2 --speckle 4` on the uncut frame | 11.5 KB |
+| scene frame (person + counter + bell) | `--ground indigo --key-tol 10 --holes 150 --erode 2 --speckle 4` on the uncut frame | 11.5 KB |
 | host with text (`oldguy-stand`, from a `2K` image) | `--presnap --clean 1 --min-area 40`, Bria cut | 19.0 KB |
 | host with small text (`newguy-wave`) | `--presnap --clean 0 --min-area 10 --speckle 3` | 15.8 KB |
 
@@ -86,11 +86,16 @@ so rounding never drifts. `check.mjs` fails anything over 20 KB.
 
 ## Palette notes
 
-`art/flat/PALETTE.json` was tuned during the spike: the first draft had `ink` 4.4 ΔE from `ground-indigo` and `peach`
-8 ΔE from `skin-2`, so traced regions flickered between the two. The closest pair is now 9.6 ΔE (`ground-paper` /
-`card`). The token names are fixed (another branch creates the same file): there is no pale blue (TED-Ed's lab-coat
-colour), no tan for khakis and no periwinkle ground (TED-Ed's most used one, `#5558A5`); `lilac`, `hair-4` and
-`ground-indigo` stand in.
+The spike ran on a flat draft palette (`ground-indigo`, `skin-2`, …, the names in the tables above). That draft had
+`ink` 4.4 ΔE from `ground-indigo`, so traced regions flickered between the two; colours closer than about 8 ΔE in one
+item need an allow-list.
+
+After Gate 1 the draft was replaced by the code track's grouped file (`groups.<group>.<token>`, read by
+`lib/catalog.mts`), plus `grounds.periwinkle #5558A5` (TED-Ed's most used ground) and `floors.periwinkleFloor`;
+`neutrals.sky` covers pale-blue coats and `neutrals.wood` khakis. The tools name colours `group.token` and `--allow`
+also takes the bare token. `apple-person.svg` was re-snapped to it. Its close pairs (`grounds.offwhite`/`marks.paper`
+4.7 ΔE, each ground and its floor 6-7 ΔE, `skin5`/`hairBrown` 6.6, `peachDark`/`skin3` 7.1) never meet inside one
+item if the allow-list picks one of each pair.
 
 ## Rendering
 

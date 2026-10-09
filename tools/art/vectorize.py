@@ -45,12 +45,24 @@ def rgb_to_lab(rgb):
     return np.stack([116 * f[:, 1] - 16, 500 * (f[:, 0] - f[:, 1]), 200 * (f[:, 1] - f[:, 2])], axis=1)
 
 
-# Load PALETTE.json as (names, rgb array, lab array).
+# Load PALETTE.json (grouped: {"groups": {group: {token: hex}}}) as (names, rgb array, lab array);
+# each name is "group.token", e.g. "skin.skin2".
 def load_palette(path=PALETTE_FILE):
     pal = json.loads(Path(path).read_text())
-    names = list(pal.keys())
-    rgb = np.array([hex_rgb(pal[n]) for n in names], dtype=np.uint8)
+    flat = {f'{g}.{t}': hx for g, toks in pal['groups'].items() for t, hx in toks.items()}
+    names = list(flat)
+    rgb = np.array([hex_rgb(flat[n]) for n in names], dtype=np.uint8)
     return names, rgb, rgb_to_lab(rgb)
+
+
+# Index of a token given as "group.token" or as the bare token ("skin2"); token names are unique across groups.
+def token_index(names, tok):
+    if tok in names:
+        return names.index(tok)
+    hits = [i for i, n in enumerate(names) if n.split('.', 1)[1] == tok]
+    if len(hits) != 1:
+        raise SystemExit(f'unknown palette token "{tok}"; known: {", ".join(names)}')
+    return hits[0]
 
 
 # Index of the nearest palette colour (CIE76 delta E) for each row of an (N,3) rgb array.
@@ -270,7 +282,7 @@ def vectorize(src, mode='spline', presnap_on=False, clean=2, speckle=8, max_side
         rgb = np.array(img.convert('RGB').filter(ImageFilter.MedianFilter(median)))
     else:
         rgb = np.array(img.convert('RGB'))
-    allow_idx = [names.index(t) for t in allow] if allow else None
+    allow_idx = [token_index(names, t) for t in allow] if allow else None
     if presnap_on:
         rgba = presnap(rgb, mask, pal_rgb, pal_lab, clean, min_area * scale * scale, merge_de, allow_idx)
     else:
@@ -299,10 +311,11 @@ def vectorize(src, mode='spline', presnap_on=False, clean=2, speckle=8, max_side
         f'<path fill="{f}"{(" stroke=" + chr(34) + f + chr(34) + stroke) if seam else ""} d="{d}"/>' for f, d in paths)
     # A scene frame: the cut-out subjects over one flat ground rectangle (grounds are flat colour, as in the engine).
     if ground:
+        gname = names[token_index(names, ground)]
         hexes = dict(zip(names, ['#%02X%02X%02X' % tuple(int(v) for v in c) for c in pal_rgb]))
-        body = f'<path fill="{hexes[ground]}" d="M0 0h{w}v{h}H0z"/>' + body
-        used[hexes[ground]] = ground
-        paths.insert(0, (hexes[ground], ''))
+        body = f'<path fill="{hexes[gname]}" d="M0 0h{w}v{h}H0z"/>' + body
+        used[hexes[gname]] = gname
+        paths.insert(0, (hexes[gname], ''))
     svg = f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}">{body}</svg>\n'
     stats = {
         'bytes': len(svg.encode()), 'paths_traced': raw_count, 'paths': len(paths),

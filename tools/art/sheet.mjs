@@ -20,7 +20,7 @@ function loadPlaywright() {
 
 // Parse argv into options and item specs.
 function parseArgs(argv) {
-  const opt = { out: '', title: 'contact sheet', ground: 'ground-indigo', cell: 560, cols: 2, items: [] };
+  const opt = { out: '', title: 'contact sheet', ground: 'indigo', cell: 560, cols: 2, items: [] };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--out') opt.out = argv[++i];
@@ -42,7 +42,9 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 
 // The sheet page: a grid of cells, each with the full-size drawing, its 240px thumbnail and a label.
 export function sheetHtml(opt, palette) {
-  const hexOf = new Map([...palette].map(([hex, name]) => [name, hex]));
+  // Grounds may be named "grounds.indigo" or just "indigo" (token names are unique across groups).
+  const hexOf = new Map();
+  for (const [hex, name] of palette) { hexOf.set(name, hex); hexOf.set(name.split('.')[1], hex); }
   const cells = opt.items.map((it) => {
     const svg = fs.readFileSync(it.file, 'utf8');
     const stats = svgStats(svg, palette);

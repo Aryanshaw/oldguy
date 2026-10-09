@@ -76,7 +76,7 @@ tools/art/.venv/bin/python tools/art/vectorize.py $W/cut/<id>.png art/flat/<kind
 Defaults are the spike winners: vtracer `color`, `stacked`, `spline`, `filter_speckle=8`, `color_precision=5`,
 `layer_difference=24`, `length_threshold=8`, long side ≤ 1400 px; fills snapped to the nearest palette token (CIE76),
 translates baked in, whole-number coordinates written as relative commands, same-fill runs merged. `--allow` keeps
-near-miss colours from landing on an unrelated token (for example eyes on `hair-1` instead of `ink`).
+near-miss colours from landing on an unrelated token (for example eyes on `hairInk` rather than `ink`).
 
 Per kind (what the style bible needed; see the findings):
 
@@ -108,7 +108,7 @@ catalog entry by hand.
 ## 7. Contact sheet
 
 ```sh
-node tools/art/sheet.mjs --out art/flat/_review/<batch>.png --title "<batch>" --ground ground-indigo \
+node tools/art/sheet.mjs --out art/flat/_review/<batch>.png --title "<batch>" --ground indigo \
   art/flat/<kind>/<id>.svg[@<ground token>][#<items in a composite>][=<label>] ...
 ```
 

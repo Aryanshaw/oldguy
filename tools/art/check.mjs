@@ -8,10 +8,14 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const PALETTE_FILE = path.join(ROOT, 'art', 'flat', 'PALETTE.json');
 
-// The palette as a map from upper-case hex to token name.
+// The grouped palette as a map from upper-case hex to "group.token" (e.g. "#F0B48A" -> "skin.skin2").
 export function loadPalette(file = PALETTE_FILE) {
   const pal = JSON.parse(fs.readFileSync(file, 'utf8'));
-  return new Map(Object.entries(pal).map(([name, hex]) => [hex.toUpperCase(), name]));
+  const entries = [];
+  for (const [group, tokens] of Object.entries(pal.groups)) {
+    for (const [token, hex] of Object.entries(tokens)) entries.push([hex.toUpperCase(), `${group}.${token}`]);
+  }
+  return new Map(entries);
 }
 
 // Every problem with one SVG's text, as plain sentences; [] means it passes.
