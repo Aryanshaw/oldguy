@@ -115,7 +115,7 @@ starting with a digit) in story order. If a chapter is later added, removed or m
 
 **Read:** [references/visuals.md](references/visuals.md)
 
-For each chapter, decide what the viewer must see to understand its idea (how it works, not how its code reads), then show it: a ready piece when one fits, or a scene you design, in `specs/<id>.json`. Then run `oldguy lesson --dir .oldguy/<slug>` and fix the specs until it prints `lesson ok`.
+For each chapter, decide what the viewer must see to understand its idea (how it works, not how its code reads), then show it: a ready piece when one fits, or a scene you design, in `specs/<id>.json`. If the template's `--show` says `pictures: shot lists`, write `shots/<id>.json` instead and run `oldguy shots --dir .oldguy/<slug>` ([templates.md](references/templates.md) section 4). Then run `oldguy lesson --dir .oldguy/<slug>` and fix the specs until it prints `lesson ok`.
 
 **Gate:** a spec file for every chapter in the storyboard, its picture chosen for that chapter's idea, and `lesson ok`.
 

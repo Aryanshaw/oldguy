@@ -63,6 +63,18 @@ test('--show gives the voices, pace and media still to download', (t) => {
   assert.match(r.stdout, /to download first: assets\/loop\.mp4 \(1 MB\)/);
 });
 
+test('--show says when a template draws its pictures from shot lists', (t) => {
+  const project = tempDir(t);
+  assert.doesNotMatch(oldguy(project, ['templates', 'duo', '--show']).stdout, /shots/);
+  const root = path.join(project, 'templates');
+  fs.cpSync(FIXTURES, root, { recursive: true });
+  const file = path.join(root, 'duo', 'template.json');
+  fs.writeFileSync(file, JSON.stringify({ ...JSON.parse(fs.readFileSync(file, 'utf8')), shots: true }));
+  const env = { ...process.env, OLDGUY_TEMPLATES_DIR: root, CLAUDE_PLUGIN_DATA: path.join(project, '.data') };
+  const r = spawnSync(process.execPath, [BIN, 'templates', 'duo', '--show'], { cwd: project, env, encoding: 'utf8' });
+  assert.match(r.stdout, /\npictures: shot lists \(write shots\/<id>\.json for each chapter, then oldguy shots\)\n/);
+});
+
 test('--show says nothing is left once the media is in the data folder', (t) => {
   const project = tempDir(t);
   const data = path.join(project, '.data');

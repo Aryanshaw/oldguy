@@ -6,6 +6,7 @@ import { renderPiece, GSAP_NAME, GSAP_FILE } from './pieces.mts';
 import { buildStagePage } from './stage.mts';
 import { loadTemplate, DEFAULT_TEMPLATE } from './template.mts';
 import { checkAgainstTemplate } from './template-checks.mts';
+import { isCompiledScene } from './shots.mts';
 import type { Template } from './template.mts';
 
 // One source a chapter cites: where it lives, which lines, and the exact text quoted from them.
@@ -118,14 +119,19 @@ function checkSentences(sentences: unknown): string {
 }
 
 // Replaces each design piece's {"file": "scenes/x.html"} with the file's text as {"html": ...}, so chapter.json holds
-// the whole scene (and build.json fingerprints it). The file must sit inside the video folder.
+// the whole scene (and build.json fingerprints it). The file must sit inside the video folder. A scene that is exactly
+// what `oldguy shots` compiles from the video's shots/<id>.json gets "fromShots": true, which lets the design piece take
+// it at the compiled-scene size limit; a spec may not set that mark itself (see scene-kit/design.mts).
 function inlineSceneFiles(scene: unknown, root: string): unknown {
   if (!Array.isArray(scene)) return scene;
   const entries: unknown[] = scene;
   return entries.map((item, i) => {
     // only a design entry with a "file" changes; checkScene checks every entry's shape right after
-    const entry = item as { piece?: unknown; params?: { file?: unknown; html?: unknown } } | null;
+    const entry = item as { piece?: unknown; params?: { file?: unknown; html?: unknown; fromShots?: unknown } } | null;
     const params = entry && entry.piece === 'design' ? entry.params : undefined;
+    if (params && typeof params === 'object' && params.fromShots !== undefined) {
+      throw new Error(`scene[${i}]: "fromShots" is set by oldguy scaffold for scenes from oldguy shots; remove it from the spec`);
+    }
     if (!params || params.file === undefined) return item;
     const { file, ...rest } = params;
     if (typeof file !== 'string' || !file) throw new Error(`scene[${i}]: design "file" must be a path inside ${root}`);
@@ -139,7 +145,8 @@ function inlineSceneFiles(scene: unknown, root: string): unknown {
     } catch {
       throw new Error(`scene[${i}]: cannot read design file ${file}`);
     }
-    return { ...entry, params: { ...rest, html } };
+    const compiled = isCompiledScene(root, rel.split(path.sep).join('/'), html);
+    return { ...entry, params: { ...rest, html, ...(compiled ? { fromShots: true } : {}) } };
   });
 }
 

@@ -31,6 +31,7 @@ type Asset = { path: string; url?: string; sha256?: string; bytes?: number };
 // Where the creative slot sits in one shape's frame, in pixels: [x, y, width, height].
 type SlotBox = [number, number, number, number];
 // A loaded and checked template; `dir` is the folder it was read from. A shape with no slot box uses the whole frame.
+// `shots` true means its chapters' scenes are compiled from shots/<id>.json by `oldguy shots` (the flat art library).
 type Template = {
   id: string;
   version: number;
@@ -46,6 +47,7 @@ type Template = {
   background_seconds?: number;
   tags?: string[];
   slots?: Partial<Record<Shape, SlotBox>>;
+  shots?: boolean;
   dir: string;
 };
 
@@ -206,6 +208,7 @@ function validateTemplate(raw: unknown, dir: string): string[] {
   if (raw.background !== undefined && (typeof raw.background !== 'string' || !assetPaths.has(raw.background))) errs.push('background must name a listed asset');
   if (raw.background !== undefined && !numberIn(raw.background_seconds, 1, 36000)) errs.push('background_seconds must give the background loop\'s length in seconds');
   if (raw.background === undefined && raw.background_seconds !== undefined) errs.push('background_seconds needs a background');
+  if (raw.shots !== undefined && typeof raw.shots !== 'boolean') errs.push('shots must be true or false');
   for (const name of REQUIRED_FILES) if (!fs.existsSync(path.join(dir, name))) errs.push(`${name} is missing from the template folder`);
   return errs;
 }

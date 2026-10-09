@@ -52,6 +52,19 @@ in the scene.
 A piece may start on a word of its sentence instead of the sentence start: add `"word": "<one word of that
 sentence>"` to the scene entry. A word in the last third of its line starts at the line start instead.
 
+**Shot lists.** When `--show` prints `pictures: shot lists`, you never draw the scene. The template's `template.md`
+and `rules.md` say how to write `shots/<id>.json`: one shot per sentence (shot n on beat n, counting from 0, like the
+spec's scene beats), naming drawings from the art library and where they stand. Then:
+
+1. Write `specs/<id>.json` as usual (sentences and sources), with one design piece on beat 0:
+   `{"piece": "design", "params": {"file": "scenes/<id>.html"}, "beat": 0}`.
+2. Run `oldguy shots --dir .oldguy/<slug>`. It checks every chapter in `order.json` against the library and the
+   numbered rules, and on `shots ok` writes `scenes/<id>.html`. Problems are listed under each chapter, with the rule
+   number; fix the shots and run it again. An unknown drawing names the closest ones.
+3. `oldguy shots --dir .oldguy/<slug> --show <id>` also writes `shots/<id>.png`, one still per shot: look at it
+   before narrating, and fix the shots if a picture is wrong.
+4. Then `oldguy lesson` and the chapter steps as usual. Run `oldguy shots` again after any change to a shot list.
+
 ## 5. Narrate and render
 
 Unchanged commands. Narrate prints `timing lines` for a template with speakers (each line timed exactly from its
