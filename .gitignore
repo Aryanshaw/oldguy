@@ -13,3 +13,5 @@ player/playwright-report/
 # and a template may ship its own small background loop
 !templates/*/assets/*.mp4
 .claude/worktrees/
+tools/art/.venv/
+tools/art/__pycache__/
