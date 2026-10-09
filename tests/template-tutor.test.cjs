@@ -146,3 +146,58 @@ test('tutor: the source chip names one file:line and wraps a long path instead o
   assert.match(md, /chip and the band agree/i);
   assert.match(md, /No value before its sentence, in the code too/);
 });
+
+test('tutor map: a worked example on a timeline, a folder card, and code said in plain words beside a picture', async () => {
+  const { mapScene, lineAt } = await mapModule();
+  const map = sampleMap(lineAt);
+  map.tour = 0;
+  map.panels = [
+    { id: 'folder', at: 1, until: 2, title: 'what a template is', colour: 'var(--og-yellow)',
+      folder: { name: 'templates/tutor/', files: [{ name: 'template.json', note: 'the choices' }, { name: 'stage.html', note: 'the page around it' }] } },
+    { id: 'code', lane: 'timing', at: 2, until: 3, title: 'zoom', code: [lineAt(REPO, 'lib/wav.mts', 123, 'frames / format.sampleRate')],
+      lit: [{ no: 123, at: 2 }], plain: 'time = frames so far ÷ 24,000',
+      pic: { items: [{ id: 'new', label: 'new guy' }, { id: 'old', label: 'old guy' }], steps: [{ at: 2, lit: ['old'], dark: ['new'] }] } },
+    { id: 'bar', lane: 'timing', at: 3, title: 'timing record',
+      bar: { span: [0, 6], blocks: [
+        { id: 'q', label: 'the question', from: 0, to: 3.22, tone: 'page', at: 3 },
+        { id: 'gap', label: '550 ms', from: 3.22, to: 3.77, tone: 'gap', at: 3 },
+      ], marks: [{ id: 'end', t: 3.22, label: 'ends 3.22 s', side: 'before', at: 3 }] } },
+  ];
+  const html = mapScene(map);
+  designPiece.render({ html }, { startS: 0, durationS: 12, idPrefix: 'p0', beatsS: [0.04, 2, 4, 6] });
+  // every lane glows in turn on the tour sentence
+  assert.ok(html.includes('tl.to("#tm-lane-script-t", {opacity: 1, duration: 0.3}, beat(0) + 0.30);'));
+  // the folder's files, the timeline's blocks and marks start hidden and come in on their sentence
+  assert.match(html, /#tm-bar-b-q, #tm-bar-b-gap, #tm-bar-m-end, #tm-folder-f0, #tm-folder-f1/);
+  assert.ok(html.includes('tl.to("#tm-bar-b-gap", {opacity: 1, duration: 0.3}, beat(3) + 1.00);'));
+  // the pause is drawn to scale: 0.55 s of a 6 s span on a 1720 px bar
+  assert.match(html, /id="tm-bar-b-gap" class="blk gap" style="left:923px; width:158px;/);
+  // the plain words sit under the code, and the picture lights one card and darkens the other
+  assert.match(html, /<span>in plain words:<\/span> time = frames so far ÷ 24,000/);
+  assert.ok(html.includes('tl.to("#tm-code-p-new", {opacity: 0.18, duration: 0.3}, beat(2) + 0.50);'));
+  // a label on screen stays a label
+  assert.deepEqual(checkLesson({ example: 'the line "your todo is saved"', chapters: [{ id: 'c', sentences: [
+    { text: 'Our line, your todo is saved, starts at 3.77, 550 ms after 3.22.' }, { text: 'So 24,000 frames a second.' }], scenes: [html] }] }), []);
+});
+
+test('tutor map: the last scene holds its frame, and a card and a panel cannot share an id', async () => {
+  const { mapScene, lineAt } = await mapModule();
+  const held = mapScene({ ...sampleMap(lineAt), hold: true });
+  // the piece fades out over its last 0.4 s; the held scene keeps it up whichever way the timeline is played
+  assert.match(held, /tl\.fromTo\("\.og-design", \{opacity: 0\.999\}, \{opacity: 1, [^)]*\}, endS - 0\.42\);/);
+  assert.match(held, /tl\.fromTo\("\.og-design", \{opacity: 0\.999\}, \{opacity: 1, [^)]*\}, endS - 0\.39\);/);
+  assert.doesNotMatch(mapScene(sampleMap(lineAt)), /og-design/);
+  designPiece.render({ html: held }, { startS: 0, durationS: 12, idPrefix: 'p0', beatsS: [0.04, 2, 4, 6] });
+  const clash = sampleMap(lineAt);
+  clash.panels[0].id = 'a';
+  assert.throws(() => mapScene(clash), /both called a/);
+});
+
+test('tutor: template.md keeps the lessons from the first-time viewer', () => {
+  const md = fs.readFileSync(path.join(tutor.dir, 'template.md'), 'utf8');
+  assert.match(md, /One worked example, with real numbers, in one picture/);
+  assert.match(md, /hold it for the whole sentence/);
+  assert.match(md, /The what-if covers two settings/);
+  assert.match(md, /End on a held recap frame/);
+  assert.match(md, /Fill both\s+columns on the same sentence/);
+});
