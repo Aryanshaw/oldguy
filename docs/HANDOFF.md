@@ -139,6 +139,25 @@ In plan order (`docs/superpowers/plans/2026-10-08-flat-art-engine.md`):
    - old-and-new: chapters 3 and 5 run past the template's 50 s guidance.
 10. **real-life-analogy v1** ships with the code-drawn kit, which the owner judged below TED quality. Treat it as a
     placeholder until Task 12.
+11. **Owner feedback (2026-10-09): of the three new templates, the owner likes only real-life-analogy.** tutor and
+    old-and-new did not land for them, even after polish. Before investing more in those two, ask what they disliked.
+
+    A fresh critic scored real-life-analogy v1 at 6/10, with about 65% of the flow stuck.
+
+    Keep:
+    - the one running example with real numbers, traced from the audio to the cue book (beats.json) to the page's
+      beat array (4.115 + 0.65 = 4.765)
+    - the drawn "pause 1000 ms?" quick check
+    - the honest "where the picture breaks" line
+    - the belt of tickets (one sound per sentence)
+
+    Fix:
+    - The what-if must say what else moves and what stays the same. Add a speed what-if too.
+    - Derive the line's end (8.48) from its own audio length.
+    - Cut chapter 2's "voice loaded once" and the "So doubles" rule.
+    - Cut the cast to the man, the actor and the stage manager. Drop the extra stage driver and the TV-in-the-stage.
+    - Show "template in, cue book in, page out" with two arrows into buildStagePage.
+    - Hold code cards on screen for at least 4 s.
 
 ## 5. Decisions made on the owner's behalf (overnight)
 
