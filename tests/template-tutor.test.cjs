@@ -50,3 +50,99 @@ test('tutor: a laughing line shows the laughing card and hides the pointing one'
   assert.ok(page.includes('tl.set("#og-sp-oldguy-laughs", {opacity: 1}, 1.6);'));
   assert.ok(page.includes('tl.set("#og-sp-newguy, #og-sp-oldguy", {opacity: 0}, 1.6);'));
 });
+
+// The map scene (examples/map.mjs): the four lanes stay on screen while the band under them shows code, a record or a
+// what-if; it must be a scene the design piece accepts, and every code line it shows is a whole repository line.
+const REPO = path.join(__dirname, '..');
+const { checkLesson, sceneTexts } = require('../lib/lesson.mts');
+const designPiece = require('../scene-kit/design.mts');
+const mapModule = () => import(path.join(tutor.dir, 'examples', 'map.mjs'));
+
+function sampleMap(lineAt) {
+  return {
+    kicker: 'Template engine · our line',
+    title: 'When the line is said',
+    cards: [
+      { id: 'd', lane: 'script', label: '“Your todo is saved.”', done: true },
+      { id: 'a', lane: 'timing', label: 'ends 3.22 s', at: 1 },
+      { id: 'b', lane: 'timing', label: 'starts 3.77 s', detail: '3.22 s + 550 ms', at: 2 },
+    ],
+    lights: [{ at: 3, cards: ['a'] }],
+    panels: [
+      { id: 'code', lane: 'timing', at: 1, until: 2, title: 'zoom · <code>lib/wav.mts</code>',
+        code: [lineAt(REPO, 'lib/wav.mts', 121, 'frames +='), lineAt(REPO, 'lib/wav.mts', 123, 'frames / format.sampleRate')],
+        lit: [{ no: 121, at: 1 }, { no: 123, at: 2 }] },
+      { id: 'q', lane: 'timing', at: 3, title: 'what if?',
+        table: { head: ['', 'now', 'what if'], rows: [['starts', '3.77 s', { text: '?', at: 3, then: { text: '4.22 s', at: 3 } }]] } },
+    ],
+  };
+}
+
+test('tutor map: a scene the design piece accepts, with the map drawn before anything in it', async () => {
+  const { mapScene, lineAt } = await mapModule();
+  const html = mapScene(sampleMap(lineAt));
+  const out = designPiece.render({ html }, { startS: 0, durationS: 12, idPrefix: 'p0', beatsS: [0.04, 2, 4, 6] });
+  // four lanes, every card and panel held back first, then each one revealed on its sentence
+  assert.equal((html.match(/class="lane"/g) ?? []).length, 4);
+  assert.match(out.timeline ?? out.js ?? JSON.stringify(out), /#tm-a, #tm-b, #tm-code, #tm-q/);
+  assert.ok(html.includes('tl.to("#tm-a", {opacity: 1, duration: 0.35}, beat(1) + 0.30);'));
+  // the quick check lights the card the answer needs again, and the answer takes the "?"'s place
+  assert.ok(html.includes('tl.to("#tm-a-g", {opacity: 1, duration: 0.25}, beat(3) + 0.30);'));
+  assert.ok(html.includes('tl.to("#tm-q-r0c2-b", {opacity: 1, duration: 0.3}, beat(3) + 0.50);'));
+  // the code band lights one line, then moves the light to the next
+  assert.ok(html.includes('tl.to("#tm-code-l121", {opacity: 0, duration: 0.25}, beat(2) + 0.30);'));
+  assert.ok(html.includes('tl.to("#tm-code-l123", {opacity: 1, duration: 0.25}, beat(2) + 0.30);'));
+});
+
+test('tutor map: code lines are whole repository lines, and line numbers are not read as values', async () => {
+  const { mapScene, lineAt } = await mapModule();
+  const wav = fs.readFileSync(path.join(REPO, 'lib', 'wav.mts'), 'utf8').split('\n');
+  assert.equal(lineAt(REPO, 'lib/wav.mts', 123).text, wav[122].trimEnd());
+  assert.throws(() => lineAt(REPO, 'lib/wav.mts', 123, 'not on this line'), /does not hold/);
+  const html = mapScene(sampleMap(lineAt));
+  const shown = [...html.matchAll(/<pre id="[^"]+">([\s\S]*?)<\/pre>/g)].map((m) => m[1].replace(/<[^>]*>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&'));
+  // only the indent the lines share is dropped, so the shown lines keep their shape
+  assert.deepEqual(shown.map((l) => l.trim()), [wav[120].trim(), wav[122].trim()]);
+  assert.ok(shown[0].startsWith('  frames'));
+  // the labels are short, and the code and its line numbers are left out of what the lesson check reads as labels
+  const texts = sceneTexts(html);
+  assert.ok(!texts.some((t) => /\b12[13]\b/.test(t)));
+  const sentences = [{ text: 'Our line, your todo is saved, ends at 3.22 and starts at 3.77 after 550 ms.' }, { text: 'So it would start at 4.22.' }];
+  const findings = checkLesson({ example: 'the line "your todo is saved"', chapters: [{ id: 'c', sentences, scenes: [html] }] });
+  assert.deepEqual(findings, []);
+});
+
+test('tutor: the template points at the map scene, and the source chip is a footnote by the old guy', () => {
+  const md = fs.readFileSync(path.join(tutor.dir, 'template.md'), 'utf8');
+  assert.match(md, /examples\/map\.mjs/);
+  assert.doesNotMatch(md, /code-card` replaces the map/);
+  const src = fs.readFileSync(path.join(tutor.dir, 'stage.src.html'), 'utf8');
+  assert.match(src, /\[data-shape="16:9"\] \.og-chip \{ right: /);
+});
+
+test('tutor map: a muted part stays on the line but faint, and a small code size wraps long lines', async () => {
+  const { mapScene, lineAt } = await mapModule();
+  const line = lineAt(REPO, 'lib/wav.mts', 121, 'frames += gap', '.length / frameBytes');
+  assert.equal(line.mute, '.length / frameBytes');
+  assert.throws(() => lineAt(REPO, 'lib/wav.mts', 121, 'frames', 'not on this line'), /does not hold/);
+  const map = sampleMap(lineAt);
+  map.panels[0].code[0] = line;
+  map.panels[0].size = 30;
+  const html = mapScene(map);
+  // the whole line is still there, the unnamed part drawn faint inside it
+  assert.match(html, /<b>frames \+= gap<\/b><i class="mute">\.length \/ frameBytes<\/i>;/);
+  assert.match(html, /class="code wrap" style="--cs: 30px"/);
+  // a key part cannot also be muted
+  assert.throws(() => mapScene({ ...map, panels: [{ ...map.panels[0], code: [{ ...line, mute: 'frames += gap.length' }] }] }), /cannot be muted/);
+});
+
+test('tutor: the source chip names one file:line and wraps a long path instead of running off', () => {
+  const src = fs.readFileSync(path.join(tutor.dir, 'stage.src.html'), 'utf8');
+  assert.match(src, /\.og-chip \{[^}]*overflow-wrap: anywhere/);
+  assert.doesNotMatch(src, /\.og-chip \{[^}]*white-space: nowrap/);
+  const md = fs.readFileSync(path.join(tutor.dir, 'template.md'), 'utf8');
+  // the rules the sample follows: the promise first, the chip and the band agree, no value early in code either
+  assert.match(md, /first chapter says the promise/i);
+  assert.match(md, /chip and the band agree/i);
+  assert.match(md, /No value before its sentence, in the code too/);
+});
