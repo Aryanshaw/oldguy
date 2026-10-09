@@ -95,6 +95,36 @@ In plan order (`docs/superpowers/plans/2026-10-08-flat-art-engine.md`):
 6. **Task 13.** Render the sample, run lesson, hyperframes check and the look sheet, then fresh critics until 9 or
    higher.
 7. **Optional, recommended:** a new shared sample question (see 4.1), then re-render every template's sample.
+8. **Proposed next template: `walkthrough`** (the owner agreed it should be its own template). It is for questions like
+   "show me how checkout is implemented", where the viewer will change the code. None of the current templates fit:
+   - explainer is diagram-first and shows code only as small cards;
+   - real-life-analogy hides the code behind a metaphor;
+   - tutor and old-and-new spend the screen on characters.
+
+   The layout is code-first:
+   - **Editor pane** (most of the frame): the real file with line numbers and syntax colour. It scrolls to the
+     current lines, lights the one being discussed and dims the rest.
+   - **File tabs plus a call trail**, for example `api/checkout.ts › validateCart() › pricing.ts › applyDiscount()`.
+     A jump into another function opens a new tab and adds to the trail.
+   - **Watch panel**: the running example's real values as they change (`cart.total = 59.00` → `discount = 0.10` →
+     `total = 53.10`). This is the "one example travels" rule applied to variables.
+   - **Mini-map** in a corner: a small version of the explainer flow, with a dot showing where in the flow we are.
+   - **Narration**: a calm narrator, slightly slower than explainer, holding each beat at least 4 s so the code can
+     be read.
+
+   The teaching rules still hold: real values, a what-if ("if the discount were 0.2, this line gives…"), a recap,
+   and every claim cited to file:line.
+
+   Pairing: a walkthrough can open with one analogy shot from real-life-analogy, then go into the code.
+
+   Cost is low and needs no generated art, so it is not blocked by the sg connector. Build it as:
+   - a stage layout;
+   - four scene pieces (editor, tabs and trail, watch panel, mini-map), built on the existing slot and code-card
+     pieces;
+   - `template.md` rules;
+   - a sample on the new shared question.
+
+   Use `.claude/skills/new-template/SKILL.md`.
 
 ## 4. What is still wrong or needs checking
 
