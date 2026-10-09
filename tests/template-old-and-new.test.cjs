@@ -1,6 +1,7 @@
 'use strict';
-// The old-and-new template: new guy left, old guy right (two ids, one voice), two distinct voices, word captions over
-// a looping background, and the reacting poses and props inlined into stage.html (built by build-stage.mjs).
+// The old-and-new template: new guy left, old guy right (two ids, one voice), two distinct voices and no third
+// speaker, big-word captions for values only, looping parkour footage toned down behind an opaque board, no source
+// chips, and the reacting poses inlined into stage.html (built by build-stage.mjs).
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -25,11 +26,28 @@ test('old-and-new: new guy left, old guy right, two different voices', () => {
   assert.ok(t.pace.line_gap_ms >= 500);
 });
 
-test('old-and-new: the background loop ships in the folder, small and square', () => {
+test('old-and-new: looping parkour footage at normal speed, toned down behind an opaque board that is most of the frame', () => {
   assert.equal(t.background, 'assets/parkour.mp4');
+  assert.equal(t.background_seconds, 12);
+  assert.match(t.description, /over looping parkour gameplay/);
   const size = fs.statSync(path.join(t.dir, t.background)).size;
   assert.ok(size <= 3 * 1024 * 1024);
   assert.ok(stageAssets(t).includes('assets/parkour.mp4'));
+  assert.ok(!fs.existsSync(path.join(t.dir, 'assets', 'parkour-still.webp')));
+  const src = fs.readFileSync(path.join(t.dir, 'stage.src.html'), 'utf8');
+  assert.ok(src.includes('<!-- oldguy:background -->'));
+  // darkened and blurred or desaturated, never slowed down or paused
+  const clip = src.match(/\.og-bg-clip \{([^}]*)\}/);
+  assert.ok(clip, 'the stage styles the footage');
+  assert.match(clip[1], /filter:[^;]*brightness\(0\.[0-9]+\)/);
+  assert.match(clip[1], /blur\(|saturate\(0\./);
+  assert.ok(!/playbackRate|animation-play-state|\.pause\(/.test(src));
+  // the board is opaque, so the footage only shows around it
+  assert.match(src, /\.oan-board \{[^}]*background: #14110A;/);
+  for (const [shape, [, , w]] of Object.entries(t.slots)) {
+    const width = { '16:9': 1920, '9:16': 1080, '1:1': 1440 }[shape];
+    assert.ok(w / width >= 0.7, `${shape} board is ${w} of ${width} px wide`);
+  }
 });
 
 test('old-and-new: stage.html is stage.src.html with every picture inlined', () => {
@@ -44,7 +62,7 @@ test('old-and-new: stage.html is stage.src.html with every picture inlined', () 
   }
 });
 
-test('old-and-new: a page swaps speakers and shows one caption word at a time', () => {
+test('old-and-new: a page swaps speakers, hides filler caption words and draws no source chips', () => {
   const timing = {
     durationS: 4,
     lines: [
@@ -62,5 +80,26 @@ test('old-and-new: a page swaps speakers and shows one caption word at a time', 
     assert.ok(page.includes('id="og-cap-1" class="og-cap og-cap-word">Nope</div>'));
     assert.ok(page.includes('tl.fromTo("#og-sp-oldguy", {y: 0}, {y: -14'));
     assert.ok(page.includes('class="og-bg-clip" src="assets/parkour.mp4"'));
+    assert.ok(!page.includes('class="og-chip"'));
+    assert.ok(!page.includes('og-speaker-center'));
+    // the stage's script keeps only words with a digit, an underscore or a dot inside
+    assert.ok(page.includes("if (!/[0-9_]|[A-Za-z]\\.[A-Za-z]/.test(el.textContent)) el.style.display = 'none';"));
   }
+});
+
+test('old-and-new: template.md keeps the rules a first-time viewer needs', () => {
+  const md = fs.readFileSync(path.join(t.dir, 'template.md'), 'utf8');
+  // the promise naming the stops, early
+  assert.match(md, /\*\*The promise, in the first ten seconds\.\*\*/);
+  // a before-and-after compares only what the replay shows, two cells a sentence at most
+  assert.match(md, /\*\*Compare only what the replay shows\.\*\*/);
+  assert.match(md, /\*\*One sentence fills at most two cells\*\*/);
+  // the lit code word is the word the voice says, at the moment it is said
+  assert.match(md, /\*\*The lit\s+word is the spoken word\*\*/);
+  assert.match(md, /word by word/);
+  // one clock per chapter, and chapter breaks longer than any pause
+  assert.match(md, /\*\*One clock per chapter\.\*\*/);
+  assert.match(md, /\*\*Chapter breaks are longer than any pause\.\*\*/);
+  // big enough to read on a phone after the 0.54 scale
+  assert.match(md, /labels 48 px or more/);
 });

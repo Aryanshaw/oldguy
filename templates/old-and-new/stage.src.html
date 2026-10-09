@@ -1,94 +1,71 @@
 <style>
-/* Old Guy & New Guy: the TikTok "brainrot explainer". Looping parkour gameplay fills the frame; the scene sits on a
-   near-black board with a yellow frame; the new guy stands on the left, the old guy on the right; the words go up one
-   at a time, big and bold on a yellow plate, in the middle.
-   Each character is drawn twice. A still "reacting" pose is always there, dimmed and a step back (.oan-ghost). The
-   engine's speaker element sits on top of it, hidden between his lines: while he talks it shows his talking pose,
-   lit on his own colour card, and bobs. The card covers the ghost, including at the top of a bob (the ghost is inset
-   by more than the bob's 14 px). The old guy has two speaker ids on the same card: `oldguy` (talking, pointing) and
-   `oldguy-laughs` (laughing, for his jokes).
-   Pictures are the oldguy character kit (assets/, see ASSETS.md); the reacting poses and the props are inlined below
-   as data URIs by build-stage.mjs, because the engine copies only speaker pictures and background footage into a
-   chapter. Edit stage.src.html, then run `node templates/old-and-new/build-stage.mjs`.
+/* Old Guy & New Guy: the TikTok "brainrot explainer", tuned so the board does the teaching. One big board with a yellow
+   frame holds the chapter's map; looping Minecraft parkour gameplay keeps moving behind it, toned down so it never
+   pulls the eye off the board:
+   - the background is the template's looping parkour footage (the engine's .og-bg-clip, at normal speed), darkened,
+     desaturated and softly blurred, under a dark shade; the board is opaque, so the footage shows only around it;
+   - the new guy (left) and the old guy (right) are small head-and-shoulders speaker icons under the board, dimmed
+     and grey while quiet; the engine's speaker element covers the dim one, lit on his own colour, while he talks;
+   - the big word on its yellow plate shows only values and code names (a word with a digit, an underscore or a dot
+     inside: 520, 3.57, bm_george); the script after the captions marker hides every other word, so filler never
+     flashes;
+   - no source chips: the board's code card names the file and line it shows.
+   The old guy has two speaker ids on the same card: `oldguy` (talking, pointing) and `oldguy-laughs` (laughing).
+   Pictures are the oldguy character kit (assets/, see ASSETS.md); the reacting poses are inlined below as data URIs by
+   build-stage.mjs, because the engine copies only speaker pictures and background footage into a chapter. Edit
+   stage.src.html, then run `node templates/old-and-new/build-stage.mjs`.
    Brand: yellow #F6C945, orange #FF8A1F, near-black #14110A, cream #FFF1CC, coral #FF6B57.
    New guy: lime #C6F432, blue #2D4BFF, off-white #F4F4EF, black #111111, pink #FF7AB6. */
 #root { background: #14110A; }
-.og-bg-clip { filter: saturate(1.1) brightness(0.82); }
-.oan-shade { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: rgba(20, 17, 10, 0.38); }
-.oan-board { position: absolute; box-sizing: border-box; background: #14110A; border: 10px solid #F6C945; border-radius: 18px; box-shadow: 0 12px 0 #14110A; }
-.oan-ghost { position: absolute; background-repeat: no-repeat; background-size: contain; background-position: center bottom; filter: grayscale(0.55) brightness(0.62); opacity: 0.92; }
+/* the footage keeps moving at normal speed, but dark, grey-ish and soft, so motion reads without detail to track */
+.og-bg-clip { filter: brightness(0.5) saturate(0.35) blur(4px); transform: scale(1.04); }
+.oan-shade { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: rgba(20, 17, 10, 0.45); }
+.oan-board { position: absolute; box-sizing: border-box; background: #14110A; border: 10px solid #F6C945; border-radius: 18px; box-shadow: 0 12px 0 #000; }
+.oan-ghost { position: absolute; box-sizing: border-box; border-radius: 24px; border: 6px solid #3A3426; background-color: #241F14; background-repeat: no-repeat; background-size: 150% auto; background-position: 50% 4%; filter: grayscale(0.8) brightness(0.5); }
 .oan-ghost-new { background-image: url(PIC(newguy-react)); }
 .oan-ghost-old { background-image: url(PIC(oldguy-react)); }
-.og-speaker { position: absolute; box-sizing: border-box; border-radius: 28px; border: 8px solid #14110A; box-shadow: 0 10px 0 #14110A; }
-.og-speaker img { object-position: center bottom; }
+.og-speaker { position: absolute; box-sizing: border-box; border-radius: 24px; border: 6px solid #14110A; box-shadow: 0 8px 0 #000; overflow: hidden; }
+.og-speaker img { width: 150% !important; height: auto !important; left: -25% !important; top: -2% !important; object-fit: initial !important; }
 .og-speaker-left { background: #C6F432; }
 .og-speaker-right { background: #F6C945; }
-.oan-tag { position: absolute; box-sizing: border-box; padding: 6px 18px 10px; border-radius: 14px; border: 6px solid #14110A; font: 900 34px var(--og-font); letter-spacing: 0.04em; text-align: center; white-space: nowrap; box-shadow: 0 6px 0 #14110A; }
-.oan-tag-new { background: #2D4BFF; color: #F4F4EF; transform: rotate(-3deg); }
+.oan-tag { position: absolute; box-sizing: border-box; padding: 4px 12px 8px; border-radius: 12px; border: 5px solid #14110A; font: 900 30px var(--og-font); letter-spacing: 0.04em; text-align: center; white-space: nowrap; }
+.oan-tag-new { background: #2D4BFF; color: #F4F4EF; }
 .oan-tag-new b { color: #C6F432; font-weight: 900; }
-.oan-tag-old { background: #14110A; color: #FFF1CC; border-color: #FF8A1F; box-shadow: 0 6px 0 #FF8A1F; transform: rotate(3deg); }
+.oan-tag-old { background: #14110A; color: #FFF1CC; border-color: #FF8A1F; }
 .oan-tag-old b { color: #F6C945; font-weight: 900; }
-.og-cap { position: absolute; left: 20px; right: 20px; width: fit-content; margin: 0 auto; transform: rotate(-2deg); box-sizing: border-box; padding: 6px 34px 16px; border-radius: 20px; background: #F6C945; color: #14110A; border: 8px solid #14110A; box-shadow: 0 12px 0 #14110A; font: 900 104px/1.05 var(--og-font); text-transform: uppercase; letter-spacing: 0.01em; white-space: nowrap; opacity: 0; }
-.og-chip { position: absolute; left: 30px; right: 30px; width: fit-content; margin: 0 auto; box-sizing: border-box; padding: 10px 22px 12px; border-radius: 12px; background: #FFF1CC; color: #14110A; border: 4px solid #14110A; border-left: 14px solid #FF6B57; font: 700 28px/1.25 var(--og-font-mono); font-variant-ligatures: none; white-space: normal; overflow-wrap: anywhere; text-align: center; box-shadow: 0 6px 0 #14110A; }
-.og-chip::before { content: "SOURCE  "; font: 900 22px var(--og-font); letter-spacing: 0.12em; color: #B8402F; }
+.og-cap { position: absolute; left: 20px; right: 20px; width: fit-content; margin: 0 auto; box-sizing: border-box; padding: 4px 30px 12px; border-radius: 18px; background: #F6C945; color: #14110A; border: 7px solid #14110A; box-shadow: 0 10px 0 #000; font: 900 96px/1.05 var(--og-font); letter-spacing: 0.01em; white-space: nowrap; opacity: 0; }
 .oan-brand { position: absolute; padding: 4px 16px 8px; border-radius: 12px; background: #14110A; color: #FFF1CC; font: 900 34px var(--og-font); letter-spacing: 0.04em; white-space: nowrap; }
 .oan-brand b { color: #F6C945; }
-.oan-prop { position: absolute; background-repeat: no-repeat; background-size: contain; background-position: center; filter: drop-shadow(0 6px 0 rgba(20, 17, 10, 0.55)); }
-.oan-mug { background-image: url(PIC(props/mug)); }
-.oan-cap { background-image: url(PIC(props/cap)); }
-.oan-pencil { background-image: url(PIC(props/pencil)); }
-.oan-computer { background-image: url(PIC(props/computer)); }
 
-/* 16:9 (1920 x 1080). Slot [410, 30, 1100, 619]. */
-[data-shape="16:9"] .oan-board { left: 400px; top: 20px; width: 1120px; height: 639px; }
-[data-shape="16:9"] .oan-cap { left: 60px; top: 40px; width: 230px; height: 164px; transform: rotate(-10deg); }
-[data-shape="16:9"] .oan-computer { left: 120px; top: 230px; width: 200px; height: 133px; }
-[data-shape="16:9"] .oan-mug { left: 1630px; top: 40px; width: 200px; height: 183px; transform: rotate(8deg); }
-[data-shape="16:9"] .oan-pencil { left: 1620px; top: 240px; width: 150px; height: 146px; }
-[data-shape="16:9"] .og-speaker-left { left: 40px; top: 420px; width: 330px; height: 600px; }
-[data-shape="16:9"] .oan-ghost-new { left: 64px; top: 444px; width: 282px; height: 556px; }
-[data-shape="16:9"] .og-speaker-right { left: 1540px; top: 470px; width: 360px; height: 550px; }
-[data-shape="16:9"] .oan-ghost-old { left: 1564px; top: 494px; width: 312px; height: 506px; }
-[data-shape="16:9"] .oan-tag-new { left: 40px; top: 380px; width: 330px; font-size: 32px; }
-[data-shape="16:9"] .oan-tag-old { left: 1540px; top: 430px; width: 360px; font-size: 32px; }
-[data-shape="16:9"] .og-cap { top: 700px; font-size: 96px; }
-[data-shape="16:9"] .og-chip { top: 900px; max-width: 1120px; }
-[data-shape="16:9"] .oan-brand { left: 846px; top: 1000px; font-size: 30px; }
+/* 16:9 (1920 x 1080). Slot [250, 26, 1420, 799]: the board is three quarters of the frame. */
+[data-shape="16:9"] .oan-board { left: 240px; top: 16px; width: 1440px; height: 819px; }
+[data-shape="16:9"] .oan-ghost-new, [data-shape="16:9"] .og-speaker-left { left: 22px; top: 520px; width: 200px; height: 230px; }
+[data-shape="16:9"] .oan-ghost-old, [data-shape="16:9"] .og-speaker-right { left: 1698px; top: 520px; width: 200px; height: 230px; }
+[data-shape="16:9"] .oan-tag-new { left: 22px; top: 760px; width: 200px; font-size: 28px; }
+[data-shape="16:9"] .oan-tag-old { left: 1698px; top: 760px; width: 200px; font-size: 28px; }
+[data-shape="16:9"] .og-cap { top: 868px; font-size: 92px; }
+[data-shape="16:9"] .oan-brand { left: 22px; top: 1010px; font-size: 28px; }
 
-/* 9:16 (1080 x 1920). Slot [30, 150, 1020, 574]. */
-[data-shape="9:16"] .oan-brand { left: 30px; top: 40px; font-size: 44px; }
-[data-shape="9:16"] .oan-cap { left: 760px; top: 10px; width: 170px; height: 121px; transform: rotate(10deg); }
-[data-shape="9:16"] .oan-mug { left: 930px; top: 20px; width: 120px; height: 110px; transform: rotate(8deg); }
-[data-shape="9:16"] .oan-board { left: 20px; top: 140px; width: 1040px; height: 594px; }
-[data-shape="9:16"] .og-cap { top: 850px; font-size: 112px; }
-[data-shape="9:16"] .og-chip { top: 1040px; max-width: 1040px; font-size: 24px; }
-[data-shape="9:16"] .oan-tag-new { left: 30px; top: 1250px; width: 400px; }
-[data-shape="9:16"] .oan-tag-old { left: 520px; top: 1260px; width: 530px; }
-[data-shape="9:16"] .og-speaker-left { left: 30px; top: 1300px; width: 400px; height: 590px; }
-[data-shape="9:16"] .oan-ghost-new { left: 54px; top: 1324px; width: 352px; height: 546px; }
-[data-shape="9:16"] .og-speaker-right { left: 520px; top: 1300px; width: 530px; height: 590px; }
-[data-shape="9:16"] .oan-ghost-old { left: 544px; top: 1324px; width: 482px; height: 546px; }
+/* 9:16 (1080 x 1920). Slot [20, 480, 1040, 585]: the board fills the width, in the middle of the phone. */
+[data-shape="9:16"] .oan-brand { left: 20px; top: 396px; font-size: 40px; }
+[data-shape="9:16"] .oan-board { left: 10px; top: 470px; width: 1060px; height: 605px; }
+[data-shape="9:16"] .og-cap { top: 1110px; font-size: 104px; }
+[data-shape="9:16"] .oan-ghost-new, [data-shape="9:16"] .og-speaker-left { left: 40px; top: 1290px; width: 250px; height: 290px; }
+[data-shape="9:16"] .oan-ghost-old, [data-shape="9:16"] .og-speaker-right { left: 790px; top: 1290px; width: 250px; height: 290px; }
+[data-shape="9:16"] .oan-tag-new { left: 40px; top: 1594px; width: 250px; }
+[data-shape="9:16"] .oan-tag-old { left: 790px; top: 1594px; width: 250px; }
 
-/* 1:1 (1440 x 1440). Slot [170, 30, 1100, 619]. */
-[data-shape="1:1"] .oan-board { left: 160px; top: 20px; width: 1120px; height: 639px; }
-[data-shape="1:1"] .og-cap { top: 700px; font-size: 100px; }
-[data-shape="1:1"] .og-chip { top: 880px; max-width: 1000px; font-size: 26px; }
-[data-shape="1:1"] .oan-tag-new { left: 30px; top: 930px; width: 360px; font-size: 30px; }
-[data-shape="1:1"] .oan-tag-old { left: 1010px; top: 960px; width: 400px; font-size: 30px; }
-[data-shape="1:1"] .og-speaker-left { left: 30px; top: 975px; width: 360px; height: 445px; }
-[data-shape="1:1"] .oan-ghost-new { left: 54px; top: 999px; width: 312px; height: 401px; }
-[data-shape="1:1"] .og-speaker-right { left: 1010px; top: 1005px; width: 400px; height: 415px; }
-[data-shape="1:1"] .oan-ghost-old { left: 1034px; top: 1029px; width: 352px; height: 371px; }
-[data-shape="1:1"] .oan-computer { left: 470px; top: 1010px; width: 220px; height: 146px; }
-[data-shape="1:1"] .oan-mug { left: 770px; top: 1000px; width: 170px; height: 156px; transform: rotate(8deg); }
-[data-shape="1:1"] .oan-brand { left: 516px; top: 1250px; font-size: 34px; }
+/* 1:1 (1440 x 1440). Slot [20, 130, 1400, 788]. */
+[data-shape="1:1"] .oan-brand { left: 20px; top: 44px; font-size: 38px; }
+[data-shape="1:1"] .oan-board { left: 10px; top: 120px; width: 1420px; height: 808px; }
+[data-shape="1:1"] .og-cap { top: 960px; font-size: 92px; }
+[data-shape="1:1"] .oan-ghost-new, [data-shape="1:1"] .og-speaker-left { left: 40px; top: 1120px; width: 220px; height: 250px; }
+[data-shape="1:1"] .oan-ghost-old, [data-shape="1:1"] .og-speaker-right { left: 1180px; top: 1120px; width: 220px; height: 250px; }
+[data-shape="1:1"] .oan-tag-new { left: 40px; top: 1380px; width: 220px; font-size: 28px; }
+[data-shape="1:1"] .oan-tag-old { left: 1180px; top: 1380px; width: 220px; font-size: 28px; }
 </style>
 <!-- oldguy:background -->
 <div class="oan-shade"></div>
-<div class="oan-prop oan-cap"></div>
-<div class="oan-prop oan-computer"></div>
-<div class="oan-prop oan-mug"></div>
-<div class="oan-prop oan-pencil"></div>
 <div class="oan-board"></div>
 <!-- oldguy:slot -->
 <div class="oan-ghost oan-ghost-new"></div>
@@ -97,5 +74,10 @@
 <div class="oan-tag oan-tag-new"><b>NEW</b> GUY</div>
 <div class="oan-tag oan-tag-old"><b>OLD</b> GUY</div>
 <!-- oldguy:captions -->
-<!-- oldguy:chips -->
+<script>
+/* the big word is for values and code names only: hide every caption word without a digit, an underscore or a dot inside */
+document.querySelectorAll('.og-cap-word').forEach(function (el) {
+  if (!/[0-9_]|[A-Za-z]\.[A-Za-z]/.test(el.textContent)) el.style.display = 'none';
+});
+</script>
 <div class="oan-brand">old guy <b>&amp;</b> new guy</div>

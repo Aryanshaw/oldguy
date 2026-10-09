@@ -2,7 +2,7 @@
   "id": "old-and-new",
   "version": 1,
   "title": "Old Guy & New Guy",
-  "description": "The new guy guesses wrong, the old guy sets him straight with the real line of code, over looping parkour gameplay.",
+  "description": "The new guy guesses wrong, the old guy sets him straight with the real line of code, on one big board over looping parkour gameplay.",
   "tags": [
     "characters",
     "funny",
@@ -39,9 +39,9 @@
   ],
   "pace": {
     "voice_speed": {
-      "newguy": 1.12,
-      "oldguy": 1.0,
-      "oldguy-laughs": 1.0
+      "newguy": 1.05,
+      "oldguy": 0.95,
+      "oldguy-laughs": 0.95
     },
     "line_gap_ms": 520,
     "max_words_per_line": 20,
@@ -54,22 +54,22 @@
   },
   "slots": {
     "16:9": [
-      410,
-      30,
-      1100,
-      619
+      250,
+      26,
+      1420,
+      799
     ],
     "9:16": [
-      30,
-      150,
-      1020,
-      574
+      20,
+      480,
+      1040,
+      585
     ],
     "1:1": [
-      170,
-      30,
-      1100,
-      619
+      20,
+      130,
+      1400,
+      788
     ]
   },
   "background": "assets/parkour.mp4",
