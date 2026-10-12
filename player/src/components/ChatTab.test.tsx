@@ -77,10 +77,20 @@ describe('thread', () => {
     expect(screen.getByText('b.ts:3')).toBeInTheDocument();
   });
 
+  it('a viewer bubble holding a long URL stays inside its column', async () => {
+    const text = 'see https://customszone3.gov.in/Content/images/pdf/Form-very-long-path-without-spaces.pdf please';
+    await setup([viewer('v1', text)]);
+    const bubble = screen.getByText(text);
+    expect(bubble.className).toMatch(/min-w-0/);
+    expect(bubble.className).not.toMatch(/break-words/);
+  });
+
   it('a 4,000-character message with no spaces wraps; script text is literal', async () => {
     const long = 'x'.repeat(4000);
     await setup([viewer('v1', long), claude('c1', '<script>alert(1)</script>')]);
-    expect(screen.getByText(long).className).toMatch(/break-words|overflow-wrap:anywhere/);
+    // anywhere (not break-word) is what lets a flex child shrink below its longest word; break-words would override it
+    expect(screen.getByText(long).className).toMatch(/\[overflow-wrap:anywhere\]/);
+    expect(screen.getByText(long).className).not.toMatch(/break-words/);
     expect(screen.getByText('<script>alert(1)</script>')).toBeInTheDocument();
   });
 });

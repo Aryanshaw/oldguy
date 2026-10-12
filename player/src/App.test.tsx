@@ -118,9 +118,11 @@ describe('App', () => {
     const { store } = make(state([]));
     const { container } = render(<App store={store} />);
     await screen.findByText('How the cache works');
-    expect(container.querySelector('dialog')).not.toHaveAttribute('open');
+    // the page also holds the templates gallery's dialog; this test is about the export one
+    const exportDialog = () => container.querySelector('dialog:not([aria-labelledby="tg-title"])');
+    expect(exportDialog()).not.toHaveAttribute('open');
     await userEvent.click(screen.getAllByRole('button', { name: 'Export' })[0]);
-    expect(container.querySelector('dialog')).toHaveAttribute('open');
+    expect(exportDialog()).toHaveAttribute('open');
     act(() => {});
   });
 });

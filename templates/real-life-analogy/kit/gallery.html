@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Analogy Kit Gallery</title>
+<!-- Every character preset, face, hair, head, pose, prop, chalk mark and card the real-life-analogy kit can draw.
+     Open it straight from disk; it loads kit.js beside it and nothing else. -->
+<style>
+@font-face { font-family: 'RLA Hand'; src: url('fonts/patrick-hand.woff2') format('woff2'); }
+body { margin: 0; padding: 24px; background: #1A1545; color: #FFF1CC; font: 16px/1.4 system-ui, sans-serif; }
+h1 { font: 400 44px 'RLA Hand', cursive; margin: 0 0 4px; letter-spacing: 0.04em; }
+h2 { font: 400 30px 'RLA Hand', cursive; margin: 28px 0 10px; letter-spacing: 0.04em; color: #F6C945; }
+p { margin: 0 0 8px; max-width: 70ch; color: #D8D2F4; }
+.row { display: flex; flex-wrap: wrap; gap: 12px; }
+.tile { background: #221C55; border-radius: 10px; overflow: hidden; }
+.tile svg { display: block; }
+.tile b { display: block; padding: 4px 10px 8px; font: 400 20px 'RLA Hand', cursive; letter-spacing: 0.04em; color: #FFF1CC; }
+.stage { position: relative; width: 1920px; height: 1080px; transform: scale(0.5); transform-origin: 0 0; margin-bottom: -540px; }
+.stage-wrap { width: 960px; height: 540px; overflow: hidden; border-radius: 10px; }
+</style>
+</head>
+<body>
+<h1>Real-life analogy kit</h1>
+<p>Built by kit.js: one call per person, prop, chalk mark or card. Flat fills from one palette, no outlines, words only on paper cards.</p>
+<div id="out"></div>
+<script src="kit.js"></script>
+<script>
+(function () {
+  const R = window.RLA;
+  const out = document.getElementById('out');
+  const style = document.createElement('style');
+  style.textContent = R.CSS;
+  document.head.appendChild(style);
+  const tile = (label, inner, w, h) => `<div class="tile"><svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${inner}</svg><b>${label}</b></div>`;
+  const section = (title, tiles) => `<h2>${title}</h2><div class="row">${tiles.join('')}</div>`;
+  let html = '';
+  html += section('Presets: cast(name)', Object.keys(R.PRESETS).map((n) => tile(n, R.cast(n, { id: `g-${n}`, x: 130, y: 330, s: 0.34 }).svg, 260, 340)));
+  html += section('Faces: face', R.FACES.map((fc) => tile(fc, R.person({ id: `g-f-${fc}`, pose: 'bust', face: fc, hair: 'swoop', hairColor: 'indigo', x: 130, y: 520, s: 0.5 }).svg, 260, 300)));
+  html += section('Hair: hair', R.HAIRS.map((hr, i) => tile(hr, R.person({ id: `g-h-${hr}`, pose: 'bust', hair: hr, hairColor: Object.keys(R.HAIR)[i % 8], skin: Object.keys(R.SKIN)[i % 5], x: 130, y: 520, s: 0.5 }).svg, 260, 300)));
+  html += section('Heads: head', R.HEADS.map((hd) => tile(hd, R.person({ id: `g-hd-${hd}`, pose: 'bust', head: hd, hair: 'bald', hairColor: 'brown', x: 130, y: 520, s: 0.5 }).svg, 260, 300)));
+  html += section('Poses: pose', R.POSES.map((ps) => {
+    const bust = ps.startsWith('bust');
+    const holding = ps.endsWith('hold') ? { prop: 'apple', s: 0.7, dy: -40 } : null;
+    return tile(ps, R.person({ id: `g-p-${ps}`, pose: ps, hair: 'bob', hairColor: 'coral', face: ps === 'think' ? 'thinking' : 'neutral', x: bust ? 150 : 120, y: bust ? 520 : 330, s: bust ? 0.46 : 0.34, holding }).svg, 300, 340);
+  }));
+  html += section('Props: prop(name)', R.PROPS.map((n) => {
+    const probe = R.prop(n, { id: `probe-${n}` });
+    const s = Math.min(0.75, 120 / probe.r);
+    return tile(n, R.prop(n, { id: `g-pr-${n}`, x: 150, y: 160, s, beam: n === 'spotlight' ? [60, 200] : undefined }).svg, 300, 320);
+  }));
+  // one composed shot: a person, a prop, a hanging card, the burst, a sight line
+  const sc = R.scene({ id: 'gallery', ground: 'blue', push: 0 });
+  sc.set(R.prop('counter', { id: 'gs-counter', x: 1180, y: 900, s: 1.1 }).svg);
+  sc.add(0, R.cast('clerk', { id: 'gs-clerk', x: 520, y: 1080, s: 1.05, pose: 'point', face: 'pleased' }));
+  sc.add(0, R.prop('bell', { id: 'gs-bell', x: 1220, y: 690, s: 1.1 }), { focus: true, extra: true });
+  const cd = R.card({ id: 'gs-card', x: 980, y: 120, title: 'the order', lines: ['cart.checkout()'], file: 'shop.js · line 12', hl: { line: 0, word: 'checkout' } });
+  sc.add(0, cd, { extra: true });
+  sc.add(0, R.strings({ id: 'gs-str', from: cd.bottom(3), to: [1220, 600] }), { extra: true });
+  sc.add(0, R.sight({ id: 'gs-sight', from: R.cast('clerk', { x: 520, y: 1080, s: 1.05 }).anchors.eye, to: [1120, 650] }), { extra: true });
+  const built = sc.build();
+  html += `<h2>A composed shot: scene().build()</h2><p>${built.problems.length ? 'problems: ' + built.problems.join('; ') : 'lint: no problems'}</p><div class="stage-wrap"><div class="stage">${built.html.replace(/<script[\s\S]*<\/script>/, '')}</div></div>`;
+  out.innerHTML = html;
+  // the gallery shows chalk fully drawn (in a scene it draws itself on its beat)
+  document.querySelectorAll('.rla-d').forEach((p) => p.setAttribute('stroke-dashoffset', '0'));
+})();
+</script>
+</body>
+</html>

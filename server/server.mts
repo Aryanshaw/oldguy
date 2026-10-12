@@ -5,6 +5,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { createGuard, readJsonBody } from '../lib/http-guard.mts';
 import { newManifest, saveManifest, loadManifest } from '../lib/manifest.mts';
+import { hasVideoChoice, readVideoChoice } from '../lib/settings.mts';
 import { slugChapterId } from '../lib/chapter.mts';
 import { scanChapter } from '../lib/chapter-scan.mts';
 import { serveFile, safeChapterFile } from '../lib/range.mts';
@@ -191,10 +192,20 @@ function makeListener(state: ServerState, routes: Route[], guard: Guard): (req: 
 }
 
 // Loads the manifest, or creates and saves a fresh one when the file is absent. A file that is there but bad stops the start.
+// When the video folder chose a template (video.json), the manifest records it so the player can show it; a manifest
+// written before that choice is given it once.
 function ensureManifest(slugDir: string): Manifest {
   const file = path.join(slugDir, 'manifest.json');
-  if (fs.existsSync(file)) return loadManifest(file);
-  const m = newManifest({ title: path.basename(slugDir), slug: path.basename(slugDir), audience: 'beginner' });
+  const choice = hasVideoChoice(slugDir) ? readVideoChoice(slugDir) : null;
+  if (fs.existsSync(file)) {
+    const loaded = loadManifest(file);
+    if (!choice || loaded.template !== undefined) return loaded;
+    const { chapters, ...head } = loaded;
+    const patched: Manifest = { ...head, template: choice.template, shape: choice.shape, chapters };
+    saveManifest(file, patched);
+    return patched;
+  }
+  const m = newManifest({ title: path.basename(slugDir), slug: path.basename(slugDir), audience: 'beginner', ...(choice ?? {}) });
   saveManifest(file, m);
   return m;
 }

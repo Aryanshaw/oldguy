@@ -32,6 +32,7 @@ An event stays open until it has a reply or an ack, so handle every one.
 | `just_text` | `oldguy ack <id>`. Stop the subagent building that chapter, delete its folder (`rm -r .oldguy/<slug>/chapters/<id>`, if it was made) and its spec, then `oldguy remove-chapter --id <id> --dir .oldguy/<slug>` (the page drops "Making a chapter for…"). The question already has its text answer. |
 | `retry_chapter` | `oldguy ack <id>`, then dispatch a fresh chapter subagent for that chapter id. |
 | `export` | `oldguy ack <id>`: export runs on its own route. |
+| `remake` | `oldguy ack <id>`, then follow "Remake" in [templates.md](templates.md): a new video folder in the event's `template` and `shape`, built by chapter subagents, while this video stays up. When it is ready, reply in this page's chat, giving the new link. |
 
 Answer in the house voice: short, plain, beginner-friendly, every claim with its file and lines. When you cannot
 find something in the code, say so; never guess.

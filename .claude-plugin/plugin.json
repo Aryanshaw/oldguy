@@ -1,7 +1,7 @@
 {
   "name": "oldguy",
   "description": "Ask the old guy. Ask how a feature of your codebase works and get a short narrated video, built from chapters that are fact-checked against the code, in a local player you can chat with.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": {
     "name": "Aryan Shaw"
   },

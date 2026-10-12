@@ -30,4 +30,11 @@ describe('Header', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Export' }));
     expect(onExport).toHaveBeenCalledTimes(1);
   });
+  it('shows the template label only when given, and the templates control beside Export', () => {
+    const { container, rerender } = render(<Header title="T" connected onExport={() => {}} />);
+    expect(container.querySelector('[data-template-label]')).toBeNull();
+    rerender(<Header title="T" connected onExport={() => {}} label="tutor · 9:16" templates={<button type="button">Templates</button>} />);
+    expect(screen.getByText('tutor · 9:16')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Templates' })).toBeInTheDocument();
+  });
 });

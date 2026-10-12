@@ -1,6 +1,7 @@
 # oldguy video templates
 
-Date: 2026-10-07. Status: draft, waiting for owner review.
+Date: 2026-10-07. Status: Phase A (the template engine, with explainer) built on 2026-10-08; see
+`docs/templates/SUMMARY.md`. Phases B to D (the other templates) are open.
 Parent spec: `2026-10-02-yap-design.md`. This document adds templates; where it disagrees with the parent, section 12
 lists the amendments.
 

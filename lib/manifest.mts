@@ -3,6 +3,8 @@
 import nodeFs from 'node:fs';
 import path from 'node:path';
 import { slugChapterId } from './chapter.mts';
+import { isShape } from './template.mts';
+import type { Shape } from './template.mts';
 
 // The states a chapter can be in; the type is derived from this list so the two cannot drift apart.
 const STATUSES = ['pending', 'rendering', 'ready', 'failed', 'stale'] as const;
@@ -29,13 +31,16 @@ type ManifestRow = {
   build_sha256: string | null;
   verified_against_commit: string | null;
 };
-// The manifest.json file: the video's details and its chapters in story order.
+// The manifest.json file: the video's details and its chapters in story order. `template` and `shape` say how the
+// video is told; a manifest from before templates has neither and means explainer at 16:9.
 type Manifest = {
   version: 1;
   title: string;
   slug: string;
   audience: string;
   verified_against_commit: string | null;
+  template?: string;
+  shape?: Shape;
   chapters: ManifestRow[];
 };
 // A chapter to add: the id and title are required, every other field falls back to its default.
@@ -62,9 +67,10 @@ function listHas(list: readonly unknown[], value: unknown): boolean {
   return list.includes(value);
 }
 
-// Makes an empty manifest for a new video.
-function newManifest({ title, slug, audience }: { title: string; slug: string; audience: string }): Manifest {
-  return { version: 1, title, slug, audience, verified_against_commit: null, chapters: [] };
+// Makes an empty manifest for a new video; the template and shape are recorded only when given.
+function newManifest({ title, slug, audience, template, shape }: { title: string; slug: string; audience: string; template?: string; shape?: Shape }): Manifest {
+  const base = { version: 1 as const, title, slug, audience, verified_against_commit: null };
+  return template === undefined ? { ...base, chapters: [] } : { ...base, template, shape: shape ?? '16:9', chapters: [] };
 }
 
 // True when the id is exactly what the Phase 1 slug rule would produce (the rule throws on junk, which means "not valid").
@@ -139,6 +145,11 @@ function validateManifest(obj: unknown): { ok: boolean; errors: string[] } {
   for (const f of ['title', 'slug', 'audience']) {
     if (typeof m[f] !== 'string' || !m[f]) errors.push(`${f} must be a non-empty string`);
   }
+  if (m.template !== undefined && !(typeof m.template === 'string' && /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/.test(m.template))) {
+    errors.push('template must be a template id (a slug)');
+  }
+  if (m.shape !== undefined && !isShape(m.shape)) errors.push('shape must be 16:9, 9:16 or 1:1');
+  if ((m.template === undefined) !== (m.shape === undefined)) errors.push('template and shape are given together or not at all');
   if (!Array.isArray(m.chapters)) {
     errors.push('chapters must be an array');
     return { ok: false, errors };

@@ -5,6 +5,9 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { narrateChapter } = require('../lib/narrate.mts');
+const { loadTemplate } = require('../lib/template.mts');
+// The one-call narrator path these tests drive: the shipped explainer without silence between sentences.
+const ONE_CALL = (() => { const t = loadTemplate('explainer'); return { ...t, pace: { ...t.pace, line_gap_ms: 0, voice_speed: 1 } }; })();
 const { scaffoldChapter } = require('../lib/chapter.mts');
 const { parseWav } = require('../lib/wav.mts');
 const { HYPERFRAMES_VERSION } = require('../lib/hyperframes.mts');
@@ -62,7 +65,7 @@ function readJson(dir, name) {
 test('narrate (whisper available): tts then transcribe through npx hyperframes, python from the venv', async (t) => {
   const dir = chapterDir(t);
   const { run, calls } = fakeRun();
-  await narrateChapter(dir, { run, venvPython: PYTHON, whisperAvailable: true });
+  await narrateChapter(dir, { run, venvPython: PYTHON, template: ONE_CALL, whisperAvailable: true });
   // both steps run the pinned Hyperframes through npx --yes, so no prompt and no surprise upgrade
   const pinned = `hyperframes@${HYPERFRAMES_VERSION}`;
   assert.equal(HYPERFRAMES_VERSION, '0.8.112');
@@ -81,7 +84,7 @@ test('narrate (whisper available): tts then transcribe through npx hyperframes, 
 
 test('narrate: padded narration.wav is exactly 0.160 s longer than the tts output', async (t) => {
   const dir = chapterDir(t);
-  await narrateChapter(dir, { ...fakeRun(), venvPython: PYTHON, whisperAvailable: true });
+  await narrateChapter(dir, { ...fakeRun(), venvPython: PYTHON, template: ONE_CALL, whisperAvailable: true });
   const raw = parseWav(fs.readFileSync(RAW_WAV)).durationS;
   const padded = parseWav(fs.readFileSync(path.join(dir, 'narration.wav'))).durationS;
   assert.ok(Math.abs(padded - raw - 0.16) < 1e-9, `${padded} - ${raw}`);
@@ -89,7 +92,7 @@ test('narrate: padded narration.wav is exactly 0.160 s longer than the tts outpu
 
 test('narrate (words path): 3 beats timed from words, timing "words", captions in the author\'s words', async (t) => {
   const dir = chapterDir(t);
-  const result = await narrateChapter(dir, { ...fakeRun(), venvPython: PYTHON, whisperAvailable: true });
+  const result = await narrateChapter(dir, { ...fakeRun(), venvPython: PYTHON, template: ONE_CALL, whisperAvailable: true });
   const beats = readJson(dir, 'beats.json');
   assert.equal(beats.timing, 'words');
   assert.equal(result.timing, 'words');
@@ -107,7 +110,7 @@ test('narrate: whisper timings past the end of the audio are cut back to the aud
   const dir = chapterDir(t);
   const words = JSON.parse(fs.readFileSync(TRANSCRIPT, 'utf8'));
   words[words.length - 1] = { ...words[words.length - 1], end: 12.0 };
-  await narrateChapter(dir, { ...fakeRun({ words }), venvPython: PYTHON, whisperAvailable: true });
+  await narrateChapter(dir, { ...fakeRun({ words }), venvPython: PYTHON, template: ONE_CALL, whisperAvailable: true });
   const audioS = parseWav(fs.readFileSync(path.join(dir, 'narration.wav'))).durationS;
   const beats = readJson(dir, 'beats.json').beats;
   assert.equal(beats[beats.length - 1].end, Math.floor(audioS * 1000) / 1000);
@@ -118,7 +121,7 @@ test('narrate: whisper timings past the end of the audio are cut back to the aud
 
 test('narrate: duration is the padded length rounded up to 0.1 s, and the page uses it exactly', async (t) => {
   const dir = chapterDir(t);
-  const result = await narrateChapter(dir, { ...fakeRun(), venvPython: PYTHON, whisperAvailable: true });
+  const result = await narrateChapter(dir, { ...fakeRun(), venvPython: PYTHON, template: ONE_CALL, whisperAvailable: true });
   // 9.3013 s of speech + 0.16 s padding = 9.4613 s, rounded up to the next tenth
   assert.equal(result.durationS, 9.5);
   assert.equal(readJson(dir, 'beats.json').durationS, 9.5);
@@ -128,7 +131,7 @@ test('narrate: duration is the padded length rounded up to 0.1 s, and the page u
 
 test('narrate: the scene pieces land on their beats in index.html', async (t) => {
   const dir = chapterDir(t);
-  await narrateChapter(dir, { ...fakeRun(), venvPython: PYTHON, whisperAvailable: true });
+  await narrateChapter(dir, { ...fakeRun(), venvPython: PYTHON, template: ONE_CALL, whisperAvailable: true });
   const third = readJson(dir, 'beats.json').beats[2].start;
   const html = fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
   assert.match(html, /id="p0-root" class="og-piece og-title"/);
@@ -139,14 +142,14 @@ test('narrate: the scene pieces land on their beats in index.html', async (t) =>
 
 test('narrate writes exactly the finished files and leaves no temp folder behind', async (t) => {
   const dir = chapterDir(t);
-  await narrateChapter(dir, { ...fakeRun(), venvPython: PYTHON, whisperAvailable: true });
+  await narrateChapter(dir, { ...fakeRun(), venvPython: PYTHON, template: ONE_CALL, whisperAvailable: true });
   assert.deepEqual(fs.readdirSync(dir).sort(), NARRATED);
 });
 
 test('narrate (no whisper): never transcribes, times by sentence share and records it', async (t) => {
   const dir = chapterDir(t);
   const { run, calls } = fakeRun();
-  const result = await narrateChapter(dir, { run, venvPython: PYTHON, whisperAvailable: false });
+  const result = await narrateChapter(dir, { run, venvPython: PYTHON, template: ONE_CALL, whisperAvailable: false });
   assert.deepEqual(calls.map((c) => c.args[2]), ['tts']);
   const beats = readJson(dir, 'beats.json');
   assert.equal(beats.timing, 'sentence-share');
@@ -163,7 +166,7 @@ test('narrate (no whisper): never transcribes, times by sentence share and recor
 test('narrate: a failing tts surfaces its stderr and writes no files', async (t) => {
   const dir = chapterDir(t);
   await assert.rejects(
-    narrateChapter(dir, { ...fakeRun({ fail: 'tts' }), venvPython: PYTHON, whisperAvailable: true }),
+    narrateChapter(dir, { ...fakeRun({ fail: 'tts' }), venvPython: PYTHON, template: ONE_CALL, whisperAvailable: true }),
     /hyperframes tts failed.*kokoro exploded/,
   );
   assert.deepEqual(fs.readdirSync(dir).sort(), SCAFFOLDED);
@@ -175,7 +178,7 @@ test('narrate: a failing tts with an empty stderr surfaces the error from its JS
   const reason = 'The kokoro-onnx package is not installed.';
   const run = async () => ({ code: 1, stdout: `${JSON.stringify({ ok: false, error: reason })}\n`, stderr: '' });
   await assert.rejects(
-    narrateChapter(dir, { run, venvPython: PYTHON, whisperAvailable: true }),
+    narrateChapter(dir, { run, venvPython: PYTHON, template: ONE_CALL, whisperAvailable: true }),
     /hyperframes tts failed: The kokoro-onnx package is not installed\./,
   );
 });
@@ -183,7 +186,7 @@ test('narrate: a failing tts with an empty stderr surfaces the error from its JS
 test('narrate: a failing transcribe also fails (no silent fallback) and writes no files', async (t) => {
   const dir = chapterDir(t);
   await assert.rejects(
-    narrateChapter(dir, { ...fakeRun({ fail: 'transcribe' }), venvPython: PYTHON, whisperAvailable: true }),
+    narrateChapter(dir, { ...fakeRun({ fail: 'transcribe' }), venvPython: PYTHON, template: ONE_CALL, whisperAvailable: true }),
     /hyperframes transcribe failed.*kokoro exploded/,
   );
   assert.deepEqual(fs.readdirSync(dir).sort(), SCAFFOLDED);
@@ -191,8 +194,8 @@ test('narrate: a failing transcribe also fails (no silent fallback) and writes n
 
 test('narrate: re-narrating replaces the earlier outputs', async (t) => {
   const dir = chapterDir(t);
-  await narrateChapter(dir, { ...fakeRun(), venvPython: PYTHON, whisperAvailable: false });
-  await narrateChapter(dir, { ...fakeRun(), venvPython: PYTHON, whisperAvailable: true });
+  await narrateChapter(dir, { ...fakeRun(), venvPython: PYTHON, template: ONE_CALL, whisperAvailable: false });
+  await narrateChapter(dir, { ...fakeRun(), venvPython: PYTHON, template: ONE_CALL, whisperAvailable: true });
   assert.equal(readJson(dir, 'beats.json').timing, 'words');
   assert.deepEqual(fs.readdirSync(dir).sort(), NARRATED);
 });
@@ -201,7 +204,7 @@ test('narrate: narration with an extra sentence fails the text audit before any 
   const dir = chapterDir(t);
   fs.appendFileSync(path.join(dir, 'narration.txt'), 'And one more sentence.\n');
   const { run, calls } = fakeRun();
-  await assert.rejects(narrateChapter(dir, { run, venvPython: PYTHON, whisperAvailable: true }), /narration\.txt no longer matches chapter\.json/);
+  await assert.rejects(narrateChapter(dir, { run, venvPython: PYTHON, template: ONE_CALL, whisperAvailable: true }), /narration\.txt no longer matches chapter\.json/);
   assert.equal(calls.length, 0);
   assert.deepEqual(fs.readdirSync(dir).sort(), SCAFFOLDED);
 });
@@ -211,14 +214,14 @@ test('narrate: a changed word in narration.txt fails before any tts is run', asy
   const file = path.join(dir, 'narration.txt');
   fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replace('button', 'switch'));
   const { run, calls } = fakeRun();
-  await assert.rejects(narrateChapter(dir, { run, venvPython: PYTHON, whisperAvailable: true }), /narration\.txt no longer matches chapter\.json: fix the spec, delete the chapter folder, then scaffold, audit and narrate again/);
+  await assert.rejects(narrateChapter(dir, { run, venvPython: PYTHON, template: ONE_CALL, whisperAvailable: true }), /narration\.txt no longer matches chapter\.json: fix the spec, delete the chapter folder, then scaffold, audit and narrate again/);
   assert.equal(calls.length, 0);
   assert.deepEqual(fs.readdirSync(dir).sort(), SCAFFOLDED);
 });
 
 test('narrate: index.html plays the padded narration.wav that sits beside it', async (t) => {
   const dir = chapterDir(t);
-  await narrateChapter(dir, { ...fakeRun(), venvPython: PYTHON, whisperAvailable: true });
+  await narrateChapter(dir, { ...fakeRun(), venvPython: PYTHON, template: ONE_CALL, whisperAvailable: true });
   const html = fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
   const audio = html.match(/<audio[^>]*>/g);
   assert.equal(audio.length, 1);
@@ -233,7 +236,7 @@ test('narrate: index.html plays the padded narration.wav that sits beside it', a
 
 test('narrate writes build.json with sha256 of the chapter text and every built file', async (t) => {
   const dir = chapterDir(t);
-  await narrateChapter(dir, { ...fakeRun(), venvPython: PYTHON, whisperAvailable: false });
+  await narrateChapter(dir, { ...fakeRun(), venvPython: PYTHON, template: ONE_CALL, whisperAvailable: false });
   const record = JSON.parse(fs.readFileSync(path.join(dir, 'build.json'), 'utf8'));
   assert.equal(record.version, 3);
   const files = ['beats.json', 'captions.json', 'captions.vtt', 'gsap.min.js', 'index.html', 'narration.txt', 'narration.wav'];
@@ -248,7 +251,7 @@ test('narrate writes build.json with sha256 of the chapter text and every built 
 test('narrate hands Hyperframes absolute paths even when given a relative chapter folder', async (t) => {
   const dir = chapterDir(t);
   const { run, calls } = fakeRun();
-  await narrateChapter(path.relative(process.cwd(), dir), { run, venvPython: PYTHON, whisperAvailable: true });
+  await narrateChapter(path.relative(process.cwd(), dir), { run, venvPython: PYTHON, template: ONE_CALL, whisperAvailable: true });
   for (const call of calls) {
     const paths = call.args.filter((a) => a.includes('narration'));
     assert.ok(paths.length > 0 && paths.every((p) => path.isAbsolute(p)), call.args.join(' '));
@@ -264,7 +267,7 @@ test('narrate refuses a chapter.json entry that is not exactly one sentence, bef
   chapter.sentences[1].text = 'then saves a pending row in the database.';
   fs.writeFileSync(file, JSON.stringify(chapter));
   const { run, calls } = fakeRun();
-  await assert.rejects(narrateChapter(dir, { run, venvPython: PYTHON, whisperAvailable: true }), /sentences\[0\]/);
+  await assert.rejects(narrateChapter(dir, { run, venvPython: PYTHON, template: ONE_CALL, whisperAvailable: true }), /sentences\[0\]/);
   assert.equal(calls.length, 0);
 });
 
@@ -282,7 +285,7 @@ test('narrate speaks the verified text even if narration.txt changes on disk aft
     }
     return base(cmd, args, env);
   };
-  await narrateChapter(dir, { run, venvPython: PYTHON, whisperAvailable: false });
+  await narrateChapter(dir, { run, venvPython: PYTHON, template: ONE_CALL, whisperAvailable: false });
   assert.equal(spoken.trim(), verified);
   // the build record holds the verified bytes, so render will refuse the folder whose narration.txt was swapped
   const record = JSON.parse(fs.readFileSync(path.join(dir, 'build.json'), 'utf8'));
@@ -308,7 +311,7 @@ function withGit(answer) {
 test('narrate records the commit HEAD of --root in build.json and returns it', async (t) => {
   const dir = chapterDir(t);
   const { run, gitCalls } = withGit({ code: 0, stdout: `${SHA}\n`, stderr: '' });
-  const result = await narrateChapter(dir, { run, venvPython: PYTHON, whisperAvailable: false, root: 'some/repo' });
+  const result = await narrateChapter(dir, { run, venvPython: PYTHON, template: ONE_CALL, whisperAvailable: false, root: 'some/repo' });
   assert.deepEqual(gitCalls, [['-C', path.resolve('some/repo'), 'rev-parse', 'HEAD']]);
   assert.equal(readJson(dir, 'build.json').verified_against_commit, SHA);
   assert.equal(result.commit, SHA);
@@ -319,7 +322,7 @@ test('narrate records null for output that is not a 40-hex commit, a git failure
     { code: 128, stdout: '', stderr: 'fatal: not a git repository' }, { code: null, stdout: '', stderr: 'spawn git ENOENT' },
     new Error('spawn git ENOENT')]) {
     const dir = chapterDir(t);
-    const result = await narrateChapter(dir, { run: withGit(answer).run, venvPython: PYTHON, whisperAvailable: false, root: '/repo' });
+    const result = await narrateChapter(dir, { run: withGit(answer).run, venvPython: PYTHON, template: ONE_CALL, whisperAvailable: false, root: '/repo' });
     assert.equal(readJson(dir, 'build.json').verified_against_commit, null, JSON.stringify(String(answer.stdout ?? answer)));
     assert.equal(result.commit, null);
   }
@@ -328,7 +331,7 @@ test('narrate records null for output that is not a 40-hex commit, a git failure
 test('narrate without a root asks git nothing and records null', async (t) => {
   const dir = chapterDir(t);
   const { run, gitCalls } = withGit({ code: 0, stdout: SHA, stderr: '' });
-  await narrateChapter(dir, { run, venvPython: PYTHON, whisperAvailable: false });
+  await narrateChapter(dir, { run, venvPython: PYTHON, template: ONE_CALL, whisperAvailable: false });
   assert.deepEqual(gitCalls, []);
   assert.equal(readJson(dir, 'build.json').verified_against_commit, null);
 });

@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1920, height=1080" />
+<title>a-designed-flow</title>
+<script src="gsap.min.js"></script>
+<style>
+html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: var(--og-black); }
+#root { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: var(--og-black); }
+/* Scene kit v0 theme: retro yellow / orange / black on a 1920x1080 stage.
+   No external fonts or urls: a system font stack only.
+   Contrast (WCAG relative-luminance ratios, AA needs 4.5 for text, 3 for large text):
+     black text (#14110A) on yellow (#F6C945)  = 11.99
+     black text (#14110A) on orange (#FF8A1F) =  7.99
+     off-white text (#FFF6DC) on black (#14110A) = 17.47
+     off-white text (#FFF6DC) on panel (#2A2417) = 14.28
+     yellow (#F6C945) on panel (#2A2417) = 9.80 */
+:root {
+  --og-yellow: #F6C945;
+  --og-orange: #FF8A1F;
+  --og-black: #14110A;
+  --og-panel: #2A2417;
+  --og-text: #FFF6DC;
+  --og-font: "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+  --og-font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --og-size-title: 120px;
+  --og-size-sub: 52px;
+  --og-size-body: 44px;
+  --og-size-detail: 34px;
+  --og-size-code: 30px;
+  --og-size-small: 26px;
+  --og-gap: 32px;
+  --og-pad: 48px;
+  --og-radius: 0px;
+  --og-border: 6px;
+  --og-max-text: 1500px;
+  --og-card-w: 1500px;
+  --og-card-h: 800px;
+  --og-bubble-w: 640px;
+  --og-arrow: 28px;
+}
+
+.og-piece {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--og-gap);
+  font-family: var(--og-font);
+  color: var(--og-text);
+}
+
+/* long text wraps inside a maximum width instead of running off the stage */
+.og-wrap {
+  max-width: var(--og-max-text);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.og-heading {
+  font-size: var(--og-size-title);
+  line-height: 1.05;
+  font-weight: 900;
+  text-align: center;
+  color: var(--og-yellow);
+}
+.og-sub {
+  font-size: var(--og-size-sub);
+  text-align: center;
+  color: var(--og-text);
+}
+
+.og-steps {
+  align-items: flex-start;
+  padding: 0 var(--og-pad);
+}
+.og-step {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--og-gap);
+}
+.og-step-num {
+  flex: none;
+  min-width: var(--og-size-sub);
+  padding: 0 var(--og-gap);
+  font-size: var(--og-size-body);
+  font-weight: 900;
+  text-align: center;
+  background: var(--og-orange);
+  color: var(--og-black);
+}
+.og-step-label {
+  font-size: var(--og-size-body);
+  font-weight: 800;
+  color: var(--og-yellow);
+}
+.og-step-detail {
+  font-size: var(--og-size-detail);
+  color: var(--og-text);
+}
+
+.og-card {
+  width: var(--og-card-w);
+  max-height: var(--og-card-h);
+  overflow: hidden;
+  background: var(--og-panel);
+  border: var(--og-border) solid var(--og-yellow);
+  border-radius: var(--og-radius);
+}
+.og-file {
+  padding: var(--og-gap) var(--og-pad);
+  font-family: var(--og-font-mono);
+  font-size: var(--og-size-small);
+  font-weight: 700;
+  background: var(--og-yellow);
+  color: var(--og-black);
+}
+.og-lines {
+  padding: var(--og-gap) 0;
+}
+.og-line {
+  display: flex;
+  gap: var(--og-gap);
+  padding: 0 var(--og-pad);
+  font-family: var(--og-font-mono);
+  font-size: var(--og-size-code);
+  line-height: 1.5;
+  color: var(--og-text);
+}
+.og-no {
+  flex: none;
+  min-width: var(--og-size-sub);
+  text-align: right;
+  color: var(--og-yellow);
+}
+/* keep every leading space and tab exactly as written */
+.og-code {
+  white-space: pre;
+  /* a tab is 4 columns, the same count the code card's width limit uses */
+  tab-size: 4;
+  overflow: hidden;
+}
+.og-hl {
+  background: var(--og-orange);
+  color: var(--og-black);
+}
+.og-hl .og-no {
+  color: var(--og-black);
+}
+
+.og-callout {
+  pointer-events: none;
+}
+.og-bubble {
+  position: relative;
+  width: var(--og-bubble-w);
+  padding: var(--og-gap);
+  font-size: var(--og-size-body);
+  font-weight: 800;
+  background: var(--og-orange);
+  color: var(--og-black);
+  border: var(--og-border) solid var(--og-black);
+}
+.og-bubble::after {
+  content: "";
+  position: absolute;
+  width: 0;
+  height: 0;
+  border: var(--og-arrow) solid transparent;
+}
+.og-point-down::after { top: 100%; left: 50%; border-top-color: var(--og-orange); }
+.og-point-up::after { bottom: 100%; left: 50%; border-bottom-color: var(--og-orange); }
+.og-point-left::after { right: 100%; top: 50%; border-right-color: var(--og-orange); }
+.og-point-right::after { left: 100%; top: 50%; border-left-color: var(--og-orange); }
+
+/* flow: a diagram that stays on screen; lanes are the parts of a system, steps appear in them one by one.
+   Contrast on the panel (#2A2417): off-white 14.28, dim note (#C9BFA3) 8.6; lane colours used for headings and
+   number discs only (black digits on them: yellow 11.99, orange 7.99, green 10.3, blue 8.9, pink 7.6). */
+:root {
+  --og-step-bg: #1F1A10;
+  --og-line: #4A412C;
+  --og-dim: #C9BFA3;
+  --og-green: #6FD08C;
+  --og-blue: #6CB8FF;
+  --og-pink: #FF7AB6;
+  --og-red: #FF6B5E;
+}
+.og-flow {
+  justify-content: flex-start;
+  align-items: stretch;
+  padding: 56px 64px;
+  gap: 28px;
+  box-sizing: border-box;
+}
+.og-flow-head { display: flex; flex-direction: column; gap: 6px; }
+.og-flow-kicker {
+  font-family: var(--og-font-mono);
+  font-size: var(--og-size-small);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--og-yellow);
+}
+.og-flow-title { font-size: 64px; line-height: 1.1; font-weight: 900; color: var(--og-text); }
+.og-flow-lanes { flex: 1; display: flex; gap: 20px; min-height: 0; }
+.og-lane {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 22px 20px;
+  background: var(--og-panel);
+  border: 3px solid var(--og-line);
+}
+.og-lane-c1 { --lane: var(--og-yellow); }
+.og-lane-c2 { --lane: var(--og-green); }
+.og-lane-c3 { --lane: var(--og-orange); }
+.og-lane-c4 { --lane: var(--og-blue); }
+.og-lane-c5 { --lane: var(--og-pink); }
+.og-lane-glow { position: absolute; inset: -3px; border: 4px solid var(--lane); opacity: 0; pointer-events: none; }
+.og-lane-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 36px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--lane);
+}
+.og-lane-dot { flex: none; width: 16px; height: 16px; border-radius: 50%; background: var(--lane); }
+.og-lane-note { font-size: 26px; color: var(--og-dim); }
+.og-lane-steps { display: flex; flex-direction: column; gap: 16px; margin-top: 8px; }
+.og-flow-step {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 18px 18px;
+  background: var(--og-step-bg);
+  border: 2px solid var(--og-line);
+}
+.og-flow-num {
+  flex: none;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 900;
+  background: var(--lane);
+  color: var(--og-black);
+}
+.og-flow-text { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.og-flow-label { font-size: 34px; line-height: 1.2; font-weight: 800; color: var(--og-text); }
+.og-flow-detail { font-size: 26px; line-height: 1.3; color: var(--og-dim); }
+.og-flow-glow { position: absolute; inset: -2px; border: 4px solid var(--lane); opacity: 0; pointer-events: none; }
+.og-kind-ok { border-color: var(--og-green); }
+.og-kind-ok .og-flow-num { background: var(--og-green); }
+.og-kind-fail { border-color: var(--og-red); }
+.og-kind-fail .og-flow-num { background: var(--og-red); }
+.og-kind-fail .og-flow-label { color: var(--og-red); }
+
+/* design: a scene Claude lays out itself; the root is a plain 1920x1080 box it positions things in */
+.og-design { display: block; }
+
+/* shared look for designed scenes: the chapter header (a small label over a big title) and the badge for work that
+   is planned but not built; every scene uses these so chapters match */
+.og-kicker {
+  position: absolute; left: 96px; top: 64px;
+  font: 600 26px var(--og-font-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--og-yellow);
+}
+.og-title { position: absolute; left: 96px; top: 104px; font: 900 64px var(--og-font); color: var(--og-text); }
+.og-planned {
+  position: absolute; right: 96px; top: 76px; padding: 14px 28px;
+  border: 4px solid var(--og-orange); font: 900 30px var(--og-font); letter-spacing: 0.06em; color: var(--og-orange);
+}
+
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="a-designed-flow" data-start="0" data-width="1920" data-height="1080" data-duration="18">
+<div id="p0-root" class="og-piece og-flow"><div id="p0-head" class="og-flow-head"><div class="og-flow-title og-wrap">Flow</div></div><div class="og-flow-lanes"><div id="p0-lane-0" class="og-lane og-lane-c1"><div id="p0-lane-0-glow" class="og-lane-glow"></div><div class="og-lane-head"><span class="og-lane-dot"></span><span class="og-lane-label og-wrap">Client</span></div><div class="og-lane-steps"><div id="p0-step-0" class="og-flow-step"><span class="og-flow-num">1</span><div class="og-flow-text"><div class="og-flow-label og-wrap">ask</div></div><div id="p0-step-0-glow" class="og-flow-glow"></div></div></div></div><div id="p0-lane-1" class="og-lane og-lane-c2"><div id="p0-lane-1-glow" class="og-lane-glow"></div><div class="og-lane-head"><span class="og-lane-dot"></span><span class="og-lane-label og-wrap">Server</span></div><div class="og-lane-steps"><div id="p0-step-1" class="og-flow-step og-kind-ok"><span class="og-flow-num">2</span><div class="og-flow-text"><div class="og-flow-label og-wrap">answer</div></div><div id="p0-step-1-glow" class="og-flow-glow"></div></div></div></div></div></div>
+<style>
+#d .x { color: var(--og-yellow); }
+</style>
+<div id="p1-root" class="og-piece og-design"><div id="d"><div class="x">hi &amp; bye</div></div></div>
+<audio id="narration" src="narration.wav" data-start="0" data-duration="18" data-track-index="10" data-volume="1"></audio>
+</div>
+<script>
+const tl = gsap.timeline({ paused: true });
+tl.fromTo("#p0-root", {opacity: 0}, {opacity: 1, duration: 0.4, ease: "power2.out"}, 0.04);
+tl.to("#p0-root", {opacity: 0, duration: 0.4, ease: "power2.out"}, 11.1);
+tl.from("#p0-head", {opacity: 0, y: -16, duration: 0.4, ease: "power2.out"}, 0.44);
+tl.from("#p0-root .og-lane", {opacity: 0, y: 24, duration: 0.2, stagger: 0.1, ease: "power2.out"}, 0.44);
+tl.from("#p0-step-0", {opacity: 0, y: 24, duration: 0.4, ease: "power2.out"}, 0.84);
+tl.fromTo("#p0-step-0-glow", {opacity: 0}, {opacity: 1, duration: 0.25, ease: "power2.out"}, 0.84);
+tl.to("#p0-step-0-glow", {opacity: 0, duration: 0.25, ease: "power2.out"}, 6);
+tl.fromTo("#p0-lane-0-glow", {opacity: 0}, {opacity: 1, duration: 0.25, ease: "power2.out"}, 0.84);
+tl.to("#p0-lane-0-glow", {opacity: 0, duration: 0.25, ease: "power2.out"}, 6);
+tl.from("#p0-step-1", {opacity: 0, y: 24, duration: 0.4, ease: "power2.out"}, 6);
+tl.fromTo("#p0-step-1-glow", {opacity: 0}, {opacity: 1, duration: 0.25, ease: "power2.out"}, 6);
+tl.fromTo("#p0-lane-1-glow", {opacity: 0}, {opacity: 1, duration: 0.25, ease: "power2.out"}, 6);
+tl.fromTo("#p1-root", {opacity: 0}, {opacity: 1, duration: 0.4, ease: "power2.out"}, 11.5);
+tl.to("#p1-root", {opacity: 0, duration: 0.4, ease: "power2.out"}, 17.6);
+{
+const oldguyBeats = [0.04,6,11.5];
+const beat = (n) => oldguyBeats[n];
+const startS = 11.5;
+const endS = 18;
+tl.from("#d .x", {opacity: 0, duration: 0.4}, beat(2));
+}
+window.__timelines["a-designed-flow"] = tl;
+</script>
+</body>
+</html>

@@ -27,6 +27,16 @@ Claude Code with `--plugin-dir /path/to/oldguy`.
 - `bin/`, `lib/` and `server/` have no runtime dependencies.
 - Design changes go into the spec (`docs/superpowers/specs/2026-10-02-yap-design.md`) as amendments.
 
+## Adding a template
+
+Video templates live in `templates/<id>/`: `template.json`, `template.md`, `stage.html` and small assets. A template
+changes how an explanation is told (voices, characters, layout, pace), never what is checked. The engine does all
+the timing, so a template is data and layout only. The repo-only skill `.claude/skills/new-template/` walks through
+it. In short: scaffold the folder, try it with `OLDGUY_TEMPLATES_DIR=$PWD/templates node bin/oldguy.cjs templates <id> --show`,
+keep `npm test` green (`tests/templates-shipped.test.cjs` checks every shipped template), render a chapter in every shape
+it lists with `hyperframes check` passing, and add a `sample.mp4`. Big media goes in a GitHub Release with its sha256
+and size in `template.json`. The design is `docs/superpowers/specs/2026-10-07-video-templates-design.md`.
+
 ## Releasing
 
 Raise the same version in `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `package.json` and

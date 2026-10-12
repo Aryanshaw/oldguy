@@ -1,6 +1,6 @@
 # oldguy status
 
-Where the project stands, what is still open, and what is deliberately left for later. Updated 2026-10-07.
+Where the project stands, what is still open, and what is deliberately left for later. Updated 2026-10-08.
 
 Renamed from Yap to oldguy on 2026-10-07; older docs use the old name. See
 `docs/superpowers/specs/2026-10-07-oldguy-rename-design.md`.
@@ -14,6 +14,7 @@ Renamed from Yap to oldguy on 2026-10-07; older docs use the old name. See
 | 2. Chapters and server | Several chapters in a manifest, served locally with an API and a live stream | `docs/phase-2/SUMMARY.md` |
 | 3. Player | The browser player: video, timeline, captions, Chat and Sources tabs, export | `docs/phase-3/SUMMARY.md` |
 | 4. Chat bridge | Questions typed in the page reach the live Claude Code session; answers and new chapters come back | `docs/phase-4/SUMMARY.md` |
+| Templates, Phase A | The template engine: templates as folders, `oldguy templates`, `video.json`, many voices in one Kokoro process, the stage driver (speakers, captions, chips, background, any shape), remake, the player label and the Templates gallery (search, filters, sample previews); `explainer` is today's look | `docs/templates/SUMMARY.md` |
 | Polish | `oldguy setup` (installs only what the user agrees to), install from the plugin marketplace, README, MIT license, the old guy mascot (traced from the concept art) | this file, `README.md` |
 
 The design and every amendment: `docs/superpowers/specs/2026-10-02-yap-design.md`. Code layout and rules:
@@ -37,6 +38,9 @@ Checks nobody has done yet:
 
 Work to do:
 
+- **Templates B to D.** `real-life-analogy`, `tutor` and `peter-and-stewie` on the engine (owner supplies the
+  characters and footage for the last one); see `docs/templates/SUMMARY.md` for what is not verified yet.
+
 - **Browser test in CI.** `player/e2e` exists but CI does not run it; a job with real Chrome would also check
   H.264 playback. Its fixture works again (it writes the vendored `gsap.min.js`), but the full run has not passed
   yet: the cloud container's Chromium has no H.264, so it needs real Chrome.
@@ -53,7 +57,7 @@ Work to do:
 
 ## Left for later on purpose (v2 or never)
 
-Podcast or reel formats, named or speaking characters, voice cloning, agents other than Claude Code, hosting or
+Voice cloning, agents other than Claude Code, hosting or
 sharing videos, accounts, drag-to-reorder chapters, a warning when the code changed since a video was made, and
 answering in the page while Claude Code is closed.
 

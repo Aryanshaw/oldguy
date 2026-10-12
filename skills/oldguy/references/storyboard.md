@@ -5,18 +5,20 @@ complete enough to watch on its own.
 
 ## 1. Chapters
 
-- Each chapter is 20 to 40 seconds of speech: about 50 to 100 words. Count them.
-- 4 to 8 chapters for a 2 to 3 minute video. One idea per chapter: "what the form sends", "where the todo is
+- Each chapter aims for the template's length (`oldguy templates <id> --show` prints it). For explainer that is 20 to
+  40 seconds of speech: about 50 to 100 words. Count them. Going over is not an error; split a chapter that runs long.
+- As many chapters as the flow needs. One idea per chapter: "what the form sends", "where the todo is
   saved", "what if saving fails".
 - Each chapter has a stable id with no number in it: `what-the-form-sends`, never `chapter-2` or `part-b`. The id
   becomes the folder name (lower-case letters, digits and single hyphens, no leading digit, at most 60 characters).
 - Each chapter has a short title for its title card.
 
-## 2. Chapters stand alone
+## 2. Chapters connect through the example
 
-A viewer may watch any chapter first, so never point at another chapter. Banned: "as we saw", "last chapter",
-"next, we will", "earlier", "later on", "at 1:30". Start each chapter so it makes sense cold, and end it on its
-own idea.
+The chapters tell one story: the running example moves through them ([teaching.md](teaching.md)). A viewer may
+still watch any chapter first, so each one opens by placing the example ("The todo row is saved and still
+pending") and connects by naming things, never by position or time. Banned: "next chapter", "in part 2", "coming
+up", "at 1:30". Every chapter has at least one sentence starting with "So" and ends on its own point.
 
 ## 3. One sentence per entry
 
@@ -52,10 +54,11 @@ Under the top section, one block per chapter:
 ```
 ## what-the-form-sends — What the form sends
 sources: s1 app/todos.py 10-14 "todos.append(todo)"
-0 framing  Hi, let's see what happens when you add a todo!
+0 framing  You type buy milk and press Add.
 1 claim s1 The new todo is added to the list in memory.
-picture: design: the form, the request travelling to the server, the list gaining a row on 1
+2 claim s1 So it is gone again when the server restarts.
+picture: design: empty lanes browser, server, list at 0; the todo moves to the server on 1; the list gains a row on 2
 words: 61
 ```
 
-**Gate:** Every chapter in `script.md` has a number-free id, a title, 50 to 100 words, one sentence per entry with a kind, no reference to another chapter, and a picture plan whose changes start at beat 0.
+**Gate:** Every chapter in `script.md` has a number-free id, a title, a word count near the template's length, one sentence per entry with a kind, a "So" sentence, no pointing at another chapter by position, the running example where it is, and a picture plan that draws the empty map at beat 0.

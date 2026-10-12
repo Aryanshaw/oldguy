@@ -5,7 +5,13 @@ import type { Rendered } from "./shared.mts";
 // The freedom is in what it draws; the guardrails below are checked in code, so a chapter page can still only animate
 // its own text: no scripts, no event handlers, no loaded files or links, and a timeline made of GSAP tween calls only.
 
+// A scene Claude writes by hand is at most this big. A scene compiled from a shot list by `oldguy shots` may be bigger:
+// it is generated (its drawings come from the art library), so the reason for the small limit, Claude writing every
+// byte, does not hold. Only scaffold marks a scene as compiled ("fromShots": true in its params), and only after
+// compiling the chapter's shots/<id>.json again and getting the same bytes (lib/chapter.mts), so the mark cannot be
+// claimed by a hand-written scene: a spec that sets it is refused.
 const MAX_BYTES = 100 * 1024;
+const COMPILED_MAX_BYTES = 600 * 1024;
 const TIMELINE_OPEN = "<script data-oldguy-timeline>";
 // Tags that could run code, load something or leave the page; markup may use any other HTML or inline SVG.
 const BANNED_TAGS = /<\s*\/?\s*(script|iframe|frame|object|embed|link|meta|base|form|input|button|textarea|select|template|audio|video|img|image|use|foreignobject)\b/i;
@@ -128,7 +134,8 @@ function readBeats(opts: unknown): number[] {
 function render(params: unknown, opts: unknown): Rendered {
   const p = k.requireParams(params, "design");
   const source = k.requireText(p.html, "html", "design");
-  if (Buffer.byteLength(source, "utf8") > MAX_BYTES) throw new Error(`design: the scene is over ${MAX_BYTES / 1024} KB`);
+  const max = p.fromShots === true ? COMPILED_MAX_BYTES : MAX_BYTES;
+  if (Buffer.byteLength(source, "utf8") > max) throw new Error(`design: the scene is over ${max / 1024} KB`);
   const { css, markup, timeline } = split(source);
   checkMarkup(markup);
   checkCss(css);
@@ -154,4 +161,4 @@ function render(params: unknown, opts: unknown): Rendered {
   return { html, ...k.finish(lines, t.endMs) };
 }
 
-export { render };
+export { render, MAX_BYTES, COMPILED_MAX_BYTES };

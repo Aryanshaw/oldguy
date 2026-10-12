@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "body-a-stand", "kind": "cast", "body": "body-a", "pose": "stand", "file": "cast/body-a-stand.svg",
+      "tags": ["person", "adult"], "size": "person", "viewBox": [0, 0, 200, 600],
+      "anchors": { "eye": { "x": 128, "y": 86 }, "hand": { "x": 159, "y": 336 }, "top": { "x": 100, "y": 24 }, "floor": { "x": 100, "y": 600 } },
+      "colors": { "skin": "#F0B48A", "hair": "#1B1640", "top": "#FF6B57", "bottom": "#1F5FA8", "shoes": "#14110A" }
+    },
+    {
+      "id": "body-a-point", "kind": "cast", "body": "body-a", "pose": "point", "file": "cast/body-a-point.svg",
+      "tags": ["person", "adult", "point"], "size": "person", "viewBox": [0, 0, 320, 600],
+      "anchors": { "eye": { "x": 128, "y": 86 }, "hand": { "x": 302, "y": 196 }, "top": { "x": 100, "y": 24 }, "floor": { "x": 100, "y": 600 } },
+      "colors": { "skin": "#F0B48A", "hair": "#1B1640", "top": "#FF6B57", "bottom": "#1F5FA8", "shoes": "#14110A" }
+    },
+    {
+      "id": "oldguy-stand", "kind": "host", "body": "oldguy", "pose": "stand", "file": "hosts/oldguy-stand.svg",
+      "tags": ["host", "old guy"], "size": "person", "viewBox": [0, 0, 220, 620],
+      "anchors": { "eye": { "x": 138, "y": 100 }, "hand": { "x": 176, "y": 364 }, "top": { "x": 110, "y": 22 }, "floor": { "x": 110, "y": 620 } },
+      "layers": { "eyes": "eyes", "eyesShut": "eyes-shut", "mouth": "mouth", "mouthOpen": "mouth-open" }
+    },
+    {
+      "id": "oldguy-shock", "kind": "host", "body": "oldguy", "pose": "shock", "file": "hosts/oldguy-shock.svg",
+      "tags": ["host", "old guy", "surprise"], "size": "person", "viewBox": [0, 0, 220, 620],
+      "anchors": { "eye": { "x": 138, "y": 98 }, "hand": { "x": 192, "y": 36 }, "top": { "x": 110, "y": 20 }, "floor": { "x": 110, "y": 620 } },
+      "layers": { "eyes": "eyes", "eyesShut": "eyes-shut", "mouth": "mouth", "mouthOpen": "mouth-open" }
+    },
+    {
+      "id": "shop-counter", "kind": "prop", "file": "props/shop-counter.svg",
+      "tags": ["counter", "shop", "desk"], "size": "large", "viewBox": [0, 0, 600, 420],
+      "anchors": { "top": { "x": 300, "y": 30 }, "card": { "x": 300, "y": 30 }, "floor": { "x": 300, "y": 420 } }
+    },
+    {
+      "id": "bell", "kind": "prop", "file": "props/bell.svg",
+      "tags": ["bell", "ring", "notify"], "size": "small", "viewBox": [0, 0, 160, 140],
+      "anchors": { "top": { "x": 80, "y": 8 }, "card": { "x": 80, "y": 8 }, "floor": { "x": 80, "y": 140 } }
+    },
+    {
+      "id": "oven", "kind": "prop", "file": "props/oven.svg",
+      "tags": ["kitchen", "toast", "bake"], "size": "medium", "viewBox": [0, 0, 300, 300],
+      "anchors": { "floor": { "x": 150, "y": 300 } }
+    },
+    {
+      "id": "kettle", "kind": "prop", "file": "props/kettle.svg",
+      "tags": ["kitchen", "tea", "boil"], "size": "small", "viewBox": [0, 0, 200, 180],
+      "anchors": { "floor": { "x": 100, "y": 180 } }
+    }
+  ]
+}

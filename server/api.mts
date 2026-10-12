@@ -4,6 +4,8 @@ import path from 'node:path';
 import { appendEvent, readEventsAfter, appendReply, readThread, appendAck } from '../lib/events.mts';
 import { loadManifest, insertChapter, reorderChapters, removeChapter, setChapterFields } from '../lib/manifest.mts';
 import { scanChapter } from '../lib/chapter-scan.mts';
+import { listTemplates, templateIds, sampleFiles } from '../lib/template.mts';
+import { readVideoChoice } from '../lib/settings.mts';
 import { handleExport } from './export-route.mts';
 import type { Ack, EventContext, EventType, Reply, SourceRef, ThreadEntry, ViewerEvent } from '../lib/events.mts';
 import type { Manifest, ManifestRow, NewRow } from '../lib/manifest.mts';
@@ -13,7 +15,7 @@ import type { ExportResult } from '../lib/export.mts';
 import type { Route, RouteContext, ServerState } from './types.mts';
 
 // What a client sends to POST /api/message.
-type MessageBody = { type: EventType; text?: string; context?: EventContext; ref?: string };
+type MessageBody = { type: EventType; text?: string; context?: EventContext; ref?: string; template?: string; shape?: string };
 // What a client sends to POST /api/reply.
 type ReplyBody = { in_reply_to: string; text: string; sources?: SourceRef[]; offer_video?: true };
 // What a client sends to POST /api/ack: the event Claude has handled without a text reply.
@@ -121,14 +123,46 @@ function handleStream({ res, state }: RouteContext): void {
 
 // POST /api/message: stores a viewer event (type, text, context) and tells the other open tabs.
 async function handleMessage({ req, res, state, sendJson, readJsonBody }: RouteContext): Promise<void> {
-  const { type, text, context, ref } = await readJsonBody(req);
+  const { type, text, context, ref, template, shape } = await readJsonBody(req);
   const input: Record<string, unknown> = { type };
   if (text !== undefined) input.text = text;
   if (context !== undefined) input.context = context;
   if (ref !== undefined) input.ref = ref;
+  if (template !== undefined) input.template = template;
+  if (shape !== undefined) input.shape = shape;
+  // a remake into a template this oldguy does not ship is refused here, before Claude is asked to do anything
+  if (type === 'remake' && typeof template === 'string' && !templateIds().includes(template)) {
+    throw httpError(400, `unknown template "${template}"; use one of ${templateIds().join(', ')}`);
+  }
   const event = lib(() => appendEvent(eventsFile(state), input, { now: clockDate(state) }));
   tell(state, 'state', () => buildState(state));
   sendJson(res, 200, { event });
+}
+
+// One template as the player's gallery shows it: what it is, who speaks, its rhythm, and whether it has a preview
+// (served at /api/templates/<id>/sample and /api/templates/<id>/poster).
+type TemplateCard = {
+  id: string; title: string; description: string; shapes: string[]; tags: string[];
+  voices: { id: string; voice: string }[]; captions: string; chapter_seconds: [number, number];
+  sample: boolean; poster: boolean;
+};
+// What GET /api/templates answers: the template and shape this video is made in, and every template it could be
+// remade as, for the player's template gallery.
+type TemplatesResponse = { current: { template: string; shape: string }; templates: TemplateCard[] };
+
+// GET /api/templates: the video's template and shape, and the templates the player may offer in Remake as.
+async function handleTemplates({ res, state, sendJson }: RouteContext): Promise<void> {
+  const current = readVideoChoice(state.slugDir);
+  const templates = listTemplates().map((t): TemplateCard => {
+    const files = sampleFiles(t);
+    const voices = t.speakers.length ? t.speakers.map((s) => ({ id: s.id, voice: s.voice })) : [{ id: 'narrator', voice: t.narrator_voice }];
+    return {
+      id: t.id, title: t.title, description: t.description, shapes: [...t.shapes], tags: [...(t.tags ?? [])], voices,
+      captions: t.pace.captions, chapter_seconds: t.pace.chapter_seconds, sample: files.video !== null, poster: files.poster !== null,
+    };
+  });
+  const body: TemplatesResponse = { current, templates };
+  sendJson(res, 200, body);
 }
 
 // POST /api/reply: stores Claude's answer to an event and streams it to the open tabs.
@@ -285,6 +319,7 @@ async function handleChapters({ req, res, state, sendJson, readJsonBody }: Route
 const API_ROUTES: Route[] = [
   { method: 'GET', pattern: '/api/state', handler: handleState },
   { method: 'GET', pattern: '/api/stream', handler: handleStream },
+  { method: 'GET', pattern: '/api/templates', handler: handleTemplates },
   { method: 'POST', pattern: '/api/message', handler: handleMessage },
   { method: 'POST', pattern: '/api/reply', handler: handleReply },
   { method: 'POST', pattern: '/api/ack', handler: handleAck },
@@ -296,5 +331,5 @@ const API_ROUTES: Route[] = [
 export { API_ROUTES, clearHeartbeatTimer };
 export type { AckBody, AckResponse,
   MessageBody, ReplyBody, ChaptersBody, ExportBody, SettableFields, StateResponse, MessageResponse, ReplyResponse,
-  ChaptersResponse, ExportResponse,
+  ChaptersResponse, ExportResponse, TemplatesResponse, TemplateCard,
 };

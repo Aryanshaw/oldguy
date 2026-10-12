@@ -23,13 +23,18 @@ Whatever the shape:
 - **Everything shown is real or clearly generic.** Code, values and file contents come from the repository with
   where they came from (`add.js, line 12`), or are plainly examples (`step 1`, `"buy milk"`). Never invent anything
   that looks like it is from the repository.
-- **Mark what is not built.** When a chapter shows planned or missing work, say so on screen: the `og-planned`
-  badge, and dashed outlines in `--og-orange` for planned parts beside solid ones for what exists.
-- **One picture that builds.** Keep the chapter's picture on screen and change only what the sentence talks about,
-  so the viewer sees state pile up instead of slides swapping. The screen is never blank.
+- **Mark what is not built, once.** A video about planned work says so in one chapter: the `og-planned` badge
+  there, and dashed outlines in `--og-orange` for planned parts beside solid ones for what exists. Never a badge
+  on every frame.
+- **Draw the map empty first, then let it fill.** At beat 0 the chapter's lanes or boxes are on screen with their
+  names and nothing inside. Each sentence adds one thing and nothing is replaced: the current item bright, earlier
+  ones dimmed to about half, later ones hidden. The screen is never blank.
+- **Labels, not sentences.** At most eight words per piece of text; the voice says the rest. Never draw the
+  narration on screen as a caption band.
 - **Readable on a phone.** About seven things on screen at most, labels at least 32 px, nothing under 24 px.
-- **Chapters stand alone, and match.** When chapters share a picture, each draws it again from the start with what
-  came before shown dimmed. Every scene opens with the same header (section 3).
+- **One visual language, and chapters stand alone.** Every chapter uses the same lanes, chips, colours and
+  highlight. When chapters share a map, each draws it again from the start with what came before shown dimmed.
+  Every scene opens with the same header (section 3). The full rules are in [teaching.md](teaching.md).
 
 ## 2. Ready pieces
 
@@ -100,4 +105,4 @@ Each piece's `beat` is the sentence it appears with; beats rise from 0 and a pie
 Then scaffold it: `oldguy scaffold .oldguy/<slug>/specs/<id>.json --root .oldguy/<slug>` (the video folder, not the
 repository). It never overwrites a chapter: to redo one, delete its folder first.
 
-**Gate:** every chapter has a spec whose picture was chosen for its idea, `oldguy scaffold` exited 0 for it, and you looked at its snapshots, one per sentence, before rendering.
+**Gate:** every chapter has a spec whose picture was chosen for its idea, `oldguy lesson --dir .oldguy/<slug>` printed `lesson ok` before the first scaffold, `oldguy scaffold` exited 0 for each chapter, and you looked at its snapshots, one per sentence (the map empty at the first, things piling up after), before rendering.

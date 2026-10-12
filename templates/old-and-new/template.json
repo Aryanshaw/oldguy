@@ -1,0 +1,109 @@
+{
+  "id": "old-and-new",
+  "version": 1,
+  "title": "Old Guy & New Guy",
+  "description": "The new guy guesses wrong, the old guy sets him straight with the real line of code, on one big board over looping parkour gameplay.",
+  "tags": [
+    "characters",
+    "funny",
+    "dialogue",
+    "gameplay",
+    "captions",
+    "beginner"
+  ],
+  "shapes": [
+    "16:9",
+    "9:16",
+    "1:1"
+  ],
+  "default_shape": "9:16",
+  "speakers": [
+    {
+      "id": "newguy",
+      "voice": "am_adam",
+      "side": "left",
+      "image": "assets/newguy-talk.webp"
+    },
+    {
+      "id": "oldguy",
+      "voice": "bm_george",
+      "side": "right",
+      "image": "assets/oldguy-talk.webp"
+    },
+    {
+      "id": "oldguy-laughs",
+      "voice": "bm_george",
+      "side": "right",
+      "image": "assets/oldguy-laugh.webp"
+    }
+  ],
+  "pace": {
+    "voice_speed": {
+      "newguy": 1.05,
+      "oldguy": 0.95,
+      "oldguy-laughs": 0.95
+    },
+    "line_gap_ms": 520,
+    "max_words_per_line": 20,
+    "captions": "word",
+    "visual_beat": "sentence",
+    "chapter_seconds": [
+      25,
+      50
+    ]
+  },
+  "slots": {
+    "16:9": [
+      250,
+      26,
+      1420,
+      799
+    ],
+    "9:16": [
+      20,
+      480,
+      1040,
+      585
+    ],
+    "1:1": [
+      20,
+      130,
+      1400,
+      788
+    ]
+  },
+  "background": "assets/parkour.mp4",
+  "background_seconds": 12,
+  "assets": [
+    {
+      "path": "assets/newguy-talk.webp"
+    },
+    {
+      "path": "assets/newguy-react.webp"
+    },
+    {
+      "path": "assets/oldguy-talk.webp"
+    },
+    {
+      "path": "assets/oldguy-react.webp"
+    },
+    {
+      "path": "assets/oldguy-laugh.webp"
+    },
+    {
+      "path": "assets/parkour.mp4"
+    },
+    {
+      "path": "assets/props/cap.webp"
+    },
+    {
+      "path": "assets/props/mug.webp"
+    },
+    {
+      "path": "assets/props/pencil.webp"
+    },
+    {
+      "path": "assets/props/computer.webp"
+    }
+  ]
+}

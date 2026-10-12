@@ -5,7 +5,8 @@ import path from 'node:path';
 import { slugChapterId } from './chapter.mts';
 import { escapesRoot } from './audit.mts';
 
-const TYPES = ['message', 'make_video', 'just_text', 'retry_chapter', 'export'] as const;
+const TYPES = ['message', 'make_video', 'just_text', 'retry_chapter', 'export', 'remake'] as const;
+const SHAPES = ['16:9', '9:16', '1:1'];
 const MAX_TEXT = 4000;
 const DEFAULT_MAX_BYTES = 8192;
 
@@ -14,8 +15,9 @@ type EventType = (typeof TYPES)[number];
 // What the viewer was looking at when they did it: which chapter and which second.
 type EventContext = { chapter_id: string; t: number };
 // One line of events.jsonl, as stored.
-// make_video events also carry ref, the id of the reply the viewer wants turned into a chapter.
-type ViewerEvent = { id: string; ts: string; type: EventType; text?: string; context?: EventContext; ref?: string };
+// make_video events also carry ref, the id of the reply the viewer wants turned into a chapter; remake events carry
+// the template and shape the viewer wants the whole video made again in.
+type ViewerEvent = { id: string; ts: string; type: EventType; text?: string; context?: EventContext; ref?: string; template?: string; shape?: string };
 // A source Claude cites in a reply: a file and its lines ("12" or "12-20").
 type SourceRef = { file: string; lines: string };
 // One line of thread.jsonl, as stored: Claude's answer to an event.
@@ -29,7 +31,7 @@ type ThreadEntry = (ViewerEvent & { role: 'viewer' }) | (Reply & { role: 'claude
 // Options shared by the writers: a clock and the largest line they will store.
 type WriteOptions = { now?: () => Date; maxBytes?: number };
 // What a viewer event may carry before it has been checked.
-type EventInput = { type?: unknown; text?: unknown; context?: unknown; ref?: unknown };
+type EventInput = { type?: unknown; text?: unknown; context?: unknown; ref?: unknown; template?: unknown; shape?: unknown };
 // What a reply may carry before it has been checked.
 type ReplyInput = { in_reply_to?: unknown; text?: unknown; sources?: unknown; offer_video?: unknown };
 
@@ -152,6 +154,16 @@ function checkRef(type: unknown, ref: unknown): void {
   if (!validId(ref, 'rep')) fail('ref must look like rep_<number>');
 }
 
+// A remake event must name a template (a slug) and a shape; no other event type carries either.
+function checkRemake(type: unknown, template: unknown, shape: unknown): void {
+  if (type !== 'remake') {
+    if (template !== undefined || shape !== undefined) fail('only remake carries template and shape');
+    return;
+  }
+  if (typeof template !== 'string' || !/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/.test(template)) fail('template is required for remake: a template id');
+  if (typeof shape !== 'string' || !SHAPES.includes(shape)) fail(`shape is required for remake: one of ${SHAPES.join(', ')}`);
+}
+
 // Validates and stores a viewer event; returns the stored event with its id and timestamp.
 function appendEvent(file: string, anything: unknown, { now = () => new Date(), maxBytes = DEFAULT_MAX_BYTES }: WriteOptions = {}): ViewerEvent {
   const input = anything as EventInput | null | undefined;
@@ -159,11 +171,15 @@ function appendEvent(file: string, anything: unknown, { now = () => new Date(), 
   checkText(input.text, input.type === 'message');
   checkContext(input.context);
   checkRef(input.type, input.ref);
+  checkRemake(input.type, input.template, input.shape);
   // the type, text and context were all checked just above
   const event: ViewerEvent = { id: nextId(file, 'evt'), ts: stamp(now), type: input.type as EventType };
   if (input.text !== undefined) event.text = input.text as string;
   if (input.context !== undefined) event.context = input.context as EventContext;
   if (input.ref !== undefined) event.ref = input.ref as string;
+  // checkRemake just proved both are strings on a remake, and absent on anything else
+  if (input.template !== undefined) event.template = input.template as string;
+  if (input.shape !== undefined) event.shape = input.shape as string;
   appendLine(file, event, maxBytes);
   return event;
 }

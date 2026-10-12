@@ -512,6 +512,35 @@ describe('engine fix round 3', () => {
     expect(a.paused).toBe(true);
     expect(b.paused).toBe(true);
   });
+
+  it('holdAtEnd: a finished chapter loads the next paused at its start and fires hold with the finished id', async () => {
+    const held = createEngine({ a: asVideo(a), b: asVideo(b), urlFor: url, holdAtEnd: true });
+    const onHold = vi.fn();
+    held.on('hold', onHold);
+    held.setChapters([c1, c2]);
+    await held.play();
+    a.fire('ended');
+    expect(held.visible()).toBe('b');
+    expect(b.paused).toBe(true);
+    expect(held.state()).toBe('paused');
+    expect(held.position()).toEqual({ chapterId: 'c2', offset: 0 });
+    expect(onHold).toHaveBeenCalledWith('c1');
+    await held.play();
+    expect(b.paused).toBe(false);
+    b.fire('ended');
+    expect(held.state()).toBe('ended');
+    expect(onHold).toHaveBeenCalledTimes(1);
+  });
+
+  it('play with a pending seek waits for the target instead of starting the chapter it leaves', async () => {
+    e.setChapters([c1, c2, c3]);
+    e.seek({ chapterId: 'c3', offset: 0 });
+    await e.play();
+    expect(a.paused).toBe(true);
+    b.fire('canplay');
+    expect(e.visible()).toBe('b');
+    expect(b.paused).toBe(false);
+  });
 });
 
 void flush;

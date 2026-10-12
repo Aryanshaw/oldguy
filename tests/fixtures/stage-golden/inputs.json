@@ -1,0 +1,15 @@
+[
+  { "id": "how-jobs-run", "durationS": 12.4,
+    "scene": [ { "piece": "title", "params": { "heading": "Jobs", "sub": "how they run" }, "beat": 0 },
+               { "piece": "callout", "params": { "text": "here", "pointTo": "left" }, "beat": 1 } ],
+    "beats": [0.04, 4.2] },
+  { "id": "what-the-card-shows", "durationS": 21.7,
+    "scene": [ { "piece": "steps", "params": { "items": [ { "label": "One" }, { "label": "Two", "detail": "then this" } ] }, "beat": 0 },
+               { "piece": "code-card", "params": { "file": "app.js", "lines": [ { "no": 1, "text": "start()", "highlight": true }, { "no": 2, "text": "stop()" } ] }, "beat": 2 } ],
+    "beats": [0.04, 5.1, 9.8, 15.0] },
+  { "id": "a-designed-flow", "durationS": 18,
+    "scene": [ { "piece": "flow", "params": { "heading": "Flow", "lanes": [ { "id": "a", "label": "Client" }, { "id": "b", "label": "Server" } ],
+                 "steps": [ { "lane": "a", "label": "ask", "at": 0 }, { "lane": "b", "label": "answer", "at": 1, "kind": "ok" } ] }, "beat": 0 },
+               { "piece": "design", "params": { "html": "<style>#d .x { color: var(--og-yellow); }</style><div id=\"d\"><div class=\"x\">hi &amp; bye</div></div><script data-oldguy-timeline>tl.from(\"#d .x\", {opacity: 0, duration: 0.4}, beat(2));</script>" }, "beat": 2 } ],
+    "beats": [0.04, 6.0, 11.5] }
+]

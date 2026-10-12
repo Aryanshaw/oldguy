@@ -27,7 +27,7 @@ const ch = (id: string, over: Partial<Chapter> = {}): Chapter => ({
 });
 
 function fakeEngine() {
-  const fns: Record<string, Set<(d?: unknown) => void>> = { time: new Set(), chapter: new Set(), state: new Set(), error: new Set() };
+  const fns: Record<string, Set<(d?: unknown) => void>> = { time: new Set(), chapter: new Set(), state: new Set(), error: new Set(), hold: new Set() };
   let st: EngineState = 'idle';
   let pos: Position | null = null;
   const e = {

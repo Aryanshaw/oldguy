@@ -9,10 +9,13 @@ Polite, cheery and efficient: a friendly helper who likes explaining things. Sho
 the system does: name a part by what it does before its code name, and name code only when it is on screen. Say what happens and why,
 once, and move on. No filler ("so basically", "as you can see"), no jokes at the code's expense, and nothing about
 what making the video uses up (the repository's own payment code is a flow like any other: explain it).
-Audience is a beginner: explain a term the first time it appears, in half a sentence.
+Audience is a beginner: explain a term the first time it appears, in half a sentence. Follow the running example
+by name, and give each step its "So" sentence: what it means for the viewer.
 
-Each entry is exactly one sentence, each chapter stands alone, and no sentence mentions another chapter or a time.
-The rules and the splitter traps are in [storyboard.md](storyboard.md).
+Each entry is exactly one sentence, each chapter opens by placing the example, and no sentence points at another
+chapter by position or a time. The rules are in [teaching.md](teaching.md); the splitter traps are in
+[storyboard.md](storyboard.md). The template's pace adds the silence after each sentence, so never pack two ideas
+into one sentence.
 
 ## Before narrating
 
@@ -41,8 +44,10 @@ and the folder gains `narration.wav`, `beats.json`, `captions.vtt`, `captions.js
 `narrated`, render that chapter (see [render.md](render.md)) in the foreground, wait for the render to finish, and
 only then move on to the next chapter. It takes a while per chapter; never run two narrates at once.
 
-Check the printed seconds: a chapter under 20 s or over 40 s goes back to the storyboard (add or trim sentences
-in the spec, then redo the chapter).
+Check the printed seconds against the template's length (explainer: 20 to 40 s): a chapter far past it is split,
+a very short one gets more sentences (fix the spec, then redo the chapter). Going over is never an error. A template
+with speakers speaks each line in its speaker's voice and prints `timing lines`; it may also copy the template's
+pictures and footage into the chapter folder.
 
 ## The build record
 
@@ -66,4 +71,4 @@ the CLI messages and this list agree on the one path:
 `oldguy narrate` exits 1 with one line saying why. A sentence or scene problem: fix the spec and redo the chapter.
 A speech or timing tool problem: run `oldguy doctor`, show the fix text, stop.
 
-**Gate:** `oldguy narrate` printed `narrated` for every chapter, each 20 to 40 s, and each folder has the seven generated files.
+**Gate:** `oldguy narrate` printed `narrated` for every chapter, each near its template's length, and each folder has the generated files.

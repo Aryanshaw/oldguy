@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "groups": {
+    "grounds": { "indigo": "#221C55", "blue": "#1F5FA8", "offwhite": "#F2EDE1", "nearblack": "#16141F" },
+    "floors": { "indigoFloor": "#2D2668", "blueFloor": "#1A5091", "offwhiteFloor": "#E0D8C4", "nearblackFloor": "#24212F" },
+    "accents": { "coral": "#FF6B57", "peach": "#F6A57C", "yellow": "#F6C945", "lilac": "#9A8FE6", "orange": "#FF8A1F" },
+    "neutrals": { "sky": "#8CCBEB", "grey": "#B9B4D6", "wood": "#C99A62" },
+    "shades": {
+      "coralDark": "#D9493A", "peachDark": "#D9845C", "yellowDark": "#D9A520", "lilacDark": "#6F63C4", "orangeDark": "#D96A0A",
+      "skyDark": "#5FA6CC", "greyDark": "#7D7899", "woodDark": "#9C7444"
+    },
+    "skin": { "skin1": "#F9D3B4", "skin2": "#F0B48A", "skin3": "#D28C5E", "skin4": "#A8653D", "skin5": "#6B3D25" },
+    "hair": { "hairInk": "#1B1640", "hairBrown": "#5A3420", "hairAuburn": "#A8432A", "hairBlond": "#E9C46A", "hairGrey": "#C9C5D6", "hairRed": "#D9502F" },
+    "marks": { "chalk": "#FFFFFF", "paper": "#FFF8E7", "ink": "#14110A" }
+  },
+  "colourways": {
+    "coral": { "skin": "skin2", "hair": "hairInk", "top": "coral", "bottom": "blue", "shoes": "ink" },
+    "peach": { "skin": "skin4", "hair": "hairBrown", "top": "peach", "bottom": "lilacDark", "shoes": "ink" },
+    "yellow": { "skin": "skin1", "hair": "hairBlond", "top": "yellow", "bottom": "blue", "shoes": "ink" },
+    "lilac": { "skin": "skin5", "hair": "hairInk", "top": "lilac", "bottom": "greyDark", "shoes": "ink" },
+    "orange": { "skin": "skin3", "hair": "hairAuburn", "top": "orange", "bottom": "lilacDark", "shoes": "ink" },
+    "sky": { "skin": "skin1", "hair": "hairGrey", "top": "sky", "bottom": "greyDark", "shoes": "ink" }
+  }
+}

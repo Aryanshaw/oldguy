@@ -2,6 +2,8 @@
 // repository's real line (whole, or visibly cut with …).
 import fs from 'node:fs';
 import path from 'node:path';
+import { checkAgainstTemplate } from './template-checks.mts';
+import type { Template } from './template.mts';
 
 // One thing that failed the audit: where (a source id, "sentence 2", "scene[0] line 4") and why.
 type Finding = { id: string; reason: string };
@@ -14,7 +16,7 @@ type AuditResult = { ok: boolean; failures: Finding[] };
 type Source = { id?: unknown; file: string; lines?: unknown; quote?: unknown };
 
 // One narration sentence as the audit reads it.
-type AuditSentence = { kind?: unknown; source_ids?: unknown };
+type AuditSentence = { kind?: unknown; source_ids?: unknown; text?: unknown; speaker?: unknown };
 
 // The params of a code-card scene entry, before they are checked.
 type CodeCardParams = { file?: unknown; lines?: unknown };
@@ -25,8 +27,9 @@ type SceneEntry = { piece?: unknown; params?: CodeCardParams | null };
 // One code-card line as written in the scene, before it is checked.
 type CardLineInput = { no?: unknown; text?: unknown };
 
-// What audit takes: the repository root, the sources, the sentences and (optionally) the scene.
-type AuditInput = { root: string; sources: Source[]; sentences: AuditSentence[]; scene?: unknown };
+// What audit takes: the repository root, the sources, the sentences, (optionally) the scene, and the video's template,
+// whose rules are added to the claim checks (they never replace one).
+type AuditInput = { root: string; sources: Source[]; sentences: AuditSentence[]; scene?: unknown; template?: Template };
 
 // Either why a file cannot be used, or the thing found.
 type Failed = { reason: string };
@@ -190,7 +193,7 @@ function checkSentence(sentence: AuditSentence, knownIds: Set<unknown>): string[
 
 // Audits every source, sentence and code-card piece and reports all failures, not just the first.
 // A missing scene means no cards (scaffold and narrate already insist the scene is a list).
-function audit({ root, sources, sentences, scene = [] }: AuditInput): AuditResult {
+function audit({ root, sources, sentences, scene = [], template }: AuditInput): AuditResult {
   const failures: Finding[] = [];
   const knownIds = new Set(sources.map((s) => s.id));
   for (const source of sources) {
@@ -203,6 +206,7 @@ function audit({ root, sources, sentences, scene = [] }: AuditInput): AuditResul
   (Array.isArray(scene) ? scene : []).forEach((entry: SceneEntry | null | undefined, index: number) => {
     if (entry && entry.piece === 'code-card') failures.push(...checkCodeCard(root, entry.params, index));
   });
+  if (template) failures.push(...checkAgainstTemplate(sentences, scene, template));
   return { ok: failures.length === 0, failures };
 }
 

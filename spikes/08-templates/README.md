@@ -10,7 +10,7 @@ Run: `node build.mjs <python of a venv with kokoro-onnx and soundfile>`, then in
 
 Inputs: `template/template.json` (the spec's shape, 9:16 only) and `chapter.json` (8 lines, Stewie and Peter, about
 how `oldguy reply` refuses a wrong line; Peter's 4 lines are claims citing `cli/client.mts:141`, `:142` and
-`lib/audit.mts:97`).
+`lib/audit.mts:100`).
 
 ## Results (2026-10-07, cloud container, 16 GB)
 
@@ -28,7 +28,7 @@ how `oldguy reply` refuses a wrong line; Peter's 4 lines are claims citing `cli/
    Kokoro: about 10 s per line, 87 s for 8 lines. A 10-chapter podcast (~80 lines) would spend ~13 minutes on
    voices alone. Narrate should speak all of a chapter's lines in one Python process (the venv already has
    `kokoro_onnx`), per voice and speed.
-2. **`max_words_per_line` is worth enforcing.** Stewie's first line came out at 13 words against the template's 12;
+2. **`max_words_per_line` is worth enforcing.** Stewie's first line came out at 14 words against the template's 12;
    nothing stopped it. The planned audit check would.
 3. **Text over busy backgrounds needs a backing plate.** The source chip is hard to read where it crosses the moving
    blocks and Peter's cap. Stages should put captions and chips on a plate or keep a clear band for them.
