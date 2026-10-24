@@ -80,6 +80,11 @@ export function postExport(
   return post('/api/export', { dest, mode });
 }
 
+/** Opens the computer's own folder picker; dest is null when the viewer cancelled. */
+export function pickExportFolder(): Promise<{ dest: string | null }> {
+  return post('/api/export/folder', {});
+}
+
 export async function getSources(id: string): Promise<ChapterSource[]> {
   const res = await json<{ sources: ChapterSource[] }>(`/chapters/${encodeURIComponent(id)}/sources`);
   return res.sources;

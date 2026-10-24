@@ -3,6 +3,7 @@ import path from 'node:path';
 import { loadManifest } from '../lib/manifest.mts';
 import { exportVideo, checkDest } from '../lib/export.mts';
 import { ffmpegPath } from '../lib/poster.mts';
+import { pickFolder } from '../lib/pick-folder.mts';
 import type { RouteContext } from './types.mts';
 
 // Answers {file, files, skipped} on success. The body is checked first (dest, mode); only one export runs at a time.
@@ -42,4 +43,19 @@ async function handleExport({ req, res, state, sendJson, readJsonBody }: RouteCo
   }
 }
 
-export { handleExport };
+// POST /api/export/folder: opens the computer's folder picker and answers {dest}, null when the viewer cancelled.
+// Only one picker is open at a time; close() shuts an open one.
+async function handlePickFolder({ res, state, sendJson }: RouteContext): Promise<void> {
+  if (state.closing) return sendJson(res, 503, { error: 'the server is closing' });
+  if (state.stopPick) return sendJson(res, 409, { error: 'a folder picker is already open' });
+  const stopper = new AbortController();
+  state.stopPick = () => stopper.abort();
+  try {
+    const dest = await (state.deps.pickFolder || pickFolder)({ signal: stopper.signal });
+    sendJson(res, 200, { dest });
+  } finally {
+    state.stopPick = null;
+  }
+}
+
+export { handleExport, handlePickFolder };

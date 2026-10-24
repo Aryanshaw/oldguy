@@ -51,6 +51,7 @@ type ServerDeps = {
   createReadStream?: CreateReadStream;
   logError?: (err: unknown) => void;
   playerDir?: string;
+  pickFolder?: (opts: { signal?: AbortSignal }) => Promise<string | null>;
 };
 // What every handler can read: where the video lives, the session key, the port, the live parts and the flags.
 type ServerState = {
@@ -65,6 +66,7 @@ type ServerState = {
   closing?: boolean;
   exporting?: boolean;
   stopExport?: (() => Promise<void>) | null;
+  stopPick?: (() => void) | null;
   heartbeatTimer?: ReturnType<typeof setTimeout> | null;
   posterIdle?: () => Promise<unknown>;
   watcher?: Watcher;

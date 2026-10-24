@@ -150,7 +150,7 @@ it to finish: `oldguy render .oldguy/<slug>/chapters --root <repo> --only <all i
 already rendered print `ready (already rendered)`).
 
 Then, and only then (never before, never between chapters), start the server in the foreground; it returns within a few seconds and prints one line, the URL.
-`oldguy serve --detach --dir .oldguy/<slug>` leaves one server in the background, the only process allowed to; it stops when this Claude Code session ends.
+`oldguy serve --detach --dir .oldguy/<slug>` leaves one server in the background, the only process allowed to; it stops when this Claude Code session ends. It also opens the page in the viewer's default browser; never open it yourself.
 If it prints a problem instead of a URL, report that line and still hand off: the videos exist anyway. If it printed the URL, start `oldguy listen` now (step 8).
 
 **Gate:** that run exited 0 with `ready` for every chapter, each `chapter.mp4` exists, and the server command printed a URL or a problem line.
@@ -159,7 +159,7 @@ If it prints a problem instead of a URL, report that line and still hand off: th
 
 ## Step 7: Hand-off
 
-Say the chapters can be watched at the printed URL (a simple page that lists the chapters). Show it exactly as
+Say the page opened in the browser, and the chapters can also be watched at the printed URL (a simple page that lists the chapters). Show it exactly as
 printed: it holds a private key for this session, so put it nowhere else (no file, no commit). Then print the path
 of every rendered chapter, one per line, in story order (the storyboard's order, not folder order), as
 `.oldguy/<slug>/chapters/<id>/chapter.mp4`. Say questions asked in the page's Chat tab are answered here. Mention no other commands.

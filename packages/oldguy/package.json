@@ -1,6 +1,6 @@
 {
   "name": "oldguy",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Install oldguy into Claude Code: ask how a feature of your codebase works and get a short narrated video, fact-checked against the code.",
   "license": "MIT",
   "author": "Aryan Shaw",

@@ -1,5 +1,6 @@
 'use strict';
 // Tests for the SessionStart hook: it must record the session id, hint at `oldguy doctor`, and never break a session.
+process.env.OLDGUY_NO_OPEN = '1'; // `serve --detach` must not open browsers during tests
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');

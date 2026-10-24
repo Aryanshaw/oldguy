@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 'use strict';
+process.env.OLDGUY_NO_OPEN = '1'; // `serve --detach` must not open browsers during tests
 // Phase 2 acceptance, run by hand (not part of `npm test`): builds a small synthetic project with real H.264 clips,
 // starts the real `oldguy serve --detach`, and checks it over real HTTP. One line per check: PASS|FAIL <name>: <observed>.
 //

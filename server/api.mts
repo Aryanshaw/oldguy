@@ -6,7 +6,7 @@ import { loadManifest, insertChapter, reorderChapters, removeChapter, setChapter
 import { scanChapter } from '../lib/chapter-scan.mts';
 import { listTemplates, templateIds, sampleFiles } from '../lib/template.mts';
 import { readVideoChoice } from '../lib/settings.mts';
-import { handleExport } from './export-route.mts';
+import { handleExport, handlePickFolder } from './export-route.mts';
 import type { Ack, EventContext, EventType, Reply, SourceRef, ThreadEntry, ViewerEvent } from '../lib/events.mts';
 import type { Manifest, ManifestRow, NewRow } from '../lib/manifest.mts';
 import type { ChapterPayload, StatePayload, StreamData, StreamEventName } from '../lib/sse.mts';
@@ -326,6 +326,7 @@ const API_ROUTES: Route[] = [
   { method: 'POST', pattern: '/api/chapters', handler: handleChapters },
   { method: 'POST', pattern: '/api/heartbeat', handler: handleHeartbeat },
   { method: 'POST', pattern: '/api/export', handler: handleExport },
+  { method: 'POST', pattern: '/api/export/folder', handler: handlePickFolder },
 ];
 
 export { API_ROUTES, clearHeartbeatTimer };

@@ -11,20 +11,17 @@ export interface Engine {
   position(): Position | null;
   state(): EngineState;
   visible(): 'a' | 'b';
-  on(ev: Ev, fn: (detail?: unknown) => void): () => void;
+  on(ev: 'time' | 'chapter' | 'state' | 'error', fn: (detail?: unknown) => void): () => void;
   destroy(): void;
 }
 
-/** 'hold' fires with the finished chapter's id when holdAtEnd stopped playback between two chapters. */
-type Ev = 'time' | 'chapter' | 'state' | 'error' | 'hold';
+type Ev = 'time' | 'chapter' | 'state' | 'error';
 
 /**
  * Two <video> elements: one visible, one idle and preloading the next playable chapter.
  * Position is always {chapterId, offset}; global seconds are never stored.
- * With holdAtEnd, a chapter that plays to its end loads the next one paused at its start, so the viewer gets a moment
- * to settle before going on.
  */
-export function createEngine(o: { a: HTMLVideoElement; b: HTMLVideoElement; urlFor: (id: string) => string; holdAtEnd?: boolean }): Engine {
+export function createEngine(o: { a: HTMLVideoElement; b: HTMLVideoElement; urlFor: (id: string) => string }): Engine {
   let vis = o.a;
   let idle = o.b;
   let chapters: Chapter[] = [];
@@ -44,7 +41,6 @@ export function createEngine(o: { a: HTMLVideoElement; b: HTMLVideoElement; urlF
     chapter: new Set(),
     state: new Set(),
     error: new Set(),
-    hold: new Set(),
   };
   const emit = (ev: Ev, detail?: unknown) => {
     for (const fn of [...listeners[ev]]) fn(detail);
@@ -139,8 +135,8 @@ export function createEngine(o: { a: HTMLVideoElement; b: HTMLVideoElement; urlF
     emitTime();
   }
 
-  /** The current chapter finished or failed: move on, or end if it was the last. `hold` keeps the next one paused. */
-  function advance(hold = false) {
+  /** The current chapter finished or failed: move on, or end if it was the last. */
+  function advance() {
     if (!cur || pending) return; // a pending seek owns the idle element and will take over
     const next = nextOf(cur);
     if (!next) {
@@ -154,18 +150,13 @@ export function createEngine(o: { a: HTMLVideoElement; b: HTMLVideoElement; urlF
     }
     visEnded = false;
     const wasPlaying = st === 'playing';
-    const finished = cur;
     setSrc(idle, next.id);
     swap();
     cur = next.id;
     atEnd = false;
     ensureIdle();
     emit('chapter', next.id);
-    if (wasPlaying && hold) {
-      ++playGen;
-      setState('paused');
-      emit('hold', finished);
-    } else if (wasPlaying) void startPlay();
+    if (wasPlaying) void startPlay();
     emitTime();
   }
 
@@ -208,7 +199,7 @@ export function createEngine(o: { a: HTMLVideoElement; b: HTMLVideoElement; urlF
   const onEnded = (el: HTMLVideoElement) => () => {
     if (destroyed || el !== vis) return;
     visEnded = true;
-    advance(o.holdAtEnd === true); // no-op while a seek is pending; recover() picks it up if the seek is dropped
+    advance(); // no-op while a seek is pending; recover() picks it up if the seek is dropped
   };
   const onTimeUpdate = (el: HTMLVideoElement) => () => {
     if (destroyed || el !== vis) return;

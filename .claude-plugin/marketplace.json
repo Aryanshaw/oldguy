@@ -11,7 +11,7 @@
       "name": "oldguy",
       "source": "./",
       "description": "Ask the old guy how a feature of your codebase works and get a short narrated video, fact-checked against the code.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "license": "MIT"
     }
   ]
