@@ -2,15 +2,17 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@/api/client', async (orig) => ({ ...(await orig<typeof import('@/api/client')>()), postExport: vi.fn() }));
-import { ApiError, postExport } from '@/api/client';
+vi.mock('@/api/client', async (orig) => ({ ...(await orig<typeof import('@/api/client')>()), postExport: vi.fn(), pickExportFolder: vi.fn() }));
+import { ApiError, pickExportFolder, postExport } from '@/api/client';
 import { ExportDialog } from './ExportDialog';
 
 const post = vi.mocked(postExport);
-const MSG = 'Type the full path of a folder, starting with /';
+const pick = vi.mocked(pickExportFolder);
+const MSG = 'Choose a folder, or type its full path';
 
 beforeEach(() => {
   post.mockReset();
+  pick.mockReset();
   localStorage.clear();
 });
 afterEach(cleanup);
@@ -20,14 +22,14 @@ function setup(open = true) {
   const utils = render(<ExportDialog open={open} onClose={onClose} />);
   return { onClose, user: userEvent.setup(), ...utils };
 }
-const field = () => screen.getByLabelText('Folder (full path)');
+const field = () => screen.getByLabelText('Folder');
 const exportBtn = () => screen.getByRole('button', { name: /^Export(ing)?$/ });
 
 describe('ExportDialog', () => {
   it('is a native dialog opened with showModal, and the field has the placeholder', () => {
     const { container } = setup();
     expect(container.querySelector('dialog')).toHaveAttribute('open');
-    expect(field()).toHaveAttribute('placeholder', '/Users/you/Desktop');
+    expect(field()).toHaveAttribute('placeholder', 'Choose a folder');
   });
   it('stays closed while open is false', () => {
     const { container } = setup(false);
@@ -46,12 +48,47 @@ describe('ExportDialog', () => {
     fireEvent(d, new Event('close'));
     expect(onClose).toHaveBeenCalled();
   });
-  it.each(['', '   ', 'relative/path', '~/x'])('refuses %j and sends nothing', async (v) => {
+  it.each(['relative/path', '~/x'])('refuses %j and sends nothing', async (v) => {
     const { user } = setup();
-    if (v.trim()) await user.type(field(), v);
+    await user.type(field(), v);
     await user.click(exportBtn());
     expect(screen.getByText(MSG)).toBeInTheDocument();
     expect(post).not.toHaveBeenCalled();
+  });
+  it('accepts a Windows path', async () => {
+    post.mockResolvedValue({ file: 'a', files: ['a'], skipped: [] });
+    const { user } = setup();
+    await user.type(field(), 'C:\\Users\\me');
+    await user.click(exportBtn());
+    expect(post).toHaveBeenCalledWith('C:\\Users\\me', 'full');
+  });
+  it('Choose… opens the folder picker and fills the field', async () => {
+    pick.mockResolvedValue({ dest: '/Users/me/Desktop' });
+    const { user } = setup();
+    await user.click(screen.getByRole('button', { name: 'Choose…' }));
+    expect(field()).toHaveValue('/Users/me/Desktop');
+    expect(post).not.toHaveBeenCalled();
+  });
+  it('Export with no folder opens the picker, then exports to the chosen one', async () => {
+    pick.mockResolvedValue({ dest: '/picked' });
+    post.mockResolvedValue({ file: 'a', files: ['a'], skipped: [] });
+    const { user } = setup();
+    await user.click(exportBtn());
+    expect(post).toHaveBeenCalledWith('/picked', 'full');
+    expect(await screen.findByText('Saved')).toBeInTheDocument();
+  });
+  it('a cancelled picker sends nothing and shows no error', async () => {
+    pick.mockResolvedValue({ dest: null });
+    const { user } = setup();
+    await user.click(exportBtn());
+    expect(post).not.toHaveBeenCalled();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+  it('a picker failure shows the server text', async () => {
+    pick.mockRejectedValue(new ApiError(501, 'no folder picker'));
+    const { user } = setup();
+    await user.click(screen.getByRole('button', { name: 'Choose…' }));
+    expect(await screen.findByText('no folder picker')).toBeInTheDocument();
   });
   it('sends full first and lists files and skipped chapters', async () => {
     post.mockResolvedValue({

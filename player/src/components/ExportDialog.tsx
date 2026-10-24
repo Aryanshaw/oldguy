@@ -1,10 +1,12 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { ApiError, postExport } from '@/api/client';
+import { ApiError, pickExportFolder, postExport } from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 const KEY = 'oldguy.exportDest';
-const BAD_PATH = 'Type the full path of a folder, starting with /';
+const BAD_PATH = 'Choose a folder, or type its full path';
+// A full path: /x on macOS and Linux, C:\x on Windows.
+const FULL_PATH = /^(\/|[A-Za-z]:[\\/])/;
 
 type Result = Awaited<ReturnType<typeof postExport>>;
 
@@ -36,9 +38,28 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
     } else if (!open && d.open) d.close();
   }, [open]);
 
+  /** Opens the computer's folder picker and fills the field; answers the folder, or null when none was chosen. */
+  async function choose(): Promise<string | null> {
+    setBusy(true);
+    setError(null);
+    setConflict(false);
+    try {
+      const { dest: picked } = await pickExportFolder();
+      if (picked) setDest(picked);
+      return picked;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      return null;
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function run(mode: 'full' | 'drafts') {
-    const path = dest.trim();
-    if (!path.startsWith('/')) {
+    let path = dest.trim();
+    if (!path) path = (await choose()) ?? '';
+    if (!path) return;
+    if (!FULL_PATH.test(path)) {
       setError(BAD_PATH);
       setConflict(false);
       return;
@@ -78,16 +99,21 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
       >
         <h2 className="text-lg font-black">Export</h2>
         <label htmlFor={id} className="text-sm font-black">
-          Folder (full path)
+          Folder
         </label>
-        <Input
-          id={id}
-          value={dest}
-          placeholder="/Users/you/Desktop"
-          onChange={(e) => setDest(e.target.value)}
-          disabled={busy}
-          autoComplete="off"
-        />
+        <div className="flex gap-2">
+          <Input
+            id={id}
+            value={dest}
+            placeholder="Choose a folder"
+            onChange={(e) => setDest(e.target.value)}
+            disabled={busy}
+            autoComplete="off"
+          />
+          <Button variant="plain" disabled={busy} onClick={() => void choose()}>
+            Choose…
+          </Button>
+        </div>
         {error && (
           <p role="alert" className="text-sm font-bold break-words [overflow-wrap:anywhere]">
             {error}

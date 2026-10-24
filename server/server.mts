@@ -342,6 +342,7 @@ async function startServer({ slugDir, key = crypto.randomBytes(16).toString('hex
     state.closing = true;
     clearHeartbeatTimer(state);
     if (state.stopExport) await state.stopExport();
+    state.stopPick?.();
     watcher.stop();
     sync.stop();
     await watcher.idle();
