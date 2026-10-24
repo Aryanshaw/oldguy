@@ -1,4 +1,5 @@
 'use strict';
+process.env.OLDGUY_NO_OPEN = '1'; // `serve --detach` must not open browsers during tests
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -290,4 +291,12 @@ test('a detached server stops itself once the Claude Code process recorded in .o
   const end = Date.now() + 12000;
   while (fs.existsSync(file) && Date.now() < end) await new Promise((res) => setTimeout(res, 200));
   assert.equal(fs.existsSync(file), false, 'server.json removed: the server shut down cleanly');
+});
+
+test('browserCommand: the default-browser opener for each system, the URL as one argument', () => {
+  const { browserCommand } = require('../cli/server.mts');
+  const url = 'http://127.0.0.1:4000/?key=abc';
+  assert.deepEqual(browserCommand(url, 'darwin'), ['open', [url]]);
+  assert.deepEqual(browserCommand(url, 'win32'), ['rundll32', ['url.dll,FileProtocolHandler', url]]);
+  assert.deepEqual(browserCommand(url, 'linux'), ['xdg-open', [url]]);
 });

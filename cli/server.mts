@@ -1,4 +1,5 @@
 // `oldguy serve [--dir <slugDir>] [--detach]`: runs the local server in the foreground, or as a background process.
+// --detach also opens the player in the default browser, unless OLDGUY_NO_OPEN is set.
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
@@ -65,11 +66,30 @@ async function serveForeground(slugDir: string): Promise<number> {
   return 0;
 }
 
+// The command that opens a URL in the default browser on each system.
+function browserCommand(url: string, platform: string = process.platform): [string, string[]] {
+  if (platform === 'darwin') return ['open', [url]];
+  // rundll32 takes the URL as one argument, so no shell ever reads it
+  if (platform === 'win32') return ['rundll32', ['url.dll,FileProtocolHandler', url]];
+  return ['xdg-open', [url]];
+}
+
+// Opens the player for the viewer, as the hand-off link would. Best effort: a missing opener changes nothing.
+function openInBrowser(url: string): void {
+  if (process.env.OLDGUY_NO_OPEN) return;
+  const [file, args] = browserCommand(url);
+  try {
+    const child = spawn(file, args, { detached: true, stdio: 'ignore' });
+    child.on('error', () => {});
+    child.unref();
+  } catch { /* no opener: the printed URL still works */ }
+}
+
 // Starts the same command as a detached child and waits up to 10 s for its state/server.json; reuses a live server.
 async function serveDetached(slugDir: string): Promise<number> {
   const existing = await liveServer(slugDir);
   if (existing && 'busy' in existing) { process.stderr.write('a server for this folder is running but not answering\n'); return 1; }
-  if (existing) { process.stdout.write(`${existing.url}\n`); return 0; }
+  if (existing) { process.stdout.write(`${existing.url}\n`); openInBrowser(existing.url); return 0; }
   // Remove a stale file first, so a new file can only be the child's.
   fs.rmSync(path.join(slugDir, 'state', 'server.json'), { force: true });
   const bin = path.join(import.meta.dirname, '..', 'bin', 'oldguy.cjs');
@@ -78,7 +98,7 @@ async function serveDetached(slugDir: string): Promise<number> {
   const deadline = Date.now() + 10000;
   while (Date.now() < deadline) {
     const up = await liveServer(slugDir);
-    if (up && !('busy' in up)) { process.stdout.write(`${up.url}\n`); return 0; }
+    if (up && !('busy' in up)) { process.stdout.write(`${up.url}\n`); openInBrowser(up.url); return 0; }
     await new Promise((r) => setTimeout(r, 50));
   }
   process.stderr.write('oldguy serve: the server did not start within 10 seconds\n');
@@ -99,4 +119,4 @@ async function runServe(args: string[]): Promise<number> {
   }
 }
 
-export { runServe, resolveSlugDir, readInfo, liveServer };
+export { runServe, resolveSlugDir, readInfo, liveServer, browserCommand };
